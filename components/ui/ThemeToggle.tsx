@@ -1,0 +1,193 @@
+'use client';
+import { useState, useEffect } from 'react';
+import { useTheme } from 'next-themes';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Sun, Moon, Clock, MapPin } from 'lucide-react';
+import { useAutoTheme } from '@/hooks/useAutoTheme';
+
+export function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const {
+    autoSettings,
+    timezoneInfo,
+    enableAutoTheme,
+    disableAutoTheme,
+    isAutoEnabled,
+    isDarkHours
+  } = useAutoTheme();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="flex items-center space-x-1">
+        <Sun size={14} className="text-amber-500" />
+        <span className="text-xs font-medium text-amber-500">Light</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      {/* OVERLAY PARA CERRAR - DEBE ESTAR PRIMERO PARA RECIBIR CLICKS */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-[40]"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
+      {/* TOGGLE PRINCIPAL - SOLO SILUETAS SIN CONTORNOS */}
+      <motion.button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center space-x-1 transition-all duration-300 hover:opacity-80 relative z-[50]"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+      >
+        {isAutoEnabled ? (
+          <>
+            <Clock
+              size={14}
+              className={`${isDarkHours ? 'text-gray-400' : 'text-amber-500'} animate-pulse`}
+            />
+            <span className={`text-xs font-medium ${isDarkHours ? 'text-gray-400' : 'text-amber-500'}`}>
+              Auto
+            </span>
+          </>
+        ) : theme === 'dark' ? (
+          <>
+            <Moon
+              size={14}
+              className="text-gray-400"
+            />
+            <span className="text-xs font-medium text-gray-400">Dark</span>
+          </>
+        ) : (
+          <>
+            <Sun
+              size={14}
+              className="text-amber-500"
+            />
+            <span className="text-xs font-medium text-amber-500">Light</span>
+          </>
+        )}
+      </motion.button>
+
+      {/* PANEL DESPLEGABLE MINIMALISTA */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.9 }}
+            transition={{ duration: 0.2 }}
+            className="absolute top-12 right-0 w-48
+                       bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-2 z-[60] border border-gray-200 dark:border-slate-700"
+          >
+            {/* MODO AUTOMATICO */}
+            <motion.button
+              onClick={() => {
+                if (isAutoEnabled) {
+                  disableAutoTheme();
+                } else {
+                  enableAutoTheme();
+                }
+                setIsOpen(false);
+              }}
+              className={`w-full flex items-center space-x-2 p-2 rounded-lg text-sm
+                         transition-colors duration-200 ${
+                isAutoEnabled
+                  ? 'bg-purple-500/20 text-purple-600 dark:text-purple-400'
+                  : 'hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-600 dark:text-gray-400'
+              }`}
+              whileHover={{ x: 2 }}
+            >
+              <Clock size={14} className={isAutoEnabled ? 'text-purple-600 dark:text-purple-400' : 'text-gray-500'} />
+              <div className="flex-1 text-left">
+                <span className={isAutoEnabled ? 'text-purple-600 dark:text-purple-400' : 'text-gray-600 dark:text-gray-400'}>
+                  Auto
+                </span>
+                {timezoneInfo && (
+                  <div className="flex items-center text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+                    <MapPin size={10} className="mr-1" />
+                    <span>{timezoneInfo.time}</span>
+                  </div>
+                )}
+              </div>
+            </motion.button>
+
+            {/* SEPARADOR SIEMPRE VISIBLE */}
+            <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
+
+            {/* MODO CLARO - SIEMPRE VISIBLE */}
+            <motion.button
+              onClick={() => {
+                disableAutoTheme(); // Disable auto when manually selecting
+                setTheme('light');
+                setIsOpen(false);
+              }}
+              className={`w-full flex items-center space-x-2 p-2 rounded-lg text-sm
+                         transition-colors duration-200 ${
+                !isAutoEnabled && theme === 'light'
+                  ? 'bg-amber-500/20 text-amber-500'
+                  : 'hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-600 dark:text-gray-400'
+              }`}
+              whileHover={{ x: 2 }}
+            >
+              <Sun size={14} className="text-amber-500" />
+              <span className="text-amber-500">Light</span>
+            </motion.button>
+
+            {/* MODO OSCURO - SIEMPRE VISIBLE */}
+            <motion.button
+              onClick={() => {
+                disableAutoTheme(); // Disable auto when manually selecting
+                setTheme('dark');
+                setIsOpen(false);
+              }}
+              className={`w-full flex items-center space-x-2 p-2 rounded-lg text-sm mt-1
+                         transition-colors duration-200 ${
+                !isAutoEnabled && theme === 'dark'
+                  ? 'bg-gray-400/20 text-gray-400'
+                  : 'hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-600 dark:text-gray-400'
+              }`}
+              whileHover={{ x: 2 }}
+            >
+              <Moon
+                size={14}
+                className="text-gray-400"
+              />
+              <span className="text-gray-400">Dark</span>
+            </motion.button>
+
+            {/* INFORMACION DE ZONA HORARIA */}
+            {timezoneInfo && isAutoEnabled && (
+              <>
+                <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
+                <div className="px-2 py-1 text-xs text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center mb-1">
+                    <MapPin size={10} className="mr-1" />
+                    <span>{timezoneInfo.location}</span>
+                  </div>
+                  <div>
+                    Oscuro: 19:00 - 07:00
+                  </div>
+                  {isDarkHours && (
+                    <div className="text-purple-600 dark:text-purple-400 mt-1">
+                      Modo nocturno activo
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+    </div>
+  );
+}

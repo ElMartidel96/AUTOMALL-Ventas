@@ -1,0 +1,824 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ====================================================
+   🚗 AUTOS MALL - GLASS MORPHISM DESIGN SYSTEM
+   ==================================================== */
+
+/* CSS Variables for Theme-Aware Design */
+:root {
+  /* Light Theme - Professional & Clean */
+  --bg-primary: 255 255 255;          /* Pure white */
+  --bg-secondary: 249 250 251;        /* Very light gray */
+  --bg-glass: rgba(255, 255, 255, 0.8);
+  --bg-card: rgba(255, 255, 255, 0.9);
+  --accent-orange: 232 131 42;         /* AM Orange accent */
+  --accent-gold: 232 131 42;           /* Legacy alias */
+  --text-primary: 17 24 39;           /* Soft black */
+  --text-secondary: 107 114 128;      /* Medium gray */
+  --border-glass: rgba(226, 232, 240, 0.4);
+  --shadow-glass: rgba(0, 0, 0, 0.1);
+
+  /* Shadcn/UI base colors - Light */
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --border: 214.3 31.8% 91.4%;
+
+  /* Glass Effects - Light */
+  --blur-subtle: blur(8px) saturate(120%);
+  --blur-medium: blur(16px) saturate(150%) contrast(110%);
+  --blur-strong: blur(24px) saturate(180%) contrast(120%) brightness(110%);
+  --blur-ultra: blur(32px) saturate(200%) contrast(130%) brightness(115%);
+}
+
+.dark {
+  /* Dark Theme - Automotive Premium */
+  --bg-primary: 13 27 42;             /* AM dark blue */
+  --bg-secondary: 18 32 48;           /* Slightly lighter */
+  --bg-glass: rgba(13, 27, 42, 0.85);
+  --bg-card: rgba(18, 32, 48, 0.92);
+  --accent-silver: 148 163 184;       /* Elegant silver */
+  --accent-orange: 232 131 42;        /* AM Orange accent */
+  --text-primary: 255 255 255;        /* Pure white */
+  --text-secondary: 148 163 184;      /* Silver gray */
+  --border-glass: rgba(148, 163, 184, 0.2);
+  --shadow-glass: rgba(0, 0, 0, 0.4);
+
+  /* Shadcn/UI base colors - Dark */
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --border: 217.2 32.6% 17.5%;
+
+  /* Glass Effects - Dark */
+  --blur-subtle: blur(8px) saturate(120%);
+  --blur-medium: blur(16px) saturate(150%) contrast(110%);
+  --blur-strong: blur(24px) saturate(180%) contrast(120%) brightness(110%);
+  --blur-ultra: blur(32px) saturate(200%) contrast(130%) brightness(115%);
+}
+
+/* ====================================================
+   🔮 GLASS MORPHISM BASE COMPONENTS
+   ==================================================== */
+
+/* Glass Panel - Main container */
+.glass-panel {
+  background: var(--bg-glass);
+  backdrop-filter: var(--blur-medium);
+  -webkit-backdrop-filter: var(--blur-medium);
+  border: 1px solid var(--border-glass);
+  border-radius: 1rem;
+  box-shadow: 
+    0 8px 32px var(--shadow-glass),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-panel:hover {
+  backdrop-filter: var(--blur-strong);
+  -webkit-backdrop-filter: var(--blur-strong);
+  transform: translateY(-2px);
+  box-shadow: 
+    0 12px 40px var(--shadow-glass),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* Glass Card - Enhanced version */
+.glass-card {
+  background: var(--bg-card);
+  backdrop-filter: var(--blur-medium);
+  -webkit-backdrop-filter: var(--blur-medium);
+  border: 1px solid var(--border-glass);
+  border-radius: 0.75rem;
+  box-shadow: 
+    0 4px 24px var(--shadow-glass),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  backdrop-filter: var(--blur-strong);
+  -webkit-backdrop-filter: var(--blur-strong);
+  transform: translateY(-1px);
+  box-shadow: 
+    0 8px 32px var(--shadow-glass),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* Glass Button */
+.glass-button {
+  background: var(--bg-glass);
+  backdrop-filter: var(--blur-medium);
+  -webkit-backdrop-filter: var(--blur-medium);
+  border: 1px solid var(--border-glass);
+  border-radius: 0.5rem;
+  color: rgb(var(--text-primary));
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.6s;
+}
+
+.glass-button:hover {
+  backdrop-filter: var(--blur-strong);
+  -webkit-backdrop-filter: var(--blur-strong);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px var(--shadow-glass);
+}
+
+.glass-button:hover::before {
+  left: 100%;
+}
+
+.glass-button:active {
+  transform: translateY(0);
+}
+
+/* Glass Input */
+.glass-input {
+  background: var(--bg-glass);
+  backdrop-filter: var(--blur-medium);
+  -webkit-backdrop-filter: var(--blur-medium);
+  border: 1px solid var(--border-glass);
+  border-radius: 0.5rem;
+  color: rgb(var(--text-primary));
+  padding: 0.75rem 1rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-input:focus {
+  outline: none;
+  backdrop-filter: var(--blur-strong);
+  -webkit-backdrop-filter: var(--blur-strong);
+  border-color: rgb(var(--accent-gold)) / 0.5;
+  box-shadow: 0 0 0 3px rgb(var(--accent-gold)) / 0.1;
+}
+
+.glass-input::placeholder {
+  color: rgb(var(--text-secondary)) / 0.7;
+}
+
+/* ====================================================
+   🌟 ADVANCED GLASS EFFECTS
+   ==================================================== */
+
+/* Floating Glass Bubble (for apeX agent) */
+.glass-bubble {
+  background: var(--bg-glass);
+  backdrop-filter: var(--blur-strong);
+  -webkit-backdrop-filter: var(--blur-strong);
+  border: 1px solid var(--border-glass);
+  border-radius: 50%;
+  box-shadow: 
+    0 8px 32px var(--shadow-glass),
+    inset 0 2px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-bubble::before {
+  content: '';
+  position: absolute;
+  top: 10%;
+  left: 10%;
+  width: 30%;
+  height: 30%;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  filter: blur(8px);
+}
+
+.glass-bubble:hover {
+  backdrop-filter: var(--blur-ultra);
+  -webkit-backdrop-filter: var(--blur-ultra);
+  transform: scale(1.1);
+  box-shadow: 
+    0 12px 48px var(--shadow-glass),
+    inset 0 2px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* Orbital Menu Items */
+.orbital-item {
+  background: var(--bg-glass);
+  backdrop-filter: var(--blur-strong);
+  -webkit-backdrop-filter: var(--blur-strong);
+  border: 1px solid var(--border-glass);
+  border-radius: 50%;
+  box-shadow: 
+    0 4px 16px var(--shadow-glass),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: center;
+}
+
+.orbital-item:hover {
+  backdrop-filter: var(--blur-ultra);
+  -webkit-backdrop-filter: var(--blur-ultra);
+  transform: scale(1.2);
+  box-shadow: 
+    0 8px 24px var(--shadow-glass),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* ====================================================
+   🎭 ANIMATIONS & TRANSITIONS
+   ==================================================== */
+
+/* Spring Animation Classes */
+@keyframes spring-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(-20px);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.spring-in {
+  animation: spring-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes orbital-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(-180deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.orbital-appear {
+  animation: orbital-appear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Pulse effect for important elements */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 
+      0 8px 32px var(--shadow-glass),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    box-shadow: 
+      0 12px 48px rgb(var(--accent-gold)) / 0.3,
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* ====================================================
+   📱 RESPONSIVE DESIGN
+   ==================================================== */
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .glass-panel,
+  .glass-card {
+    backdrop-filter: var(--blur-subtle);
+    -webkit-backdrop-filter: var(--blur-subtle);
+  }
+  
+  .glass-bubble {
+    backdrop-filter: var(--blur-medium);
+    -webkit-backdrop-filter: var(--blur-medium);
+  }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .glass-panel,
+  .glass-card,
+  .glass-button,
+  .glass-bubble,
+  .orbital-item {
+    transition: none;
+  }
+  
+  .spring-in,
+  .orbital-appear,
+  .float,
+  .pulse-glow {
+    animation: none;
+  }
+}
+
+/* ====================================================
+   🎨 UTILITY CLASSES
+   ==================================================== */
+
+/* Background utilities */
+.bg-glass { background: var(--bg-glass); }
+.bg-glass-card { background: var(--bg-card); }
+.text-glass { color: rgb(var(--text-primary)); }
+.text-glass-secondary { color: rgb(var(--text-secondary)); }
+.border-glass { border-color: var(--border-glass); }
+
+/* Blur utilities */
+.backdrop-blur-subtle { backdrop-filter: var(--blur-subtle); -webkit-backdrop-filter: var(--blur-subtle); }
+.backdrop-blur-medium { backdrop-filter: var(--blur-medium); -webkit-backdrop-filter: var(--blur-medium); }
+.backdrop-blur-strong { backdrop-filter: var(--blur-strong); -webkit-backdrop-filter: var(--blur-strong); }
+.backdrop-blur-ultra { backdrop-filter: var(--blur-ultra); -webkit-backdrop-filter: var(--blur-ultra); }
+
+/* Additional utility classes */
+.scale-120 { transform: scale(1.2); }
+.hover\:scale-120:hover { transform: scale(1.2); }
+
+/* Scrollbar hide utility - for horizontal scroll areas */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;             /* Chrome, Safari, Opera */
+}
+
+/* Typography & Scroll Prevention */
+html {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Prevent horizontal scroll from floating elements - works on both mobile and PC */
+  overflow-x: hidden;
+}
+
+body {
+  background: rgb(var(--bg-primary));
+  color: rgb(var(--text-primary));
+  line-height: 1.5;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  /* Prevent horizontal scroll - redundant but ensures cross-browser compatibility */
+  overflow-x: hidden;
+}
+
+/* ====================================================
+   🌓 SMOOTH THEME TRANSITIONS
+   ==================================================== */
+
+/* Global transition for theme changes */
+*, *::before, *::after {
+  transition: background-color 0.3s ease,
+              border-color 0.3s ease,
+              color 0.3s ease,
+              box-shadow 0.3s ease;
+}
+
+/* Disable transitions on page load to prevent flash */
+.no-transitions * {
+  transition: none !important;
+}
+
+/* ====================================================
+   🎨 THEME-AWARE BACKGROUND GRADIENTS
+   ==================================================== */
+
+/* Light theme gradient background - warm automotive */
+.theme-gradient-bg {
+  background: linear-gradient(135deg,
+    rgb(248 250 252) 0%,           /* slate-50 */
+    rgb(239 246 255) 25%,          /* blue-50 */
+    rgb(255 247 237) 50%,          /* orange-50 */
+    rgb(240 253 244) 75%,          /* green-50 */
+    rgb(248 250 252) 100%          /* slate-50 */
+  );
+}
+
+/* Dark theme gradient background - deep automotive blue */
+.dark .theme-gradient-bg {
+  background: linear-gradient(135deg,
+    rgb(13 27 42) 0%,              /* am-dark */
+    rgb(18 32 48) 25%,             /* am-dark lighter */
+    rgb(15 30 50) 50%,             /* deep navy */
+    rgb(13 27 42) 75%,             /* am-dark */
+    rgb(9 20 32) 100%              /* am-darker */
+  );
+}
+
+/* ====================================================
+   💎 GLASS CRYSTAL - Works on BOTH Light and Dark modes
+   ==================================================== */
+
+/* Glass crystal effect - semi-transparent with blur */
+.glass-crystal {
+  background: rgba(100, 120, 180, 0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(100, 120, 180, 0.15);
+  box-shadow:
+    0 4px 16px rgba(100, 120, 180, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.glass-crystal:hover {
+  background: rgba(100, 120, 180, 0.12);
+  box-shadow:
+    0 8px 24px rgba(100, 120, 180, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* Dark mode enhancement for glass crystal */
+.dark .glass-crystal {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.dark .glass-crystal:hover {
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* Glass crystal enhanced - slightly more pronounced for content sections */
+.glass-crystal-enhanced {
+  background: rgba(100, 120, 180, 0.12);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(100, 120, 180, 0.2);
+  box-shadow:
+    0 6px 20px rgba(100, 120, 180, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.glass-crystal-enhanced:hover {
+  background: rgba(100, 120, 180, 0.16);
+  box-shadow:
+    0 10px 28px rgba(100, 120, 180, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.dark .glass-crystal-enhanced {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 6px 24px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.dark .glass-crystal-enhanced:hover {
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 10px 32px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+/* Glass crystal badge (for step numbers) */
+.glass-crystal-badge {
+  background: rgba(100, 120, 180, 0.2);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(100, 120, 180, 0.3);
+}
+
+.dark .glass-crystal-badge {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* ====================================================
+   🔮 ENHANCED GLASS EFFECTS FOR DARK MODE
+   ==================================================== */
+
+/* Dark mode specific glass enhancements */
+.dark .glass-panel {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.dark .glass-panel:hover {
+  background: rgba(15, 23, 42, 0.85);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.dark .glass-card {
+  background: rgba(26, 29, 41, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.dark .glass-card:hover {
+  background: rgba(26, 29, 41, 0.92);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.dark .glass-button {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: rgb(255 255 255);
+}
+
+.dark .glass-button:hover {
+  background: rgba(51, 65, 85, 0.9);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.dark .glass-bubble {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+/* ====================================================
+   📝 TEXT UTILITIES FOR THEME AWARENESS
+   ==================================================== */
+
+/* These classes adapt to the current theme */
+.text-adaptive {
+  color: rgb(var(--text-primary));
+}
+
+.text-adaptive-secondary {
+  color: rgb(var(--text-secondary));
+}
+
+/* Explicit light/dark text overrides */
+.dark .text-glass {
+  color: rgb(255 255 255);
+}
+
+.dark .text-glass-secondary {
+  color: rgb(148 163 184);
+}
+
+/* Light mode text (default) */
+.text-glass {
+  color: rgb(17 24 39);
+}
+
+.text-glass-secondary {
+  color: rgb(107 114 128);
+}
+
+/* ====================================================
+   🌈 HOLOGRAPHIC & SHIMMER ANIMATIONS
+   ==================================================== */
+
+@keyframes holographic {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Holographic text effect - AM brand colors */
+.text-holographic {
+  background: linear-gradient(90deg, #1B3A6B, #2B5EA7, #E8832A, #2D8F4E, #1B3A6B);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: holographic 4s ease infinite;
+}
+
+/* Holographic border effect */
+.border-holographic {
+  position: relative;
+}
+
+.border-holographic::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(90deg, #1B3A6B, #2B5EA7, #E8832A, #2D8F4E, #1B3A6B);
+  background-size: 300% 100%;
+  animation: holographic 4s ease infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* ====================================================
+   🦊 APEX AVATAR - FLOATING VIDEO PROFILE SYSTEM
+   ==================================================== */
+
+/* ApexAvatar float animation - gentle oscillation like Apple Watch */
+@keyframes apexFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* Avatar pulse glow - subtle orange pulse (AM accent) */
+@keyframes apexPulse {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(232, 131, 42, 0.15);
+  }
+  50% {
+    box-shadow: 0 8px 24px rgba(232, 131, 42, 0.3);
+  }
+}
+
+/* Avatar glow animation - ambient glow effect (AM blue) */
+@keyframes apexGlow {
+  0%, 100% {
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+  }
+  50% {
+    filter: drop-shadow(0 8px 24px rgba(27, 58, 107, 0.25));
+  }
+}
+
+/* Main float class for ApexAvatar */
+.apex-float {
+  animation: apexFloat 3s ease-in-out infinite, apexGlow 3s ease-in-out infinite;
+}
+
+/* Sticky mode float - slightly different timing */
+.apex-float-sticky {
+  animation: apexFloat 2.5s ease-in-out infinite, apexPulse 2.5s ease-in-out infinite;
+}
+
+/* ApexAvatar badge pulse animation */
+@keyframes badgePulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.badge-pulse {
+  animation: badgePulse 2s ease-in-out infinite;
+}
+
+/* Squircle shape for Apple Watch style - superellipse approximation */
+.squircle {
+  border-radius: 22%;
+  overflow: hidden;
+}
+
+/* ApexAvatar container */
+.apex-avatar-container {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.apex-avatar-container:hover {
+  transform: scale(1.05);
+}
+
+.apex-avatar-container:active {
+  transform: scale(0.98);
+}
+
+/* Dark mode enhancements for ApexAvatar */
+.dark .apex-float {
+  animation: apexFloat 3s ease-in-out infinite;
+}
+
+@keyframes apexGlowDark {
+  0%, 100% {
+    filter: drop-shadow(0 4px 12px rgba(148, 163, 184, 0.15));
+  }
+  50% {
+    filter: drop-shadow(0 8px 24px rgba(148, 163, 184, 0.3));
+  }
+}
+
+.dark .apex-float {
+  animation: apexFloat 3s ease-in-out infinite, apexGlowDark 3s ease-in-out infinite;
+}
+
+/* Reduced motion preferences for ApexAvatar */
+@media (prefers-reduced-motion: reduce) {
+  .apex-float,
+  .apex-float-sticky,
+  .badge-pulse {
+    animation: none;
+  }
+}
+
+/* ====================================================
+   🌈 HOLOGRAPHIC 3D TEXT EFFECTS - FOCUS AREAS CAROUSEL
+   ==================================================== */
+
+/* Holographic gradient shift animation */
+@keyframes holographicShift {
+  0%, 100% {
+    background-position: 0% 50%;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4)) drop-shadow(0 1px 3px rgba(0,0,0,0.3)) brightness(1.0);
+  }
+  25% {
+    background-position: 50% 25%;
+    filter: drop-shadow(0 5px 8px rgba(232,131,42,0.3)) drop-shadow(0 2px 4px rgba(0,0,0,0.3)) brightness(1.1);
+  }
+  50% {
+    background-position: 100% 50%;
+    filter: drop-shadow(0 6px 10px rgba(43,94,167,0.3)) drop-shadow(0 2px 4px rgba(0,0,0,0.3)) brightness(1.15);
+  }
+  75% {
+    background-position: 50% 75%;
+    filter: drop-shadow(0 5px 8px rgba(45,143,78,0.3)) drop-shadow(0 2px 4px rgba(0,0,0,0.3)) brightness(1.1);
+  }
+}
+
+/* Holographic 3D floating text class - AM brand gradient */
+.text-holographic-3d {
+  background: linear-gradient(135deg, #E8832A 0%, #F5A623 25%, #2B5EA7 50%, #2D8F4E 75%, #1B3A6B 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: holographicShift 4s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+
+/* Alternative: Chrome/neon glow effect */
+@keyframes neonPulse {
+  0%, 100% {
+    text-shadow:
+      0 0 5px rgba(255,255,255,0.8),
+      0 0 10px rgba(232,131,42,0.6),
+      0 0 20px rgba(27,58,107,0.5),
+      0 0 40px rgba(43,94,167,0.4);
+  }
+  50% {
+    text-shadow:
+      0 0 8px rgba(255,255,255,0.9),
+      0 0 15px rgba(45,143,78,0.7),
+      0 0 30px rgba(232,131,42,0.6),
+      0 0 60px rgba(27,58,107,0.5);
+  }
+}
+
+.text-neon-glow {
+  animation: neonPulse 3s ease-in-out infinite;
+}

@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="orangeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff9d00"/>
+      <stop offset="100%" stop-color="#e67300"/>
+    </linearGradient>
+    <linearGradient id="darkOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#cc5500"/>
+      <stop offset="100%" stop-color="#994000"/>
+    </linearGradient>
+    <linearGradient id="brownGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8b4513"/>
+      <stop offset="100%" stop-color="#5d2e0a"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Main head shape -->
+  <polygon points="16,2 24,6 28,14 28,18 24,26 16,30 8,26 4,18 4,14 8,6" fill="url(#orangeGrad)" stroke="#5d2e0a" stroke-width="0.5"/>
+  
+  <!-- Left ear -->
+  <polygon points="6,8 2,6 1,10 4,13 7,12" fill="url(#darkOrange)" stroke="#5d2e0a" stroke-width="0.3"/>
+  
+  <!-- Right ear -->
+  <polygon points="26,8 30,6 31,10 28,13 25,12" fill="url(#darkOrange)" stroke="#5d2e0a" stroke-width="0.3"/>
+  
+  <!-- Forehead -->
+  <polygon points="10,8 16,5 22,8 20,12 16,10 12,12" fill="url(#brownGrad)"/>
+  
+  <!-- Left eye area -->
+  <polygon points="9,12 13,14 11,18 7,16" fill="url(#brownGrad)"/>
+  <ellipse cx="10" cy="15" rx="2" ry="2.5" fill="#1a0d00"/>
+  
+  <!-- Right eye area -->
+  <polygon points="23,12 19,14 21,18 25,16" fill="url(#brownGrad)"/>
+  <ellipse cx="22" cy="15" rx="2" ry="2.5" fill="#1a0d00"/>
+  
+  <!-- Nose bridge -->
+  <polygon points="14,16 16,14 18,16 16,19" fill="url(#brownGrad)"/>
+  
+  <!-- Nostrils -->
+  <ellipse cx="14.5" cy="18" rx="1" ry="1.2" fill="#0d0600"/>
+  <ellipse cx="17.5" cy="18" rx="1" ry="1.2" fill="#0d0600"/>
+  
+  <!-- Mouth area -->
+  <polygon points="11,20 16,19 21,20 19,24 16,25 13,24" fill="url(#orangeGrad)"/>
+  
+  <!-- Mouth -->
+  <path d="M13,23 Q16,24.5 19,23" stroke="#5d2e0a" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  
+  <!-- Chin -->
+  <polygon points="13,25 16,28 19,25 16,27" fill="url(#brownGrad)"/>
+  
+  <!-- Face definition lines -->
+  <polyline points="10,11 16,9 22,11" stroke="#5d2e0a" stroke-width="0.5" fill="none" opacity="0.6"/>
+  <polyline points="8,15 16,13 24,15" stroke="#5d2e0a" stroke-width="0.5" fill="none" opacity="0.6"/>
+  <polyline points="11,19 16,17 21,19" stroke="#5d2e0a" stroke-width="0.5" fill="none" opacity="0.6"/>
+</svg>

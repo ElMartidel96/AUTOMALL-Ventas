@@ -1,0 +1,37 @@
+{
+  "dao": "0x3244DFBf9E5374DF2f106E89Cf7972E5D4C9ac31",
+  "metadata": {
+    "title": "Initial Token Distribution to Vault",
+    "description": "Transfer 400,000 CGC tokens (40% of supply) from DAO treasury to GovTokenVault according to established tokenomics. This is essential for the DAO to function properly and distribute rewards to contributors.",
+    "actions": [
+      {
+        "to": "0xe8AF8cF18DA5c540daffe76Ae5fEE31C80c74899",
+        "value": "0",
+        "data": "0xa9059cbb000000000000000000000000f5606020e772308cc66f2fc3d0832bf9e17e68e00000000000000000000000000000000000000000000054b40b1f852bda000000",
+        "description": "Transfer 400,000 CGC to vault"
+      }
+    ],
+    "timestamp": "2025-08-30T16:00:21.682Z",
+    "proposer": "0xc655BF2Bd9AfA997c757Bef290A9Bb6ca41c5dE6"
+  },
+  "actions": [
+    {
+      "to": "0xe8AF8cF18DA5c540daffe76Ae5fEE31C80c74899",
+      "value": 0,
+      "data": "0xa9059cbb000000000000000000000000f5606020e772308cc66f2fc3d0832bf9e17e68e00000000000000000000000000000000000000000000054b40b1f852bda000000"
+    }
+  ],
+  "calldata": "0xa9059cbb000000000000000000000000f5606020e772308cc66f2fc3d0832bf9e17e68e00000000000000000000000000000000000000000000054b40b1f852bda000000",
+  "target": "0xe8AF8cF18DA5c540daffe76Ae5fEE31C80c74899",
+  "value": 0,
+  "description": "Transfer 400,000 CGC to vault",
+  "aragon_url": "https://app.aragon.org/dao/base-mainnet/0x3244DFBf9E5374DF2f106E89Cf7972E5D4C9ac31",
+  "manual_instructions": {
+    "step1": "Go to https://app.aragon.org",
+    "step2": "Connect to DAO: 0x3244DFBf9E5374DF2f106E89Cf7972E5D4C9ac31",
+    "step3": "Create new proposal",
+    "step4": "Target: 0xe8AF8cF18DA5c540daffe76Ae5fEE31C80c74899",
+    "step5": "Calldata: 0xa9059cbb000000000000000000000000f5606020e772308cc66f2fc3d0832bf9e17e68e00000000000000000000000000000000000000000000054b40b1f852bda000000",
+    "step6": "Submit and vote"
+  }
+}

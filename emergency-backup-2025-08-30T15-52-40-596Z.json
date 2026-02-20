@@ -1,0 +1,102 @@
+{
+  "timestamp": "2025-08-30T15-52-40-596Z",
+  "deploymentData": {
+    "network": "base",
+    "chainId": 8453,
+    "deployer": "0xc655BF2Bd9AfA997c757Bef290A9Bb6ca41c5dE6",
+    "timestamp": "2025-08-30T15:13:39.249Z",
+    "config": {
+      "expectedChainId": 8453,
+      "minBalance": "0.002",
+      "aragonDAO": "0x3244DFBf9E5374DF2f106E89Cf7972E5D4C9ac31",
+      "easContract": "0x4200000000000000000000000000000000000021",
+      "schemaRegistry": "0x4200000000000000000000000000000000000020",
+      "tokenName": "CryptoGift Coin",
+      "tokenSymbol": "CGC",
+      "totalSupply": "1000000",
+      "shadowMode": true,
+      "initialDailyCap": "1000",
+      "initialWeeklyCap": "5000",
+      "initialMonthlyCap": "15000",
+      "confirmations": 5,
+      "distribution": {
+        "vault": 400000,
+        "treasury": 250000,
+        "team": 150000,
+        "ecosystem": 100000,
+        "liquidity": 50000,
+        "emergency": 50000
+      }
+    },
+    "contracts": {
+      "CGCToken": {
+        "address": "0xe8AF8cF18DA5c540daffe76Ae5fEE31C80c74899",
+        "txHash": "0x1a7a577db7ce6f82963d669b383d7d288874fe864060255580d2139de08976d8",
+        "blockNumber": 34888738,
+        "gasUsed": "1967739",
+        "constructorArgs": [
+          "0x3244DFBf9E5374DF2f106E89Cf7972E5D4C9ac31"
+        ]
+      },
+      "GovTokenVault": {
+        "address": "0xF5606020e772308cc66F2fC3D0832bf9E17E68e0",
+        "txHash": "0x05d94d183e8240326016a6218638ef68d3e82dfc69ae3a53af2d9533bb5a28cf",
+        "blockNumber": 34888743,
+        "gasUsed": "2478221",
+        "constructorArgs": [
+          "0xe8AF8cF18DA5c540daffe76Ae5fEE31C80c74899",
+          "0x3244DFBf9E5374DF2f106E89Cf7972E5D4C9ac31",
+          "0x4200000000000000000000000000000000000021",
+          "1000000000000000000000",
+          "5000000000000000000000",
+          "15000000000000000000000"
+        ]
+      },
+      "AllowedSignersCondition": {
+        "address": "0x6101CAAAD91A848d911171B82369CF90B8B00597",
+        "txHash": "0x165cfdcf2098c434da4c35d1949b3f84485a3e1b4133b2c24295bd352e1e969c",
+        "blockNumber": 34888749,
+        "gasUsed": "797166",
+        "constructorArgs": [
+          "0x3244DFBf9E5374DF2f106E89Cf7972E5D4C9ac31",
+          "0xF5606020e772308cc66F2fC3D0832bf9E17E68e0",
+          [
+            "0x3244DFBf9E5374DF2f106E89Cf7972E5D4C9ac31",
+            "0xc655BF2Bd9AfA997c757Bef290A9Bb6ca41c5dE6"
+          ]
+        ]
+      },
+      "MerklePayouts": {
+        "address": "0xC75Be1A1fCb412078102b7C286d12E8ACc75b922",
+        "txHash": "0x236e21efbf8c4dd52f6aa7662c07e6feed8271f8a19954030426601554d581c8",
+        "blockNumber": 34888755,
+        "gasUsed": "1540327",
+        "constructorArgs": [
+          "0xe8AF8cF18DA5c540daffe76Ae5fEE31C80c74899",
+          "0x3244DFBf9E5374DF2f106E89Cf7972E5D4C9ac31"
+        ]
+      }
+    },
+    "transactions": [],
+    "gasUsed": "6783453",
+    "totalCost": "0.000008181359860428"
+  },
+  "status": {
+    "contractsOk": 4,
+    "total": 4,
+    "balance": "0.004456113577558596"
+  },
+  "tokenStatus": {
+    "totalSupply": "1000000.0",
+    "ownerBalance": "0.0"
+  },
+  "vaultStatus": {
+    "cgcBalance": "0.0",
+    "ethBalance": "0.0"
+  },
+  "environment": {
+    "nodeVersion": "v20.19.3",
+    "platform": "linux",
+    "arch": "x64"
+  }
+}

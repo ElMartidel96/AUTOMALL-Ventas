@@ -1,0 +1,458 @@
+name: 🔒 Security Checks (Comprehensive)
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 0 * * 1' # Weekly on Monday at 00:00 UTC
+
+jobs:
+  # Dependency audit with detailed reporting
+  audit:
+    name: 📦 Dependency Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 📦 Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+          run_install: false
+      
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org/'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+      
+      - name: 📦 Install Dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+      
+      - name: 🔍 Run Comprehensive Audit
+        run: |
+          echo "## 📦 Dependency Security Audit Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Run audit with multiple output formats
+          set +e
+          pnpm audit --json > audit-report-detailed.json 2>/dev/null || echo '{"error":"audit_failed"}' > audit-report-detailed.json
+          pnpm audit --prod --audit-level=moderate > audit-output.txt 2>&1
+          AUDIT_EXIT_CODE=$?
+          set -e
+          
+          # Extract vulnerability counts from JSON
+          if [ -f "audit-report-detailed.json" ] && [ -s "audit-report-detailed.json" ]; then
+            CRITICAL=$(jq '.metadata.vulnerabilities.critical // 0' audit-report-detailed.json 2>/dev/null || echo "0")
+            HIGH=$(jq '.metadata.vulnerabilities.high // 0' audit-report-detailed.json 2>/dev/null || echo "0") 
+            MODERATE=$(jq '.metadata.vulnerabilities.moderate // 0' audit-report-detailed.json 2>/dev/null || echo "0")
+            LOW=$(jq '.metadata.vulnerabilities.low // 0' audit-report-detailed.json 2>/dev/null || echo "0")
+            INFO=$(jq '.metadata.vulnerabilities.info // 0' audit-report-detailed.json 2>/dev/null || echo "0")
+            TOTAL=$(jq '.metadata.vulnerabilities.total // 0' audit-report-detailed.json 2>/dev/null || echo "0")
+          else
+            CRITICAL="0"; HIGH="0"; MODERATE="0"; LOW="0"; INFO="0"; TOTAL="0"
+          fi
+          
+          echo "### 📊 Vulnerability Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Severity | Count | Status | Priority |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|---------|----------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔴 Critical | $CRITICAL | $([ $CRITICAL -eq 0 ] && echo "✅ None" || echo "🚨 Immediate Action") | P0 |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🟠 High | $HIGH | $([ $HIGH -eq 0 ] && echo "✅ None" || echo "⚠️ Action Required") | P1 |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🟡 Moderate | $MODERATE | $([ $MODERATE -eq 0 ] && echo "✅ None" || echo "📋 Plan Fix") | P2 |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔵 Low | $LOW | $([ $LOW -eq 0 ] && echo "✅ None" || echo "👀 Monitor") | P3 |" >> $GITHUB_STEP_SUMMARY
+          echo "| ℹ️ Info | $INFO | $([ $INFO -eq 0 ] && echo "✅ None" || echo "📖 Review") | P4 |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**📈 Total Vulnerabilities: $TOTAL**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ $TOTAL -eq 0 ]; then
+            echo "🎉 **EXCELLENT** - No security vulnerabilities found in dependencies!" >> $GITHUB_STEP_SUMMARY
+          elif [ $((CRITICAL + HIGH)) -eq 0 ]; then
+            echo "✅ **GOOD** - No critical or high-severity vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **ATTENTION REQUIRED** - Critical or high-severity vulnerabilities need addressing" >> $GITHUB_STEP_SUMMARY
+          fi
+        continue-on-error: true
+      
+      - name: 📋 Generate Audit Artifacts
+        if: always()
+        run: |
+          # Create comprehensive audit report
+          echo "Audit completed at: $(date -u)" > audit-summary.txt
+          echo "Total packages audited: $(pnpm list --depth=0 2>/dev/null | grep -c "^[├└]" || echo "unknown")" >> audit-summary.txt
+          
+          # Generate fix recommendations if vulnerabilities exist
+          if [ -f "audit-report-detailed.json" ] && [ -s "audit-report-detailed.json" ]; then
+            jq -r '.advisories | to_entries[] | "Package: \(.value.module_name), Severity: \(.value.severity), Recommendation: \(.value.recommendation // "Update to latest version")"' audit-report-detailed.json > fix-recommendations.txt 2>/dev/null || echo "No specific recommendations available" > fix-recommendations.txt
+          fi
+      
+      - name: 📤 Upload Audit Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-reports
+          path: |
+            audit-report-detailed.json
+            audit-output.txt
+            audit-summary.txt
+            fix-recommendations.txt
+          retention-days: 30
+
+  # SBOM generation for supply chain security
+  sbom:
+    name: 📋 Software Bill of Materials (SBOM)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 📦 Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+          run_install: false
+      
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org/'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+      
+      - name: 📦 Install Dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+      
+      - name: 🔧 Install CycloneDX CLI
+        run: npm install -g @cyclonedx/cyclonedx-npm
+      
+      - name: 📋 Generate SBOM
+        run: |
+          echo "## 📋 Software Bill of Materials (SBOM)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Generate SBOM in multiple formats
+          cyclonedx-npm --output-format json --output-file sbom.json
+          cyclonedx-npm --output-format xml --output-file sbom.xml
+          
+          # Count components
+          COMPONENT_COUNT=$(jq '.components | length' sbom.json 2>/dev/null || echo "unknown")
+          
+          echo "### 📊 SBOM Statistics" >> $GITHUB_STEP_SUMMARY
+          echo "- 📦 **Total Components:** $COMPONENT_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "- 📅 **Generated:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "- 🏷️ **Format:** CycloneDX 1.4" >> $GITHUB_STEP_SUMMARY
+          echo "- 📁 **Outputs:** sbom.json, sbom.xml" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "✅ SBOM generation completed successfully"
+      
+      - name: 📤 Upload SBOM
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-reports
+          path: |
+            sbom.json
+            sbom.xml
+          retention-days: 30
+      
+      - name: 🔍 SBOM Analysis
+        run: |
+          echo "### 📊 SBOM Component Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Analyze component types if jq is available
+          if command -v jq >/dev/null 2>&1; then
+            echo "#### Component Types:" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            jq -r '.components[] | .type' sbom.json 2>/dev/null | sort | uniq -c | sort -nr >> $GITHUB_STEP_SUMMARY || echo "Analysis not available" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🎯 **Use Case:** SBOM enables supply chain security monitoring and compliance" >> $GITHUB_STEP_SUMMARY
+
+  # Secret scanning with TruffleHog
+  secrets:
+    name: 🔐 Secret Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for comprehensive scanning
+      
+      - name: 🔍 TruffleHog Secret Scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified --json --output trufflehog-results.json
+        continue-on-error: true
+      
+      - name: 📊 Process Secret Scan Results
+        run: |
+          echo "## 🔐 Secret Scanning Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f "trufflehog-results.json" ] && [ -s "trufflehog-results.json" ]; then
+            SECRET_COUNT=$(wc -l < trufflehog-results.json 2>/dev/null || echo "0")
+            
+            if [ "$SECRET_COUNT" -eq 0 ]; then
+              echo "✅ **No verified secrets detected** - Repository appears clean" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "⚠️ **$SECRET_COUNT potential secrets detected** - Review required" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### 🚨 Action Required:" >> $GITHUB_STEP_SUMMARY
+              echo "1. Review the uploaded secret scan report" >> $GITHUB_STEP_SUMMARY
+              echo "2. Rotate any confirmed secrets immediately" >> $GITHUB_STEP_SUMMARY
+              echo "3. Update .gitignore to prevent future exposure" >> $GITHUB_STEP_SUMMARY
+              echo "4. Consider using secret management tools" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "ℹ️ **Secret scan completed** - No results file generated (likely no secrets found)" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔍 **Scope:** Full repository history scanned for verified secrets" >> $GITHUB_STEP_SUMMARY
+        continue-on-error: true
+      
+      - name: 📤 Upload Secret Scan Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: secret-scan-results
+          path: |
+            trufflehog-results.json
+          retention-days: 7 # Shorter retention for sensitive security data
+
+  # Static Application Security Testing (SAST)
+  sast:
+    name: 🎯 Static Application Security Testing
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 🎯 Semgrep SAST Scan
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/owasp-top-ten
+            p/typescript
+            p/react
+            p/nextjs
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+        continue-on-error: true
+      
+      - name: 📊 Generate SAST Summary
+        run: |
+          echo "## 🎯 SAST Analysis Completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔍 Rulesets Applied:" >> $GITHUB_STEP_SUMMARY
+          echo "- 🛡️ Security Audit Rules" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔟 OWASP Top 10" >> $GITHUB_STEP_SUMMARY
+          echo "- 📘 TypeScript Security Patterns" >> $GITHUB_STEP_SUMMARY
+          echo "- ⚛️ React Security Best Practices" >> $GITHUB_STEP_SUMMARY
+          echo "- 🚀 Next.js Security Guidelines" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Analysis:** Static security analysis completed - check Semgrep dashboard for detailed results" >> $GITHUB_STEP_SUMMARY
+
+  # License compliance checking
+  license:
+    name: 📜 License Compliance Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 📦 Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+          run_install: false
+      
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org/'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+      
+      - name: 📦 Install Dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+      
+      - name: 🔧 Install License Checker
+        run: npm install -g license-checker
+      
+      - name: 📜 Check Licenses
+        run: |
+          echo "## 📜 License Compliance Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Generate comprehensive license report
+          license-checker --production --json > licenses-detailed.json
+          license-checker --production --summary --excludePrivatePackages > licenses-summary.txt
+          
+          # Count licenses
+          TOTAL_PACKAGES=$(jq 'keys | length' licenses-detailed.json 2>/dev/null || echo "unknown")
+          
+          echo "### 📊 License Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- 📦 **Total Packages:** $TOTAL_PACKAGES" >> $GITHUB_STEP_SUMMARY
+          echo "- 📅 **Scan Date:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check for problematic licenses
+          PROBLEMATIC_LICENSES=""
+          if grep -iE "(GPL|AGPL|LGPL|SSPL|WTFPL)" licenses-summary.txt >/dev/null 2>&1; then
+            PROBLEMATIC_LICENSES=$(grep -iE "(GPL|AGPL|LGPL|SSPL|WTFPL)" licenses-summary.txt || echo "")
+          fi
+          
+          if [ -n "$PROBLEMATIC_LICENSES" ]; then
+            echo "⚠️ **Potential License Issues Detected**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🚨 Copyleft/Restrictive Licenses Found:" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "$PROBLEMATIC_LICENSES" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**⚖️ Action Required:** Review these licenses for compatibility with your project" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ **License Compliance: GOOD** - No problematic licenses detected" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📋 **Note:** Full license details are available in the uploaded artifacts" >> $GITHUB_STEP_SUMMARY
+      
+      - name: 📤 Upload License Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-reports
+          path: |
+            licenses-detailed.json
+            licenses-summary.txt
+          retention-days: 30
+
+  # CodeQL Analysis for deeper security insights
+  codeql:
+    name: 🧬 CodeQL Security Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 🧬 Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: 'javascript-typescript'
+          queries: 'security-extended,security-and-quality'
+          config-file: .github/codeql/codeql-config.yml
+      
+      - name: 🏗️ Autobuild
+        uses: github/codeql-action/autobuild@v2
+      
+      - name: 🔍 Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:javascript-typescript"
+      
+      - name: 📊 CodeQL Summary
+        run: |
+          echo "## 🧬 CodeQL Analysis Completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔍 Analysis Scope:" >> $GITHUB_STEP_SUMMARY
+          echo "- 💻 **Languages:** JavaScript, TypeScript" >> $GITHUB_STEP_SUMMARY
+          echo "- 🎯 **Query Suite:** Security Extended + Quality" >> $GITHUB_STEP_SUMMARY
+          echo "- 📊 **Results:** Available in Security tab" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Deep static analysis completed** - Check Security tab for detailed findings" >> $GITHUB_STEP_SUMMARY
+
+  # Final security summary
+  security-summary:
+    name: 📊 Security Analysis Summary
+    runs-on: ubuntu-latest
+    needs: [audit, sbom, secrets, sast, license, codeql]
+    if: always()
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 📊 Generate Comprehensive Security Summary
+        run: |
+          echo "## 🛡️ Comprehensive Security Analysis Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ✅ Security Checks Completed:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check job results and generate summary
+          echo "| Security Check | Status | Description |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------------|--------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 📦 Dependency Audit | ${{ needs.audit.result == 'success' && '✅ Completed' || '⚠️ Check Required' }} | Vulnerability scanning of dependencies |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📋 SBOM Generation | ${{ needs.sbom.result == 'success' && '✅ Completed' || '⚠️ Check Required' }} | Software Bill of Materials created |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔐 Secret Scanning | ${{ needs.secrets.result == 'success' && '✅ Completed' || '⚠️ Check Required' }} | Repository scanned for exposed secrets |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🎯 SAST Analysis | ${{ needs.sast.result == 'success' && '✅ Completed' || '⚠️ Check Required' }} | Static application security testing |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📜 License Check | ${{ needs.license.result == 'success' && '✅ Completed' || '⚠️ Check Required' }} | License compliance verification |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🧬 CodeQL Analysis | ${{ needs.codeql.result == 'success' && '✅ Completed' || '⚠️ Check Required' }} | Deep semantic code analysis |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Generate overall security score
+          PASSED_CHECKS=0
+          [ "${{ needs.audit.result }}" == "success" ] && PASSED_CHECKS=$((PASSED_CHECKS + 1))
+          [ "${{ needs.sbom.result }}" == "success" ] && PASSED_CHECKS=$((PASSED_CHECKS + 1))
+          [ "${{ needs.secrets.result }}" == "success" ] && PASSED_CHECKS=$((PASSED_CHECKS + 1))
+          [ "${{ needs.sast.result }}" == "success" ] && PASSED_CHECKS=$((PASSED_CHECKS + 1))
+          [ "${{ needs.license.result }}" == "success" ] && PASSED_CHECKS=$((PASSED_CHECKS + 1))
+          [ "${{ needs.codeql.result }}" == "success" ] && PASSED_CHECKS=$((PASSED_CHECKS + 1))
+          
+          TOTAL_CHECKS=6
+          SECURITY_SCORE=$(( (PASSED_CHECKS * 100) / TOTAL_CHECKS ))
+          
+          echo "### 🏆 Overall Security Score: **${SECURITY_SCORE}%** ($PASSED_CHECKS/$TOTAL_CHECKS checks passed)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ $SECURITY_SCORE -eq 100 ]; then
+            echo "🎉 **EXCELLENT SECURITY POSTURE** - All security checks passed!" >> $GITHUB_STEP_SUMMARY
+          elif [ $SECURITY_SCORE -ge 80 ]; then
+            echo "✅ **GOOD SECURITY POSTURE** - Most checks passed, review any warnings" >> $GITHUB_STEP_SUMMARY
+          elif [ $SECURITY_SCORE -ge 60 ]; then
+            echo "⚠️ **MODERATE SECURITY POSTURE** - Several areas need attention" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "🚨 **SECURITY ATTENTION REQUIRED** - Multiple critical issues need addressing" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Next Steps:" >> $GITHUB_STEP_SUMMARY
+          echo "1. 🔍 Review all uploaded security artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "2. 🔧 Address any high-priority security findings" >> $GITHUB_STEP_SUMMARY
+          echo "3. 📊 Monitor the Security tab for ongoing insights" >> $GITHUB_STEP_SUMMARY
+          echo "4. 🔄 Regular security reviews (weekly scheduled)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📅 **Next Scheduled Scan:** Every Monday at 00:00 UTC" >> $GITHUB_STEP_SUMMARY

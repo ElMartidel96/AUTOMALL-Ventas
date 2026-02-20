@@ -1,0 +1,55 @@
+{
+  "name": "cg-dao-ops-agent",
+  "version": "1.0.0",
+  "description": "CryptoGift DAO Operations Agent - Local AI assistant with filesystem access",
+  "type": "module",
+  "main": "src/agent.mjs",
+  "scripts": {
+    "start": "node src/agent.mjs",
+    "dev": "node --watch src/agent.mjs",
+    "test": "node src/test-agent.mjs",
+    "setup": "node scripts/setup.mjs",
+    "monitor": "node src/monitor.mjs",
+    "proposal": "node src/proposal-assistant.mjs",
+    "chat": "node src/chat-interface.mjs",
+    "service:install": "node scripts/install-service.mjs",
+    "service:start": "node scripts/start-service.mjs",
+    "service:stop": "node scripts/stop-service.mjs",
+    "service:logs": "node scripts/view-logs.mjs"
+  },
+  "keywords": [
+    "dao",
+    "openai",
+    "agents",
+    "mcp",
+    "cryptogift",
+    "blockchain",
+    "base"
+  ],
+  "author": "CryptoGift DAO Team",
+  "license": "SEE LICENSE IN ../LICENSE",
+  "dependencies": {
+    "@modelcontextprotocol/server-filesystem": "^1.0.0",
+    "openai": "^4.77.0",
+    "dotenv": "^16.4.5",
+    "chalk": "^5.3.0",
+    "ora": "^8.0.1",
+    "inquirer": "^10.1.8",
+    "ethers": "^6.13.2",
+    "winston": "^3.14.2",
+    "node-cron": "^3.0.3",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.5",
+    "tsx": "^4.19.0",
+    "vitest": "^2.0.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CryptoGift-Wallets-DAO/cg-dao-agent.git"
+  }
+}

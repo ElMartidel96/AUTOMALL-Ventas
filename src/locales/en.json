@@ -1,0 +1,2329 @@
+{
+  "video": {
+    "fullscreenHint": "Best experience",
+    "rotateHint": "Enable fullscreen and rotate your phone to enjoy the video better",
+    "rotateHintShort": "Rotate your device for better experience",
+    "expandHint": "Double-click for fullscreen",
+    "expandHintShort": "Double-click to expand the video",
+    "tapToPlay": "Tap to play",
+    "salesMasterclass": {
+      "discoverPill": "Discover CryptoGift",
+      "theGift": {
+        "title": "The Gift",
+        "description": "The first step towards real trust.\n\nHow many times did you want to share the future of Web3 with someone you love?"
+      },
+      "theSolution": {
+        "title": "The Solution",
+        "description": "The technology behind the magic.\n\n5 verified contracts. 717+ on-chain transactions. 85.7% claim rate."
+      },
+      "theOpportunity": {
+        "title": "The Opportunity",
+        "description": "Your invitation to the future.\n\nWe are early. The infrastructure is ready. The community is forming."
+      }
+    }
+  },
+  "landing": {
+    "hero": {
+      "badge": "AI-Powered Car Sales Platform",
+      "titleLine1": "Your Car Business,",
+      "titleLine2": "Powered by AI",
+      "subtitle": "The all-in-one platform for independent car sellers. Get your own professional website, AI sales assistant, CRM, and multi-channel communication — all under your brand.",
+      "ctaPrimary": "Get Started Free",
+      "ctaSecondary": "Learn More",
+      "trust1": "Enterprise Security",
+      "trust2": "Houston, TX",
+      "trust3": "AI-Powered"
+    },
+    "stats": {
+      "sellers": "Active Sellers",
+      "listings": "Cars Listed",
+      "clients": "Connected Clients",
+      "satisfaction": "Satisfaction Rate"
+    },
+    "problem": {
+      "title": "Selling Cars Shouldn't Be This Hard",
+      "problemTitle": "The Challenge",
+      "problem1": "Managing leads across WhatsApp, calls, and emails manually wastes hours daily",
+      "problem2": "No professional online presence — clients can't find you or trust you easily",
+      "problem3": "Repetitive tasks (follow-ups, appointments, reminders) drain your selling time",
+      "problem4": "No data insights — you're flying blind without knowing what works",
+      "solutionTitle": "The Autos MALL Solution",
+      "solution1": "AI assistant handles initial client conversations 24/7 in your style",
+      "solution2": "Your own professional website at yourname.autosmall.com",
+      "solution3": "Automated CRM tracks every lead from first contact to closed sale",
+      "solution4": "Real-time analytics show your best channels, hottest leads, and conversion rates"
+    },
+    "howItWorks": {
+      "title": "Start Selling Smarter in 3 Steps",
+      "subtitle": "From signup to your first AI-assisted sale. Simple and fast.",
+      "step1Title": "Create Your Profile",
+      "step1Desc": "Sign up, add your info and inventory. Your professional page goes live instantly at yourname.autosmall.com",
+      "step2Title": "Upload Your Inventory",
+      "step2Desc": "Add your vehicles with photos, specs, and pricing. Our AI optimizes your listings for maximum visibility.",
+      "step3Title": "Let AI Work For You",
+      "step3Desc": "Your AI assistant handles client inquiries, schedules appointments, and qualifies leads while you focus on closing deals."
+    },
+    "features": {
+      "title": "Everything You Need to Sell More",
+      "subtitle": "Professional tools designed specifically for independent car sellers.",
+      "f1Title": "AI Sales Agent",
+      "f1Desc": "Your 24/7 virtual assistant that chats with clients, answers questions, and qualifies leads in your voice and style.",
+      "f2Title": "Multi-Channel CRM",
+      "f2Desc": "Manage WhatsApp, calls, emails, and social media conversations from one unified inbox.",
+      "f3Title": "Professional Website",
+      "f3Desc": "Your own branded page at yourname.autosmall.com with your inventory, contact info, and client reviews.",
+      "f4Title": "Smart Analytics",
+      "f4Desc": "Real-time dashboards showing lead sources, conversion rates, response times, and revenue tracking.",
+      "f5Title": "Referral Network",
+      "f5Desc": "Grow your network by referring other sellers. Earn commissions on every sale in your network.",
+      "f6Title": "Enterprise Security",
+      "f6Desc": "Bank-grade encryption, secure data handling, and GDPR compliance to protect you and your clients."
+    },
+    "brands": {
+      "title": "All Major Brands",
+      "subtitle": "Sell any make and model with our universal inventory system"
+    },
+    "cta": {
+      "title": "Ready to Transform Your Car Business?",
+      "subtitle": "Join hundreds of sellers who are already using AI to sell more cars, faster.",
+      "button": "Start Free Today",
+      "socialProof": "Loved by 150+ sellers in Houston"
+    }
+  },
+  "invite": {
+    "loading": "Loading your invitation...",
+    "alreadyClaimed": {
+      "title": "You Already Claimed This Invitation",
+      "desc": "You are already part of CryptoGift DAO through this permanent link.",
+      "shareTip": "This is a permanent link - You can share it with others!",
+      "goToDashboard": "Go to Dashboard"
+    },
+    "maxReached": {
+      "title": "Limit Reached",
+      "desc": "This link has reached its maximum limit of {max} claims.",
+      "goHome": "Go to Home"
+    },
+    "invalid": {
+      "title": "Invalid Invitation",
+      "desc": "This invitation link is not valid or has been disabled.",
+      "goHome": "Go to Home"
+    },
+    "permanent": {
+      "title": "Permanent Invitation",
+      "badge": "Unlimited"
+    },
+    "special": {
+      "title": "Special Invitation",
+      "badge": "Special"
+    }
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "tasks": "Tasks",
+    "tasksRewards": "Tasks & Activities",
+    "proposals": "Proposals",
+    "referrals": "Referrals",
+    "referralsNetwork": "Referral Network",
+    "apex": "AI Assistant",
+    "apexAssistant": "AI Sales Agent",
+    "funding": "Resources",
+    "aboutUs": "About",
+    "admin": "Admin",
+    "settings": "Settings",
+    "inventory": "Inventory",
+    "clients": "Clients",
+    "reports": "Reports"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "back": "Back",
+    "continue": "Continue",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "wallet": "Wallet",
+    "copyAddress": "Copy Address",
+    "copied": "Copied!",
+    "viewOnExplorer": "View on Explorer",
+    "balance": "Balance",
+    "refresh": "Refresh",
+    "details": "Details",
+    "days": "days",
+    "hours": "hours",
+    "cgc": "CGC",
+    "usd": "USD",
+    "level": "Level",
+    "rank": "Rank",
+    "pleaseConnectWallet": "Please connect your wallet",
+    "transactionCancelled": "Transaction was cancelled by user.",
+    "insufficientFunds": "Insufficient funds for gas fees.",
+    "pleaseRetry": "Please try again."
+  },
+  "wallet": {
+    "connect": "Connect Wallet",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "cgcBalance": "CGC Balance",
+    "network": "Network",
+    "base": "Base",
+    "unsupportedNetwork": "Unsupported Network",
+    "profile": "Profile"
+  },
+  "dashboard": {
+    "title": "Seller Dashboard",
+    "subtitle": "Your business at a glance",
+    "welcome": "Welcome to your Dashboard",
+    "welcomeSubtitle": "Manage your inventory, clients, and sales from one place.",
+    "addVehicle": "Add Vehicle",
+    "connectPrompt": "Sign in to access your dashboard",
+    "connectDescription": "Sign in with your account to manage your inventory, track clients, and view your sales analytics.",
+    "stats": {
+      "activeListings": "Active Listings",
+      "totalClients": "Total Clients",
+      "monthlyViews": "Monthly Views",
+      "salesThisMonth": "Sales This Month",
+      "totalSupply": "Total Supply",
+      "circulatingSupply": "Circulating Supply",
+      "treasuryBalance": "Treasury Balance",
+      "escrowBalance": "Escrow Balance",
+      "holders": "Holders",
+      "proposals": "Active Proposals",
+      "tasksCompleted": "Tasks Completed",
+      "milestonesReleased": "Milestones Released"
+    },
+    "yourStats": {
+      "title": "Your Stats",
+      "balance": "Your Balance",
+      "earnings": "Your Earnings"
+    },
+    "system": {
+      "title": "System Status",
+      "active": "System Active",
+      "inactive": "Inactive",
+      "beta": "Beta Mode",
+      "syncing": "Metrics syncing",
+      "operational": "Operational",
+      "limits": "Limits",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "usage": "Usage"
+    },
+    "panels": {
+      "inventory": {
+        "title": "My Inventory",
+        "subtitle": "Vehicles currently listed",
+        "action": "View All",
+        "empty": "No vehicles listed yet. Add your first vehicle to get started."
+      },
+      "clients": {
+        "title": "My Clients",
+        "subtitle": "Recent client interactions",
+        "action": "View All",
+        "empty": "No clients yet. Share your seller page to start connecting with buyers."
+      },
+      "activity": {
+        "title": "Recent Activity",
+        "subtitle": "Latest events and notifications",
+        "empty": "No recent activity. Your leads and interactions will appear here."
+      },
+      "referrals": {
+        "title": "My Referral Network",
+        "subtitle": "Grow your network, earn commissions",
+        "action": "View Network",
+        "empty": "Start referring other sellers to earn commissions on their sales."
+      },
+      "governance": {
+        "title": "My Governance",
+        "description": "Your voting power and DAO participation",
+        "yourGovernanceStatus": "Your governance status",
+        "connectToView": "Connect your wallet to view governance status",
+        "votingPower": "Voting Power",
+        "yourVotingPower": "Your Voting Power",
+        "tokenBalance": "Token Balance",
+        "delegation": "Delegation",
+        "delegatedTo": "Delegated To",
+        "delegated": "Delegated",
+        "self": "Yourself",
+        "selfDelegated": "Self-delegated",
+        "noDelegate": "Not Delegated",
+        "proposerStatus": "Proposer Status",
+        "proposerEligible": "Proposer Eligible",
+        "canPropose": "Can Propose",
+        "cannotPropose": "Cannot Propose",
+        "progressToProposer": "Progress to Proposer",
+        "proposerThreshold": "1,000 CGC to create proposals",
+        "needMoreVotingPower": "Need {amount} more CGC to create proposals",
+        "viewProposals": "View Active Proposals",
+        "goToProposals": "Go to Proposals",
+        "delegateVoting": "Delegate Voting",
+        "createProposal": "Create Proposal",
+        "openAragonDAO": "Open Aragon DAO",
+        "voterNote": "Your CGC balance determines your voting power in the DAO."
+      },
+      "wallet": {
+        "title": "My Wallet",
+        "description": "Your wallet and token information",
+        "yourWallet": "Your wallet details",
+        "totalEarnings": "Total Earnings",
+        "addToWallet": "Add CGC to Wallet",
+        "viewOnBasescan": "View on BaseScan",
+        "swapOnAerodrome": "Swap on Aerodrome",
+        "holderBenefits": "Holder Benefits Active",
+        "holderBenefitsDescription": "As a CGC holder, you have access to governance features, task system, and can earn additional rewards."
+      },
+      "tasks": {
+        "title": "My Tasks",
+        "description": "Your task overview and progress",
+        "yourTaskOverview": "Your task overview",
+        "connectToView": "Connect your wallet to view your tasks",
+        "available": "Available",
+        "active": "In Progress",
+        "submitted": "Submitted",
+        "completed": "Completed",
+        "readyToClaim": "Ready to claim",
+        "inProgress": "In progress",
+        "awaitingReview": "Awaiting review",
+        "rewardsEarned": "Rewards earned",
+        "browseTasks": "Browse Available Tasks",
+        "viewActiveTasks": "View My Active Tasks",
+        "viewHistory": "View Task History",
+        "viewAll": "View All",
+        "new": "new",
+        "achievementUnlocked": "Achievement Unlocked!",
+        "completedMilestone": "You've completed {count} tasks!",
+        "proposerBenefit": "As a proposer, you can suggest new tasks for the DAO."
+      },
+      "admin": {
+        "title": "Admin Dashboard",
+        "adminControls": "DAO administration controls",
+        "restricted": "Restricted Access",
+        "accessDenied": "Admin access is restricted to Gnosis Safe signers.",
+        "gnosisSafeRequired": "You must be a signer on the Owner or Guardian Safe.",
+        "systemStatus": "System Status",
+        "active": "All Systems Active",
+        "syncing": "Syncing...",
+        "dailyUsage": "Daily Usage",
+        "monthlyUsage": "Monthly Usage",
+        "pendingValidations": "Pending",
+        "treasury": "Treasury",
+        "escrow": "Escrow",
+        "validateTasks": "Validate Pending Tasks",
+        "ownerSafe": "Owner Safe",
+        "guardianSafe": "Guardian Safe",
+        "aragonDao": "Aragon DAO Governance",
+        "viewOnBasescan": "View on BaseScan",
+        "superAdminControls": "Super Admin Controls",
+        "manageTreasury": "Manage Treasury",
+        "systemSettings": "System Settings",
+        "adminNote": "All admin actions are logged on-chain. Use multisig for sensitive operations."
+      },
+      "tokenManagement": {
+        "title": "Token Management",
+        "description": "Manage your CGC tokens and rewards",
+        "accessTitle": "Token Management Access",
+        "accessDescription": "Advanced token management features require CGC token holdings. Connect your wallet and hold at least 0.01 CGC to access token releases, history, and vesting schedules.",
+        "requestRelease": "Request Token Release",
+        "releasing": "Releasing...",
+        "releaseHistory": "Release History",
+        "vestingSchedule": "Vesting Schedule"
+      },
+      "quests": {
+        "title": "Quest Platform",
+        "description": "Complete quests and earn rewards",
+        "activeQuests": "Active Quests",
+        "leaderboard": "Leaderboard",
+        "syncZealy": "Sync Zealy"
+      },
+      "administration": {
+        "title": "Administration",
+        "description": "Advanced system administration",
+        "accessTitle": "Administration Access",
+        "accessDescription": "Advanced administration features are restricted to significant CGC token holders. You need at least 1.0 CGC tokens to access multisig management and contract administration.",
+        "safeMultisig": "Safe Multisig",
+        "contractAdmin": "Contract Admin",
+        "systemStatus": "System Status"
+      }
+    },
+    "team": {
+      "title": "The Team",
+      "description": "Lean, founder-led team combining product, Web3 development and growth.",
+      "viewFullTeam": "View Full Team",
+      "founder": {
+        "name": "Rafael Gonzalez",
+        "role": "Founder & Engineering Lead",
+        "bio": "Web3 developer, built CryptoGift end-to-end on Base"
+      },
+      "community": {
+        "name": "Roberto Legrá",
+        "role": "Head of Community & Growth",
+        "bio": "6 years community strategy, crypto community builder"
+      },
+      "business": {
+        "name": "Leodanni Avila",
+        "role": "Business Development & Operations",
+        "bio": "5+ years in Web3, sales and digital marketing"
+      },
+      "contact": "Official Contact"
+    }
+  },
+  "tasks": {
+    "title": "Tasks & Rewards",
+    "subtitle": "Complete tasks, earn CGC tokens, and climb the leaderboard",
+    "available": "Available Tasks",
+    "days": "days",
+    "domains": {
+      "all": "All",
+      "development": "Development",
+      "documentation": "Documentation",
+      "design": "Design",
+      "community": "Community",
+      "governance": "Governance",
+      "operations": "Operations"
+    },
+    "types": {
+      "feature": "New Feature",
+      "bugfix": "Bug Fix",
+      "refactor": "Refactor",
+      "research": "Research",
+      "design": "Design",
+      "content": "Content",
+      "review": "Review",
+      "setup": "Setup",
+      "migration": "Migration",
+      "integration": "Integration"
+    },
+    "filters": {
+      "allDomains": "All Domains",
+      "allCategories": "All Categories",
+      "allTypes": "All Types",
+      "sortByReward": "Highest Reward",
+      "sortByComplexity": "Complexity",
+      "sortByDate": "Newest First"
+    },
+    "featured": {
+      "title": "Featured & Urgent",
+      "tasks": "tasks"
+    },
+    "badges": {
+      "featured": "Featured",
+      "urgent": "Urgent",
+      "epic": "Epic",
+      "new": "New"
+    },
+    "claimed": "Claimed Tasks",
+    "completed": "Completed Tasks",
+    "claim": "Claim Task",
+    "submit": "Submit Evidence",
+    "reward": "Reward",
+    "complexity": "Complexity",
+    "deadline": "Deadline",
+    "timeRemaining": "Time Remaining",
+    "assignee": "Assignee",
+    "duration": "Duration",
+    "progress": "Progress",
+    "status": {
+      "available": "Available",
+      "claimed": "Claimed",
+      "inProgress": "In Progress",
+      "submitted": "Submitted",
+      "validated": "Validated",
+      "completed": "Completed",
+      "expired": "Expired"
+    },
+    "tabs": {
+      "available": "Available",
+      "inProgress": "In Progress",
+      "history": "History",
+      "leaderboard": "Leaderboard",
+      "propose": "Propose"
+    },
+    "history": {
+      "title": "Completed Tasks History",
+      "description": "All completed tasks with contributors and rewards",
+      "totalCompleted": "Total Completed",
+      "totalCGC": "CGC Distributed",
+      "contributors": "Contributors",
+      "allTasks": "All Tasks",
+      "myTasks": "My Tasks",
+      "columns": {
+        "task": "Task",
+        "contributor": "Contributor",
+        "reward": "Reward",
+        "completed": "Completed",
+        "evidence": "Evidence"
+      },
+      "validated": "Validated",
+      "evidence": "Evidence",
+      "noHistory": "No completed tasks yet",
+      "noHistoryHint": "Complete your first task to appear here",
+      "retry": "Retry",
+      "showing": "Showing {shown} of {total} tasks"
+    },
+    "stats": {
+      "availableTasks": "Available Tasks",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "totalRewards": "Total Rewards",
+      "contributors": "Contributors"
+    },
+    "card": {
+      "level": "Level",
+      "noDescription": "No description available",
+      "claimedBy": "Claimed by:",
+      "workingOn": "Working on:",
+      "expiredOpenToAll": "Expired - Open to all",
+      "timeRemaining": "Time remaining:",
+      "evidenceSubmitted": "Evidence Submitted",
+      "viewEvidence": "View Evidence",
+      "claiming": "Claiming...",
+      "claimTask": "Claim Task",
+      "submitEvidence": "Submit Evidence",
+      "pendingValidation": "Pending Validation",
+      "completedBadge": "Completed"
+    },
+    "list": {
+      "searchPlaceholder": "Search tasks...",
+      "allComplexities": "All Complexities",
+      "allPlatforms": "All Platforms",
+      "github": "GitHub",
+      "discord": "Discord",
+      "manual": "Manual",
+      "custom": "Custom",
+      "sortBy": "Sort by",
+      "highestReward": "Highest Reward",
+      "lowestComplexity": "Lowest Complexity",
+      "shortestTime": "Shortest Time",
+      "noTasksFound": "No tasks found matching your filters",
+      "taskNotFound": "Task not found",
+      "failedToClaim": "Failed to claim task. Please try again."
+    },
+    "inProgressTab": {
+      "yourTasks": "Your Tasks",
+      "otherTasks": "Other Tasks In Progress",
+      "assignedTo": "Assigned to:",
+      "noTasksInProgress": "No tasks currently in progress"
+    },
+    "evidence": {
+      "dialogTitle": "Submit Task Evidence",
+      "dialogDescription": "Provide evidence that you've completed this task",
+      "urlLabel": "Evidence URL",
+      "urlPlaceholder": "https://github.com/user/repo/pull/123",
+      "urlHelp": "Link to your completed work (GitHub PR, demo URL, etc.)",
+      "additionalUrlLabel": "Additional URL",
+      "additionalUrlPlaceholder": "https://demo.example.com",
+      "additionalUrlHelp": "Optional: Demo link, documentation, or additional evidence",
+      "submitting": "Submitting evidence...",
+      "failedToSubmit": "Failed to submit evidence. Please try again."
+    },
+    "claimModal": {
+      "title": "Claim Task Confirmation",
+      "description": "Review the task details carefully before claiming. You'll have exclusive access for a limited time.",
+      "complexityLabel": "Complexity",
+      "descriptionLabel": "Description",
+      "rewardLabel": "Reward",
+      "estimatedLabel": "Estimated",
+      "claimTimeLabel": "Claim Time",
+      "requiredSkills": "Required Skills",
+      "tags": "Tags",
+      "importantNotice": "Important Notice",
+      "exclusiveAccessNotice": "You'll have {time} of exclusive access to work on this task",
+      "afterTimeoutNotice": "After the timeout, the task becomes available to everyone (including you)",
+      "canStillCompleteNotice": "You can still complete it after expiration, but others can compete",
+      "submitBeforeOthersNotice": "Submit your evidence before others to claim the reward",
+      "cancel": "Cancel",
+      "claiming": "Claiming...",
+      "claimTask": "Claim Task"
+    },
+    "detailsModal": {
+      "subtitle": "Level {level} Challenge • Task ID: {taskId}...",
+      "overview": "Overview",
+      "reward": "Reward",
+      "timeline": "Timeline",
+      "daysEstimated": "days estimated",
+      "difficulty": "Difficulty",
+      "priorityLabel": "Priority",
+      "priority": {
+        "critical": "🔴 Critical",
+        "high": "🟠 High",
+        "medium": "🔵 Medium",
+        "low": "🟢 Low",
+        "normal": "⚪ Normal"
+      },
+      "platform": "Platform",
+      "description": "Description",
+      "noDescriptionProvided": "No detailed description provided yet.",
+      "technicalRequirements": "Technical Requirements",
+      "requiredSkills": "Required Skills:",
+      "tags": "Tags:",
+      "successCriteria": {
+        "title": "Success Criteria",
+        "item1": "Implement working solution according to requirements",
+        "item2": "Provide clear evidence of completion (screenshots, URLs, videos)",
+        "item3": "Follow project coding standards and best practices",
+        "item4": "Pass admin validation review"
+      },
+      "completionProcess": {
+        "title": "Completion Process",
+        "step1": {
+          "title": "Claim Task",
+          "desc": "Reserves the task exclusively for you"
+        },
+        "step2": {
+          "title": "Develop Solution",
+          "desc": "Work on your implementation"
+        },
+        "step3": {
+          "title": "Submit Evidence",
+          "desc": "Upload proof of completion"
+        },
+        "step4": {
+          "title": "Admin Review",
+          "desc": "Wait for validation"
+        },
+        "step5": {
+          "title": "Get Paid",
+          "desc": "Automatic CGC payment to your wallet"
+        }
+      },
+      "claiming": "Claiming...",
+      "claimThisTask": "Claim This Task",
+      "copyTaskId": "Copy Task ID",
+      "askQuestions": "Ask Questions"
+    },
+    "proposal": {
+      "guidelinesTitle": "Task Proposal Guidelines",
+      "guideline1": "Be specific about deliverables and success criteria",
+      "guideline2": "Estimate complexity on a scale of 1-10",
+      "guideline3": "Provide realistic time estimates",
+      "guideline4": "Include technical requirements if applicable",
+      "taskTitle": "Task Title",
+      "titlePlaceholder": "e.g., Implement dark mode for dashboard",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Describe the task in detail, including requirements, deliverables, and acceptance criteria...",
+      "estimatedComplexity": "Estimated Complexity",
+      "selectComplexity": "Select complexity level",
+      "complexity": {
+        "level1": "Level 1 - Very Easy",
+        "level2": "Level 2 - Easy",
+        "level3": "Level 3 - Simple",
+        "level4": "Level 4 - Moderate",
+        "level5": "Level 5 - Medium",
+        "level6": "Level 6 - Challenging",
+        "level7": "Level 7 - Hard",
+        "level8": "Level 8 - Very Hard",
+        "level9": "Level 9 - Expert",
+        "level10": "Level 10 - Master"
+      },
+      "estimatedDays": "Estimated Days",
+      "daysPlaceholder": "e.g., 7",
+      "estimatedReward": "Estimated reward: {reward} CGC",
+      "platformOrigin": "Platform Origin",
+      "selectPlatform": "Where is this proposed from?",
+      "platform": {
+        "manual": "Manual Entry",
+        "discord": "Discord",
+        "github": "GitHub Issue",
+        "custom": "Custom Platform"
+      },
+      "clearForm": "Clear Form",
+      "submitting": "Submitting...",
+      "submitProposal": "Submit Proposal",
+      "pleaseCompleteFields": "Please fill in all required fields",
+      "failedToSubmit": "Failed to submit proposal",
+      "failedToSubmitRetry": "Failed to submit proposal. Please try again."
+    },
+    "inProgress": {
+      "yourTasks": "Your Tasks",
+      "otherTasksInProgress": "Other Tasks In Progress",
+      "assignedTo": "Assigned to:",
+      "noTasksInProgress": "No tasks currently in progress",
+      "failedToSubmit": "Failed to submit evidence. Please try again.",
+      "submitEvidence": {
+        "title": "Submit Task Evidence",
+        "description": "Provide evidence that you've completed this task",
+        "evidenceUrlLabel": "Evidence URL",
+        "evidenceUrlHint": "Link to your completed work (GitHub PR, demo URL, etc.)",
+        "additionalUrlLabel": "Additional URL",
+        "additionalUrlHint": "Optional: Demo link, documentation, or additional evidence",
+        "submitting": "Submitting evidence...",
+        "submit": "Submit Evidence"
+      }
+    },
+    "page": {
+      "rankLabel": "Rank",
+      "availableTasksTitle": "Available Tasks",
+      "availableTasksCount": "{count} tasks",
+      "availableTasksDescription": "Select a task to start earning CGC tokens. Each task has different complexity and rewards.",
+      "noTasksAvailable": "No tasks available",
+      "noTasksMessage": "The task system needs to be initialized with the initial 34 tasks.",
+      "initializeTasks": "Initialize Tasks (Admin Only)",
+      "inProgressTitle": "Tasks In Progress",
+      "inProgressCount": "{count} active",
+      "inProgressDescription": "Monitor ongoing tasks and submit evidence when completed.",
+      "leaderboardTitle": "Collaborator Leaderboard",
+      "leaderboardCount": "{count} collaborators",
+      "leaderboardDescription": "Top contributors ranked by total CGC earned through task completions.",
+      "proposeTitle": "Propose New Task",
+      "proposeDescription": "Submit a task proposal for review. Approved tasks will be added to the available pool.",
+      "communityProposals": "Community Proposals",
+      "communityProposalsDesc": "Vote on community proposals and help decide which tasks get added to the pool.",
+      "systemOperational": "Tasks System: Operational",
+      "completedLabel": "Completed",
+      "cgcDistributed": "CGC Distributed",
+      "contributorsLabel": "Contributors"
+    },
+    "toasts": {
+      "taskClaimed": "Task claimed!",
+      "taskClaimedDesc": "You can now start working on this task",
+      "evidenceSubmitted": "Evidence submitted!",
+      "evidenceSubmittedDesc": "Your work is now pending validation",
+      "proposalSubmitted": "Proposal submitted!",
+      "proposalSubmittedDesc": "Your task proposal is now under review",
+      "tasksInitialized": "Tasks initialized!",
+      "tasksInitializedDesc": "All {count} tasks created. Total rewards: {rewards} CGC",
+      "initFailed": "Initialization failed",
+      "errorInitializing": "Error initializing tasks",
+      "failedToLoadStats": "Failed to load statistics",
+      "failedToLoadStatsDesc": "Please try again later",
+      "refreshing": "Refreshing data...",
+      "refreshingDesc": "Updating tasks and leaderboard"
+    },
+    "gate": {
+      "title": "Community Members Only",
+      "description": "The Tasks section is reserved for CryptoGift Wallets DAO community members.",
+      "whatAreTasksTitle": "What are Tasks?",
+      "whatAreTasksDesc": "Tasks are real opportunities to contribute to building the CryptoGift ecosystem. Each task is a paid gig: complete it, get validated, and receive CGC tokens directly to your wallet.",
+      "features": {
+        "title": "Why Join the Task Force?",
+        "item1": "Earn CGC tokens for every completed task",
+        "item2": "Build your on-chain reputation and level up",
+        "item3": "Contribute to a decentralized future",
+        "item4": "Compete on the leaderboard for bonus rewards"
+      },
+      "requirement": {
+        "title": "Access Requirement",
+        "description": "Hold at least 1 CGC token in your wallet to access the Tasks section.",
+        "currentBalance": "Your current balance",
+        "required": "Required"
+      },
+      "cta": {
+        "title": "Don't have CGC yet?",
+        "description": "Join our community through a special referral invite and receive 200 CGC tokens instantly, enough to unlock Tasks and start earning!",
+        "buttonText": "Get 200 CGC Free",
+        "rewardBadge": "+200 CGC Bonus"
+      }
+    }
+  },
+  "leaderboard": {
+    "title": "Collaborator Leaderboard",
+    "yourPosition": "Your Position",
+    "columns": {
+      "rank": "Rank",
+      "address": "Address",
+      "cgcEarned": "CGC Earned",
+      "tasks": "Tasks",
+      "level": "Level"
+    },
+    "inProgressLabel": "in progress",
+    "discord": "Discord:",
+    "approxUsd": "~${amount} USD",
+    "noCollaboratorsYet": "No collaborators yet. Be the first to complete a task!",
+    "levels": {
+      "legend": "Legend",
+      "master": "Master",
+      "expert": "Expert",
+      "contributor": "Contributor",
+      "novice": "Novice"
+    }
+  },
+  "admin": {
+    "title": "Admin Validation Panel",
+    "subtitle": "Validate task completions and release payments",
+    "pending": "Pending",
+    "validated": "Validated",
+    "all": "All",
+    "approve": "Approve & Pay",
+    "reject": "Reject",
+    "notes": "Validation Notes",
+    "notAuthorized": "Access Denied",
+    "notAuthorizedMessage": "Your wallet address is not authorized to validate tasks."
+  },
+  "agent": {
+    "title": "apeX Assistant",
+    "subtitle": "AI-powered help for the DAO",
+    "placeholder": "Ask me anything about the DAO...",
+    "send": "Send",
+    "page": {
+      "accessTitle": "apeX Agent Access",
+      "accessDescription": "The apeX intelligent assistant is exclusively available to CGC token holders. Connect your wallet and hold at least 0.01 CGC tokens to chat with your DAO assistant.",
+      "headerTitle": "CG DAO Agent",
+      "liveReady": "Live & Ready",
+      "gpt5Thinking": "GPT-5 Thinking",
+      "mcpEnabled": "MCP Enabled",
+      "sseStreaming": "SSE Streaming",
+      "interactiveAssistant": "Interactive Assistant",
+      "chatDescription": "Chat with your intelligent DAO assistant powered by GPT-5 with real-time document access"
+    },
+    "features": {
+      "title": "Key Features",
+      "gpt5Thinking": "GPT-5 Thinking Mode",
+      "gpt5ThinkingDesc": "Advanced reasoning with chain-of-thought processing",
+      "documentAccess": "Real-time Document Access",
+      "documentAccessDesc": "Live access to all DAO documentation via MCP",
+      "sseStreaming": "SSE Streaming",
+      "sseStreamingDesc": "Real-time streaming responses for instant feedback",
+      "enterpriseSecurity": "Enterprise Security",
+      "enterpriseSecurityDesc": "Rate limiting, audit logging, and access control"
+    },
+    "contracts": {
+      "title": "Live Contract Data",
+      "cgcToken": "CGC Token",
+      "totalSupply": "2M Total Supply",
+      "aragonDAO": "Aragon DAO",
+      "baseMainnet": "Base Mainnet",
+      "viewAllContracts": "View All Contracts"
+    },
+    "quickActions": {
+      "title": "Quick Actions",
+      "statusReport": "Project Status Report",
+      "analyzeContracts": "Analyze Smart Contracts",
+      "createProposal": "Create DAO Proposal",
+      "reviewTokenomics": "Review Tokenomics",
+      "searchDocs": "Search Documentation"
+    },
+    "systemStatus": {
+      "title": "System Status",
+      "agentApi": "Agent API",
+      "mcpServer": "MCP Server",
+      "documentation": "Documentation",
+      "rateLimits": "Rate Limits",
+      "online": "Online",
+      "connected": "Connected",
+      "synced": "Synced",
+      "normal": "Normal"
+    },
+    "guide": {
+      "title": "Integration Guide",
+      "description": "How to integrate this agent into your application",
+      "step1Title": "1. Install Dependencies",
+      "step2Title": "2. Add API Endpoint",
+      "step3Title": "3. Use React Component",
+      "envVarsTitle": "Environment Variables Required:",
+      "envOpenAI": "Your OpenAI API key",
+      "envRedisUrl": "Redis URL for session storage",
+      "envRedisToken": "Redis token",
+      "envMcpAuth": "Internal auth token for MCP server"
+    },
+    "chat": {
+      "assistant": "CG DAO Assistant",
+      "connected": "Connected",
+      "disconnected": "Disconnected",
+      "exportConversation": "Export conversation",
+      "clearConversation": "Clear conversation",
+      "settingsTitle": "Agent Settings",
+      "model": "Model",
+      "modelDescription": "GPT-5 with Maximum Reasoning (100% Juice)",
+      "featuresTitle": "Features",
+      "featuresList": {
+        "documentAccess": "Real-time document access via MCP",
+        "streaming": "Streaming responses with SSE",
+        "sessionMemory": "Session memory and context",
+        "citations": "Citation-backed answers"
+      },
+      "helloMessage": "Hello! I'm apeX, your CG DAO Assistant.",
+      "askAnything": "Ask me anything about the DAO, contracts, or governance!",
+      "errorTitle": "Error",
+      "retry": "Retry",
+      "askAbout": "Ask about {topic}...",
+      "charactersRemaining": "{count} characters remaining",
+      "reasoningTokens": "{count} reasoning tokens"
+    },
+    "sidebar": {
+      "title": "CryptoGift Technical Advisor",
+      "subtitle": "Operational DAO Specialist",
+      "expandAdvisor": "Expand Technical Advisor",
+      "online": "Online",
+      "daoOk": "DAO OK",
+      "secure": "Secure",
+      "systemState": "System State",
+      "totalSupply": "Total Supply",
+      "mainnet": "Mainnet",
+      "contracts": "Contracts",
+      "deployed": "Deployed",
+      "activeDAO": "Active DAO",
+      "quickActionsTitle": "Quick Actions",
+      "reviewClaude": "Review CLAUDE.md",
+      "auditContracts": "Audit Contracts",
+      "daoStatus": "DAO Status",
+      "configureEAS": "Configure EAS"
+    },
+    "bubble": {
+      "needHelp": "Need help?",
+      "cgcRequired": "CGC required",
+      "chatWithApex": "Chat with apeX",
+      "quickHelp": "Quick Help",
+      "smartActions": "Smart Actions",
+      "aiInsights": "AI Insights",
+      "moreOptions": "More options",
+      "openFullChat": "Open full chat",
+      "typeMessage": "Type a message...",
+      "send": "Send",
+      "minimize": "Minimize",
+      "clearChat": "Clear chat",
+      "connecting": "Connecting...",
+      "online": "Online"
+    }
+  },
+  "referrals": {
+    "title": "Referrals Network",
+    "subtitle": "Grow your network, earn CGC rewards",
+    "accessTitle": "Referrals Access",
+    "accessDescription": "The referral program is exclusively available to CGC token holders. Connect your wallet and hold at least 0.01 CGC to participate and earn referral rewards.",
+    "stats": {
+      "totalReferrals": "Total Referrals",
+      "activeReferrals": "Active Referrals",
+      "pendingRewards": "Pending Rewards",
+      "totalEarned": "Total Earned",
+      "networkSize": "Network Size",
+      "conversionRate": "Conversion Rate",
+      "thisMonth": "This Month",
+      "allTime": "All Time",
+      "level1": "Level 1",
+      "level2": "Level 2",
+      "level3": "Level 3"
+    },
+    "code": {
+      "title": "Your Referral Code",
+      "description": "Share this code with friends to earn CGC rewards",
+      "copyCode": "Copy Code",
+      "copied": "Copied!",
+      "shareTitle": "Share Your Link",
+      "shareDescription": "Share your unique referral link on social media",
+      "generateNew": "Generate New Code",
+      "customCode": "Custom Code",
+      "customCodePlaceholder": "Enter custom code (min 4 chars)",
+      "customCodeHelp": "Create a memorable custom code for easy sharing",
+      "setCustomCode": "Set Custom Code"
+    },
+    "rewards": {
+      "title": "Reward Structure",
+      "description": "Earn CGC tokens when your referrals complete tasks",
+      "level1Title": "Direct Referrals",
+      "level1Desc": "Earn 10% of your direct referrals task earnings",
+      "level2Title": "Second Level",
+      "level2Desc": "Earn 5% from referrals of your referrals",
+      "level3Title": "Third Level",
+      "level3Desc": "Earn 2.5% from third-level network",
+      "bonusTitle": "Milestone Bonuses",
+      "bonusDesc": "Extra rewards for reaching referral milestones",
+      "milestone5": "5 Referrals: +50 CGC Bonus",
+      "milestone10": "10 Referrals: +150 CGC Bonus",
+      "milestone25": "25 Referrals: +500 CGC Bonus",
+      "milestone50": "50 Referrals: +1500 CGC Bonus",
+      "milestone100": "100 Referrals: +5000 CGC Bonus"
+    },
+    "network": {
+      "title": "Your Network",
+      "description": "Track your referral network performance",
+      "directReferrals": "Direct Referrals",
+      "secondLevel": "Second Level",
+      "thirdLevel": "Third Level",
+      "totalNetwork": "Total Network",
+      "noReferrals": "No referrals yet. Share your code to start earning!",
+      "viewDetails": "View Details",
+      "referralDate": "Joined",
+      "tasksCompleted": "Tasks",
+      "cgcEarned": "CGC Earned",
+      "you": "YOU",
+      "level1": "Level 1 - Direct Referrals",
+      "level2": "Level 2",
+      "level3": "Level 3",
+      "earned": "earned",
+      "checkActivation": "Check CGC & Activate",
+      "viewProfile": "View Profile",
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive",
+        "pending": "Pending"
+      }
+    },
+    "leaderboard": {
+      "title": "Top Referrers",
+      "description": "Top performers in the referral program",
+      "rank": "Rank",
+      "referrer": "Referrer",
+      "referrals": "Referrals",
+      "earned": "Earned",
+      "yourRank": "Your Rank",
+      "noData": "No leaderboard data yet"
+    },
+    "history": {
+      "title": "Direct Referrals History",
+      "description": "Complete tracking of your direct referrals",
+      "date": "Date",
+      "type": "Type",
+      "referral": "Referral",
+      "amount": "Amount",
+      "status": "Status",
+      "noHistory": "No reward history yet",
+      "totalDirect": "Total Direct",
+      "active": "Active",
+      "pending": "Pending",
+      "activated": "Activated",
+      "anonymous": "Anonymous User",
+      "checkCGC": "Check CGC",
+      "connected": "Wallet Connected",
+      "activatedAt": "Activated At",
+      "cgcEarned": "CGC Earned",
+      "noReferrals": "No direct referrals yet",
+      "shareLink": "Share your referral link to invite friends",
+      "types": {
+        "directBonus": "Direct Bonus",
+        "level2Bonus": "Level 2 Bonus",
+        "level3Bonus": "Level 3 Bonus",
+        "milestoneBonus": "Milestone Bonus"
+      },
+      "statuses": {
+        "pending": "Pending",
+        "paid": "Paid",
+        "processing": "Processing"
+      }
+    },
+    "signupBonus": {
+      "title": "Signup Bonus",
+      "description": "Automatic rewards for new users joining via referral",
+      "newUserBonus": "Welcome Bonus",
+      "newUserBonusDesc": "New users receive 200 CGC automatically when joining via a referral link",
+      "commissions": "Referrer Commissions",
+      "commissionsDesc": "Referrers earn commissions from their network when new users join",
+      "level1Commission": "Direct Referrer (Level 1)",
+      "level1Desc": "10% commission = 20 CGC per signup",
+      "level2Commission": "Second Level Referrer",
+      "level2Desc": "5% commission = 10 CGC per signup",
+      "level3Commission": "Third Level Referrer",
+      "level3Desc": "2.5% commission = 5 CGC per signup",
+      "totalDistribution": "Total Distribution",
+      "totalDistributionDesc": "Up to 235 CGC distributed per referral signup",
+      "bonusReceived": "Bonus Received",
+      "bonusPending": "Bonus Pending",
+      "bonusEligible": "You are eligible for the signup bonus",
+      "bonusNotEligible": "No referral detected - signup bonus not available",
+      "bonusAlreadyClaimed": "Signup bonus already claimed",
+      "yourSignupBonus": "Your Signup Bonus",
+      "yourCommissions": "Your Referral Commissions",
+      "totalEarned": "Total Earned from Signups",
+      "level1Earnings": "Level 1 Commissions",
+      "level2Earnings": "Level 2 Commissions",
+      "level3Earnings": "Level 3 Commissions",
+      "successMessage": "Bonus distributed successfully!",
+      "errorMessage": "Failed to distribute bonus",
+      "treasuryLow": "Treasury balance is low - please contact support",
+      "processingBonus": "Processing your bonus...",
+      "transactionHash": "Transaction Hash",
+      "viewOnExplorer": "View on BaseScan"
+    },
+    "how": {
+      "title": "How It Works",
+      "step1": {
+        "title": "Get Your Code",
+        "desc": "Generate your unique referral code or create a custom one"
+      },
+      "step2": {
+        "title": "Share & Invite",
+        "desc": "Share your code on social media or directly with friends"
+      },
+      "step3": {
+        "title": "Friends Join",
+        "desc": "When friends sign up using your code, they're linked to you"
+      },
+      "step4": {
+        "title": "Earn Rewards",
+        "desc": "Earn CGC when your referrals complete tasks and milestones"
+      }
+    },
+    "analytics": {
+      "title": "Analytics",
+      "description": "Detailed insights into your referral performance",
+      "clicksToday": "Clicks Today",
+      "conversions": "Conversions",
+      "avgEarningsPerReferral": "Avg. Earnings/Referral",
+      "topReferralSource": "Top Source",
+      "performanceChart": "Performance Over Time"
+    },
+    "share": {
+      "twitter": "Share on Twitter",
+      "telegram": "Share on Telegram",
+      "discord": "Share on Discord",
+      "copyLink": "Copy Link",
+      "qrCode": "QR Code",
+      "downloadQR": "Download QR",
+      "message": "Join CryptoGift DAO with my referral link and earn CGC tokens!"
+    },
+    "qrModal": {
+      "title": "Your Referral QR Code",
+      "description": "Scan to join CryptoGift DAO",
+      "code": "Referral Code",
+      "link": "Referral Link",
+      "copy": "Copy",
+      "copied": "Copied!",
+      "download": "Download",
+      "share": "Share",
+      "tip": "Friends who scan this code will automatically be linked to your referral network"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "network": "Network",
+      "history": "History",
+      "rewards": "Rewards",
+      "analytics": "Analytics",
+      "leaderboard": "Leaderboard"
+    },
+    "notifications": {
+      "newReferral": "New referral joined!",
+      "rewardEarned": "You earned {amount} CGC from referrals",
+      "milestoneReached": "Congratulations! You reached {count} referrals"
+    },
+    "special": {
+      "title": "Special Invite Link",
+      "subtitle": "Onboard new members with educational content",
+      "description": "Create a special referral link that guides new members through our Sales Masterclass before joining. Perfect for bringing in committed, educated community members.",
+      "badge": "Premium",
+      "benefits": {
+        "title": "Why Use Special Links?",
+        "education": "Recipients learn about CryptoGift before joining",
+        "quality": "Attract more engaged and committed members",
+        "rewards": "Earn bonus CGC for educated referrals"
+      },
+      "form": {
+        "password": "Optional Password",
+        "passwordPlaceholder": "Leave empty for no password",
+        "passwordHelp": "Add a password to make this invite exclusive",
+        "message": "Custom Welcome Message",
+        "messagePlaceholder": "Enter a personalized message for your invite...",
+        "messageDefault": "You have been invited to join CryptoGift DAO! Complete the Sales Masterclass to unlock your membership and start earning CGC tokens.",
+        "messageHelp": "This message will be shown to recipients",
+        "masterclassType": "Educational Experience",
+        "masterclassTypeHelp": "Select which Sales Masterclass version this person will see",
+        "masterclassTypeOptions": {
+          "v2": "Sales Masterclass V2 (Recommended)",
+          "v2Description": "Neuromarketing funnel with 3 strategic videos",
+          "legacy": "Sales Masterclass (Legacy)",
+          "legacyDescription": "Original 11-block quiz-based educational experience",
+          "none": "No Education Required",
+          "noneDescription": "Direct to wallet connection"
+        }
+      },
+      "generate": "Generate Special Link",
+      "generating": "Generating...",
+      "linkReady": "Your Special Invite Link",
+      "copyLink": "Copy Link",
+      "copied": "Copied!",
+      "createAnother": "Create Another",
+      "stats": {
+        "created": "Links Created",
+        "claimed": "Successfully Claimed",
+        "pending": "Pending Completion"
+      },
+      "image": {
+        "label": "Custom Image (optional)",
+        "uploadPrompt": "Click to upload an image",
+        "uploadFormat": "JPG, PNG or GIF (max 5MB)",
+        "uploadingImage": "Uploading image...",
+        "invalidImage": "Please select a valid image",
+        "imageTooLarge": "Image must be less than 5MB"
+      },
+      "password": {
+        "shareTitle": "Password to Share",
+        "shareHelp": "Share this password with the person you invite. They'll need it to access.",
+        "copiedLabel": "Copied"
+      },
+      "history": {
+        "title": "Previous Special Links",
+        "loading": "Loading...",
+        "status": {
+          "expired": "Expired",
+          "claimed": "Claimed",
+          "active": "Active"
+        },
+        "claimedBy": "Claimed by",
+        "showMessage": "Show Message",
+        "hideMessage": "Hide",
+        "delete": "Delete"
+      }
+    },
+    "permanent": {
+      "title": "Permanent Referral Link",
+      "subtitle": "Multi-use links that track all users who join",
+      "badge": "Never Expires",
+      "description": "Create permanent links that never expire and allow multiple users. Track clicks, conversions and see the complete history of everyone who joined through your link.",
+      "benefits": {
+        "neverExpires": "Never Expires",
+        "unlimitedUsers": "Unlimited Users",
+        "fullAnalytics": "Complete Analytics"
+      },
+      "form": {
+        "customTitle": "Custom Title (optional)",
+        "customTitlePlaceholder": "Permanent Invitation to CryptoGift DAO",
+        "customImage": "Custom Image (optional)",
+        "uploadPrompt": "Click to upload an image",
+        "uploadFormat": "JPG, PNG or GIF (max 5MB)",
+        "invalidImage": "Please select a valid image",
+        "imageTooLarge": "Image must be less than 5MB",
+        "password": "Password (optional)",
+        "passwordPlaceholder": "Leave empty if no password required",
+        "passwordHelp": "Protect your link with a password (visible for sharing)",
+        "passwordVisible": "Visible",
+        "maxClaims": "User Limit (optional)",
+        "maxClaimsPlaceholder": "Leave empty for unlimited users",
+        "maxClaimsHelp": "Set a maximum number of users who can claim this link (empty = unlimited)",
+        "customMessage": "Custom Message (optional)",
+        "customMessagePlaceholder": "I invite you to join CryptoGift DAO...",
+        "customMessageHelp": "Customize the welcome message",
+        "masterclassType": "Educational Experience",
+        "masterclassTypeHelp": "Select which Sales Masterclass version your invitees will see",
+        "masterclassTypeOptions": {
+          "v2": "Sales Masterclass V2 (Recommended)",
+          "v2Description": "Neuromarketing funnel with 3 strategic videos",
+          "legacy": "Sales Masterclass (Legacy)",
+          "legacyDescription": "Original 11-block quiz-based educational experience",
+          "none": "No Education Required",
+          "noneDescription": "Direct to wallet connection"
+        }
+      },
+      "generate": "Generate Permanent Link",
+      "generating": "Generating...",
+      "uploadingImage": "Uploading image...",
+      "linkCreated": "✅ Permanent Link Created",
+      "copied": "Copied",
+      "copy": "Copy",
+      "passwordShare": {
+        "title": "Password to Share",
+        "help": "Share this password with the people you invite. They'll need it to access."
+      },
+      "createAnother": "Create Another Link",
+      "history": {
+        "title": "Your Permanent Links",
+        "loading": "Loading...",
+        "status": {
+          "active": "Active",
+          "paused": "Paused",
+          "disabled": "Disabled",
+          "unknown": "Unknown"
+        },
+        "badgePermanent": "Permanent",
+        "analytics": {
+          "clicks": "Clicks",
+          "claimed": "Claimed",
+          "completed": "Completed",
+          "conversion": "Conversion"
+        },
+        "viewHistory": "Hide History",
+        "viewUsers": "View {count} Users",
+        "pause": "Pause",
+        "resume": "Resume",
+        "delete": "Delete",
+        "usersTitle": "Users Who Joined",
+        "userCompleted": "✅ Completed",
+        "userPending": "⏳ Pending",
+        "noUsers": "No users have joined yet"
+      },
+      "deleteConfirm": "Are you sure you want to delete this permanent link?\n\nThis action CANNOT be undone. All associated data will be deleted:\n- The link will stop working\n- User history will be lost\n- Statistics will be deleted\n\nIf you just want to pause the link temporarily, use the 'Pause' button instead.",
+      "errorGenerating": "Error generating permanent link. Please try again.",
+      "errorDeleting": "Error deleting the link. Please try again.",
+      "errorNoWallet": "Please connect your wallet first to create a permanent link.",
+      "connectWalletFirst": "Connect Wallet First"
+    }
+  },
+  "inviteCard": {
+    "status": {
+      "active": "ACTIVE",
+      "expired": "EXPIRED",
+      "claimed": "CLAIMED",
+      "revoked": "REVOKED"
+    },
+    "clickToView": "Click to view full image",
+    "clickToEnlarge": "Click to enlarge",
+    "placeholder": {
+      "title": "Special Invitation",
+      "subtitle": "CryptoGift DAO"
+    },
+    "updateStatus": "Update status",
+    "code": "Code",
+    "referredBy": "🔗 Referred by",
+    "referrerMessage": "Referrer's Message",
+    "timeRemaining": "Time Remaining",
+    "expired": "Expired",
+    "daysRemaining": "{days} day(s) remaining",
+    "hoursRemaining": "{hours} hour(s) remaining",
+    "expiresSoon": "Expires soon",
+    "details": {
+      "type": "Type",
+      "typeValue": "Special DAO Invitation",
+      "network": "Network",
+      "networkValue": "Base Mainnet",
+      "expires": "Expires"
+    },
+    "messages": {
+      "claimed": "✅ Invitation claimed successfully",
+      "expired": "⏰ This invitation has expired",
+      "revoked": "❌ This invitation has been revoked"
+    },
+    "metadata": {
+      "description": "Special invitation to join CryptoGift DAO",
+      "type": "Type",
+      "typeValue": "Special Invitation",
+      "status": "Status",
+      "referrer": "Referrer"
+    },
+    "introVideo": {
+      "badge": "Discover CryptoGift",
+      "urgencyTitle": "This Place Won't Wait Forever",
+      "benefit1": "Start with governance tokens. 1 CGC = 1 Vote in real decisions.",
+      "benefit2": "Complete tasks, get paid in tokens. No boss, no permissions needed.",
+      "benefit3": "Join the first 10,000 pioneers building the future of Web3 adoption.",
+      "earnRange": "Earn 200-3000 CGC",
+      "founderMembers": "Founding Members Only"
+    }
+  },
+  "funding": {
+    "title": "Funding",
+    "subtitle": "Support the DAO development",
+    "locked": "Coming Soon"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "auto": "Auto"
+  },
+  "footer": {
+    "brand": {
+      "name": "Autos MALL",
+      "description": "The AI-powered platform that transforms how independent sellers manage their car business. From lead generation to closing deals.",
+      "copyright": "Autos MALL LLC. All rights reserved."
+    },
+    "product": {
+      "title": "Product",
+      "dashboard": "Dashboard",
+      "inventory": "Inventory",
+      "crm": "CRM",
+      "analytics": "Analytics"
+    },
+    "resources": {
+      "title": "Resources",
+      "docs": "Documentation",
+      "faq": "FAQ",
+      "blog": "Blog",
+      "support": "Support"
+    },
+    "company": {
+      "title": "Company",
+      "about": "About Us",
+      "contact": "Contact",
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy"
+    },
+    "stats": {
+      "sellers": "Active Sellers",
+      "listings": "Cars Listed",
+      "location": "Houston, TX"
+    },
+    "bottom": {
+      "builtWith": "Built with",
+      "madeIn": "Made in Houston, TX"
+    }
+  },
+  "docs": {
+    "title": "Documentation",
+    "subtitle": "Complete technical documentation of the CryptoGift Wallets DAO ecosystem",
+    "nav": {
+      "aboutus": "About Us",
+      "whitepaper": "Whitepaper",
+      "tokenomics": "Tokenomics",
+      "contracts": "Smart Contracts",
+      "governance": "Governance",
+      "roadmap": "Roadmap",
+      "verification": "Token Verification"
+    },
+    "aboutus": {
+      "title": "About CryptoGift DAO",
+      "subtitle": "A Web3 Creation Laboratory",
+      "hero": {
+        "tagline": "From Zero to Web3 — Together",
+        "description": "We are a decentralized autonomous organization dedicated to making Web3 accessible through emotional experiences and artistic gifts."
+      },
+      "mission": {
+        "title": "Our Mission",
+        "content": "Democratize access to Web3 through a system where completing educational quests generates governance tokens, turning learning effort into voice and vote in the protocol's future."
+      },
+      "vision": {
+        "title": "Our Vision",
+        "content": "To become the premier gateway for Web3 onboarding, where every new member starts their journey through meaningful, emotional experiences that transform complex technology into beautiful gifts."
+      },
+      "focus": {
+        "title": "Our Focus Areas",
+        "emotional": {
+          "title": "Emotional Onboarding",
+          "description": "We believe the first experience with Web3 should be emotional, not technical. Our NFT-wallets feel like gifts, not complex software."
+        },
+        "artistic": {
+          "title": "Artistic Gifts",
+          "description": "Every interaction is designed with artistic intention. From custom avatars to personalized experiences, beauty guides our creation."
+        },
+        "community": {
+          "title": "DAO Community",
+          "description": "Governed entirely by our community. 1 CGC = 1 Vote. Your participation shapes the future of CryptoGift."
+        },
+        "laboratory": {
+          "title": "The Laboratory",
+          "description": "A factory of useful products. Dozens of tools in continuous development that will complete the ecosystem into something extraordinary."
+        },
+        "competitions": {
+          "title": "Competitions",
+          "description": "32 models that will be incorporated into the system, transforming everyday life: tournaments, challenges, milestones, rankings, pools and more. Compete, have fun, earn."
+        },
+        "tapToExpand": "Tap to view details"
+      },
+      "stats": {
+        "title": "Our Journey",
+        "daysActive": "Days Active",
+        "claimRate": "Claim Success Rate",
+        "criticalBugs": "Critical Bugs",
+        "network": "Built on Base (Ethereum L2)"
+      },
+      "team": {
+        "badge": "Our Team",
+        "title": "Top Contributors",
+        "subtitle": "The visionaries building the future of Web3 gifting"
+      }
+    },
+    "whitepaper": {
+      "title": "Whitepaper v1.2",
+      "updated": "Last updated: December 11, 2025",
+      "download": {
+        "title": "Download Complete Whitepaper",
+        "description": "Access the full technical documentation",
+        "button": "View Whitepaper"
+      },
+      "executive": {
+        "title": "Executive Summary",
+        "content": "CryptoGift Wallets DAO solves Web3's #1 problem: adoption. 73% of people say crypto is 'too complicated'. We flip the script with NFT-wallets that feel like gifts, not tech. 104 days beta, 85.7% claim rate, 0 critical bugs. Built on Base (Ethereum L2). Learn → Earn → Govern."
+      },
+      "vision": {
+        "title": "Vision",
+        "content": "From zero to Web3—together. Learn. Earn. Co-govern."
+      },
+      "mission": {
+        "title": "Mission",
+        "content": "Democratize access to Web3 through a system where completing educational quests generates governance tokens, turning learning effort into voice and vote in the protocol's future."
+      },
+      "problem": {
+        "title": "The Problem",
+        "barriers": "Entry Barriers to Web3",
+        "barriersList": {
+          "complexity": "Technical complexity: The blockchain learning curve intimidates new users",
+          "incentives": "Lack of incentives: Traditional education doesn't reward progress",
+          "disconnection": "Governance-community disconnection: Protocols governed by early adopters with capital",
+          "noPath": "No clear path: No structured route from beginner to contributor"
+        },
+        "limitations": "Limitations of Current Models",
+        "limitationsList": {
+          "airdrop": "Airdrop farming: Mercenary behavior without real commitment",
+          "voteBuying": "Vote buying: Power concentration in whales",
+          "superficial": "Superficial participation: Users voting without understanding proposals",
+          "disconnectedEdu": "Disconnected education: Courses that don't lead to active participation"
+        }
+      },
+      "solution": {
+        "title": "The Solution: CryptoGift Wallets DAO",
+        "architecture": "System Architecture",
+        "flow": "User → Quest Completed → EAS Attestation → MilestoneEscrow → CGC Tokens → Governance Power"
+      }
+    },
+    "tokenomics": {
+      "title": "Tokenomics",
+      "token": {
+        "title": "Governance Token (CGC)",
+        "name": "Name: CryptoGift Coin",
+        "symbol": "Symbol: CGC",
+        "supply": "Initial Supply: 2M CGC | Max: 22M CGC (milestone-based)",
+        "blockchain": "Blockchain: Base (Ethereum L2)",
+        "standard": "Standard: ERC-20",
+        "type": "Type: Pure Governance Token (no economic rights)"
+      },
+      "distribution": {
+        "title": "Initial Distribution (2M CGC)",
+        "referrals": "Referral Program",
+        "referralsDesc": "Multi-level referral rewards and signup bonuses",
+        "educational": "Educational Rewards",
+        "educationalDesc": "Quest completion, academy tasks, learning achievements",
+        "treasury": "DAO Treasury",
+        "treasuryDesc": "Controlled by governance for protocol development",
+        "contributors": "Core Contributors",
+        "contributorsDesc": "2 years vesting, 6 month cliff",
+        "liquidity": "Liquidity Pool",
+        "liquidityDesc": "Aerodrome DEX pool on Base (CGC/WETH)",
+        "reserve": "Emergency Reserve",
+        "reserveDesc": "Multisig 3/5 controlled for emergencies"
+      },
+      "caps": {
+        "title": "Emission Caps",
+        "annual": "Annual Cap",
+        "monthly": "Monthly Cap",
+        "weekly": "Weekly Cap",
+        "daily": "Daily User Cap"
+      },
+      "utility": {
+        "title": "Token Utility",
+        "governance": "Governance: 1 CGC = 1 Vote. Create proposals, vote on treasury allocation, delegate power",
+        "access": "Earning: Complete tasks (50-500 CGC), refer friends (10-20%), unlock premium features",
+        "boosts": "Status: Higher holdings = priority access, exclusive channels, founding member perks"
+      }
+    },
+    "contracts": {
+      "title": "Smart Contracts",
+      "subtitle": "All contracts deployed and verified on Base Mainnet (Dec 2025)",
+      "sections": {
+        "governance": "Core Token & Governance",
+        "taskSystem": "Task & Validation System"
+      },
+      "cgcToken": {
+        "title": "CGC Token (ERC20Votes)",
+        "desc": "Governance token with voting power delegation. Owned by Aragon DAO via TimelockController"
+      },
+      "aragonDAO": {
+        "title": "Aragon DAO",
+        "desc": "Decentralized governance with Token Voting plugin. Controls TimelockController"
+      },
+      "timelockController": {
+        "title": "TimelockController",
+        "desc": "7-day delay for CGC token owner operations. Prevents immediate malicious changes"
+      },
+      "minterGateway": {
+        "title": "MinterGateway v3.3",
+        "desc": "Primary minting mechanism with 20M supply cap. Requires authorized caller approval"
+      },
+      "milestoneEscrow": {
+        "title": "MilestoneEscrow",
+        "desc": "Task reward distribution with EIP-712 verification. Transfers from treasury (no minting)"
+      },
+      "masterController": {
+        "title": "MasterEIP712Controller",
+        "desc": "Centralized authorization control for all system permissions"
+      },
+      "taskRules": {
+        "title": "TaskRulesEIP712",
+        "desc": "Task validation rules and completion verification logic"
+      },
+      "ownership": {
+        "title": "Governance & Ownership Model",
+        "description": "CGC Token ownership follows a secure governance chain: Aragon DAO controls the TimelockController, which owns the CGC Token. This ensures all owner operations have a 7-day delay for community review.",
+        "flow": "Aragon DAO → TimelockController (7-day delay) → CGC Token Owner → MinterGateway (authorized caller)",
+        "tokenOwner": "CGC Token Owner",
+        "tokenOwnerValue": "TimelockController (controlled by Aragon DAO)",
+        "mintingCap": "Max Mintable Supply",
+        "mintingCapValue": "20M CGC via MinterGateway (Total Max: 22M)"
+      },
+      "viewOnBaseScan": "View on BaseScan",
+      "verificationBadge": "Verified"
+    },
+    "governance": {
+      "title": "Governance",
+      "aragon": {
+        "title": "Aragon OSx v1.4.0",
+        "plugin": "Plugin: Token Voting v1.3",
+        "network": "Network: Base Mainnet (Chain ID: 8453)"
+      },
+      "proposalTypes": {
+        "title": "Proposal Types",
+        "tokenRelease": "Token Release: Distribution of rewards via MilestoneEscrow",
+        "paramChanges": "Parameter Changes: Adjustment of caps, limits, multipliers",
+        "integrations": "Integrations: New quest platforms",
+        "treasury": "Treasury Management: Use of DAO funds",
+        "emergency": "Emergencies: Pauses, fund recovery"
+      },
+      "votingParams": {
+        "title": "Voting Parameters",
+        "participation": "Minimum Participation: 10% of total supply (200,000 CGC)",
+        "threshold": "Support Threshold: 51% of votes cast",
+        "duration": "Minimum Duration: 7 days",
+        "proposer": "Minimum Proposer Power: 1,000 CGC"
+      },
+      "security": {
+        "title": "Security Measures",
+        "audit": "External audit pre-launch",
+        "bounty": "Bug bounty program (up to 100,000 CGC)",
+        "timelock": "48h timelock on critical functions",
+        "pause": "Emergency pause mechanism (multisig 3/5)"
+      }
+    },
+    "roadmap": {
+      "title": "Roadmap",
+      "q4_2024": {
+        "title": "Q4 2024 - Foundation",
+        "status": "Completed",
+        "items": {
+          "dao": "Deploy DAO on Aragon",
+          "voting": "Configure Token Voting plugin",
+          "token": "Launch CGC token (2M supply)",
+          "escrow": "Implement MilestoneEscrow",
+          "master": "Deploy MasterEIP712Controller",
+          "taskRules": "Deploy TaskRulesEIP712"
+        }
+      },
+      "q1_2025": {
+        "title": "Q1 2025 - Launch",
+        "status": "In Progress",
+        "items": {
+          "tasks": "Competitive task system",
+          "admin": "Administration panel",
+          "payments": "Auto-payments implemented",
+          "wonderverse": "Wonderverse integration",
+          "quests": "First 100 quests live",
+          "users": "1,000 active users"
+        }
+      },
+      "q2_2025": {
+        "title": "Q2 2025 - Growth",
+        "status": "Planned",
+        "items": {
+          "integrations": "Dework and Zealy integration",
+          "mobile": "Mobile app launch",
+          "users": "10,000 active users",
+          "partnerships": "5 protocol partnerships",
+          "audit": "Complete security audit"
+        }
+      },
+      "q3_2025": {
+        "title": "Q3 2025 - Expansion",
+        "status": "Planned",
+        "items": {
+          "multichain": "Multi-chain deployment",
+          "defi": "Advanced DeFi quests",
+          "users": "50,000 active users",
+          "nft": "NFT badges system"
+        }
+      },
+      "q4_2025": {
+        "title": "Q4 2025 - Maturity",
+        "status": "Planned",
+        "items": {
+          "decentralization": "Full decentralization",
+          "users": "100,000 active users",
+          "treasury": "Self-sustaining treasury",
+          "governance": "Governance v2.0 with UX improvements"
+        }
+      }
+    },
+    "disclaimer": {
+      "title": "Disclaimer",
+      "content": "This documentation is a living document that evolves with community feedback. CGC tokens are pure governance tokens and DO NOT constitute securities nor grant economic or financial rights. There is no 'revenue sharing' associated with the CGC token. The token grants exclusively governance rights and access to protocol features. Participate at your own risk."
+    },
+    "contact": {
+      "title": "Contact",
+      "website": "Website",
+      "discord": "Discord",
+      "twitter": "Twitter",
+      "email": "Email",
+      "github": "GitHub"
+    },
+    "verification": {
+      "title": "Token Verification & Listing",
+      "subtitle": "Official information for exchanges and listing platforms",
+      "status": {
+        "title": "Current Status",
+        "coinGeckoStatus": "CoinGecko: Pending Listing",
+        "coinGeckoNote": "Application submitted - waiting for liquidity pool creation",
+        "baseScanStatus": "BaseScan: Verified Contract",
+        "viewOnBaseScan": "View on BaseScan",
+        "lastUpdated": "Last updated: December 5, 2025"
+      },
+      "tokenInfo": {
+        "title": "Token Information",
+        "contractAddress": "Contract Address",
+        "contractNote": "CGC Token on Base Mainnet (verified on BaseScan)",
+        "initialSupply": "Initial/Circulating Supply",
+        "initialSupplyValue": "2,000,000 CGC",
+        "maxSupply": "Max Theoretical Supply",
+        "maxSupplyValue": "22,000,000 CGC (via milestone-based emission)",
+        "emissionModel": "Emission Model",
+        "emissionModelValue": "Milestone-based: New tokens minted only when DAO completes verified milestones",
+        "blockchain": "Blockchain",
+        "blockchainValue": "Base (Ethereum Layer 2)",
+        "chainId": "Chain ID",
+        "chainIdValue": "8453 (Base Mainnet)",
+        "tokenStandard": "Token Standard",
+        "tokenStandardValue": "ERC-20",
+        "decimals": "Decimals",
+        "decimalsValue": "18",
+        "tokenType": "Token Type",
+        "tokenTypeValue": "Governance Token (No economic rights)",
+        "deployedBy": "Deployed By",
+        "deployedByValue": "CryptoGift DAO Team",
+        "verified": "Verified on BaseScan"
+      },
+      "downloads": {
+        "title": "Downloads",
+        "subtitle": "Official logos and documentation",
+        "whitepaper": "Download Whitepaper (PDF)",
+        "whitepaperDesc": "Complete technical documentation",
+        "logo200": "Logo 200x200 (PNG)",
+        "logo200Desc": "For CoinGecko and exchanges",
+        "logo32": "Logo 32x32 (PNG)",
+        "logo32Desc": "For BaseScan verification",
+        "tokenList": "Token List (JSON)",
+        "tokenListDesc": "Standard token list format"
+      },
+      "coingecko": {
+        "title": "CoinGecko Listing Information",
+        "status": "Status",
+        "statusTitle": "Current Status",
+        "statusValue": "Pending - Liquidity Pool Required",
+        "previousAttempt": "Previous Application",
+        "previousRequest": "Application submitted Sept 11, 2025 (Request ID: CL1009250007) - Rejected",
+        "previousAttemptValue": "Rejected Sept 11, 2025 (Request ID: CL1009250007)",
+        "rejectionReason": "Reason: No liquidity pool found on DEX",
+        "rejectionReasonValue": "No liquidity pool found on DEX",
+        "nextSteps": "Next Steps",
+        "nextStepsTitle": "Next Steps",
+        "step1": "Create minimal liquidity pool on Uniswap Base ($100-200 USDC)",
+        "step2": "Re-apply to CoinGecko with pool information",
+        "step3": "Public verification post on Twitter/Discord",
+        "requirements": "CoinGecko Requirements",
+        "requirementsTitle": "CoinGecko Requirements",
+        "req1": "Contract verified on BaseScan",
+        "req2": "Active liquidity pool on DEX",
+        "req3": "Contract address visible on website",
+        "req4": "Social media presence (Twitter, Discord)",
+        "req5": "Whitepaper or project documentation",
+        "progress": "Progress",
+        "contractVerified": "Contract Verified",
+        "websiteShowing": "Website Showing Contract",
+        "socialMedia": "Social Media Active",
+        "documentation": "Documentation Complete",
+        "liquidityPool": "Liquidity Pool (Pending)"
+      },
+      "links": {
+        "title": "Official Links",
+        "baseScanContract": "View Contract on BaseScan",
+        "website": "Official Website",
+        "github": "GitHub Repository",
+        "twitter": "Twitter/X",
+        "discord": "Discord Community",
+        "aragon": "Aragon DAO"
+      },
+      "api": {
+        "title": "API Endpoints",
+        "subtitle": "For CoinGecko integration",
+        "totalSupply": "Total Supply API",
+        "totalSupplyEndpoint": "/api/token/total-supply",
+        "circulatingSupply": "Circulating Supply API",
+        "circulatingSupplyEndpoint": "/api/token/circulating-supply",
+        "note": "Both APIs return numeric values in CGC units (no decimals)"
+      },
+      "fraudWarning": {
+        "title": "Why Your Wallet Shows a Warning (and why that's actually good news)",
+        "problem": "What's happening",
+        "problemTitle": "What's happening",
+        "problemDesc": "MetaMask/Coinbase may flag CGC transfers. This is normal for new tokens.",
+        "reason": "The real reason",
+        "reasonTitle": "Why this happens",
+        "reasonDesc": "We're pre-listing. Once CoinGecko approves us (application submitted), warnings disappear.",
+        "reason1": "New tokens without CoinGecko listing trigger automatic warnings",
+        "reason2": "This is a standard security feature, not a problem with CGC",
+        "impact": "What this means for you",
+        "impactDesc": "You're early. Founding members who join before listing get the same tokens—just with an extra verification step.",
+        "resolution": "Timeline",
+        "resolutionDesc": "CoinGecko listing expected in 2-6 weeks. Your tokens are 100% real, verified on BaseScan.",
+        "solutionTitle": "When will this be resolved?",
+        "solutionDesc": "CoinGecko listing is expected in 2-6 weeks. Once listed, warnings will automatically disappear from all wallets.",
+        "safetyTitle": "Your tokens are 100% safe",
+        "safetyDesc": "CGC is verified on BaseScan with open source code. Your tokens are real, secure, and will be recognized by all platforms after CoinGecko listing."
+      }
+    }
+  },
+  "profile": {
+    "viewFullProfile": "View full profile",
+    "sendMessage": "Send Message",
+    "copyWallet": "Copy wallet address",
+    "copied": "Copied!",
+    "about": "About",
+    "networks": "Networks",
+    "wallet": "Wallet",
+    "tier": "Tier",
+    "clickToExpand": "Click to view full profile",
+    "notLinked": "not linked",
+    "stats": {
+      "reputation": "Reputation",
+      "respect": "Respect",
+      "tasks": "Tasks",
+      "contributions": "Contributions",
+      "referrals": "Referrals",
+      "earned": "CGC Earned"
+    },
+    "share": {
+      "button": "Share Profile",
+      "copied": "Link copied!",
+      "copyLink": "Copy Link",
+      "qrTitle": "Profile QR Code",
+      "qrDescription": "Scan to view this profile",
+      "downloadQR": "Download",
+      "shareButton": "Share",
+      "shareMessage": "Check out my CryptoGift DAO profile!",
+      "nfcReady": "Tap phones to share",
+      "nfcNotSupported": "NFC not available",
+      "nfcError": "NFC error - try again",
+      "activateNfc": "Tap to activate NFC"
+    }
+  },
+  "specialInvite": {
+    "header": {
+      "title": "CryptoGift DAO",
+      "subtitle": "Special Invite"
+    },
+    "welcome": {
+      "title": "The Lab is Running",
+      "subtitle": "Someone you trust invites you to a living ecosystem of competitions, tasks, and collective governance.",
+      "rewardInfo": "✨ 5 minutes → 200 CGC → Unlock: voting power + paid tasks + competition system",
+      "trustSecure": "100% Secure",
+      "trustMembers": "Founding Members Only",
+      "trustVerified": "Blockchain verified",
+      "bannerTitle": "Welcome to the workshop where the future is built!",
+      "bannerDescription": "This isn't just another community. It's a running lab: competitions with real prizes, tasks that pay in tokens, decisions you make. Thousands building together. Your place is ready.",
+      "startButton": "Start My Journey",
+      "benefit1": "No costs - 100% free",
+      "benefit2": "Welcome CGC tokens",
+      "benefit3": "Access to paid tasks"
+    },
+    "password": {
+      "title": "Access Validation",
+      "subtitle": "Enter the password shared by your referrer",
+      "label": "Referrer Password",
+      "placeholder": "Enter the password",
+      "hint": "The person who invited you should have shared a password",
+      "errorRequired": "Please enter the password",
+      "errorIncorrect": "Incorrect password",
+      "errorGeneric": "Error validating. Try again.",
+      "validateButton": "Validate and Continue",
+      "validating": "Validating..."
+    },
+    "connect": {
+      "title": "You're 1 Click Away",
+      "subtitle": "You passed. 97% of people never get this far.",
+      "readyTitle": "Your 200 CGC are ready",
+      "readyDescription": "Connect your wallet → tokens deposit instantly → start earning today",
+      "connectButton": "Connect Wallet",
+      "walletSupport": "We support MetaMask, WalletConnect, Coinbase Wallet and more",
+      "benefitsTitle": "Upon connecting you'll receive:",
+      "benefit1": "Welcome CGC tokens",
+      "benefit2": "Access to task panel",
+      "benefit3": "Voting power in the DAO",
+      "benefit4": "Founding member badge",
+      "bonusTitle": "🎁 Welcome Bonus!",
+      "bonusDescription": "Upon connecting your wallet you'll automatically receive:",
+      "bonusAmount": "200 CGC",
+      "bonusReferral": "+ Referral bonuses",
+      "bonusNote": "Tokens will be deposited automatically to your wallet"
+    },
+    "complete": {
+      "title": "You're In! 🎉",
+      "subtitle": "You just joined a movement. 200 CGC are now in your wallet.",
+      "walletConnected": "Wallet connected",
+      "educationCompleted": "Education completed",
+      "inviteClaimed": "Invitation claimed",
+      "dashboardButton": "Go to Dashboard",
+      "homeButton": "Go to Home",
+      "followUs": "Follow us on social media",
+      "importToken": {
+        "title": "⚠️ Important: View CGC in Your Wallet",
+        "description": "We're in the CoinGecko/BaseScan listing process. For now, you need to import CGC manually to see it in your wallet.",
+        "alreadyHave": "You already have:",
+        "votingPower": "✅ Voting power in the DAO",
+        "communityAccess": "✅ Community access",
+        "daoMember": "✅ Full DAO membership",
+        "howToImport": "To see CGC in your wallet:",
+        "step1": "Open your wallet and tap '+' or 'Add Token'",
+        "step2": "Select 'Custom Token' and choose Base network",
+        "step3": "Paste the CGC address:",
+        "step4": "Name: CGC, Decimals: 18 (should auto-fill)",
+        "checkHistory": "💡 Check your transaction history to confirm receipt",
+        "copyAddress": "Copy Address",
+        "copied": "Copied!"
+      }
+    },
+    "delegation": {
+      "title": "Activate Your Voting Power",
+      "subtitle": "One final step to fully participate in DAO governance",
+      "benefitsTitle": "Why Activate?",
+      "benefit1": "Vote on DAO proposals and decisions",
+      "benefit2": "Your voice matters in governance",
+      "benefit3": "Participate in treasury management",
+      "activateButton": "Activate Voting Power",
+      "activating": "Activating...",
+      "success": "Voting Power Activated!",
+      "successDesc": "You can now participate in all DAO governance activities",
+      "error": "Activation Failed",
+      "skipButton": "Skip for now",
+      "gasNote": "🆓 FREE - Only requires a signature, no gas fee",
+      "signatureNote": "This is a signature request, not a payment"
+    },
+    "card": {
+      "name": "Special Invite DAO",
+      "tokensTitle": "200 CGC Instant",
+      "tokensDesc": "Start with governance tokens. 1 CGC = 1 Vote in real decisions.",
+      "tasksTitle": "Earn 200-3000 CGC",
+      "tasksDesc": "Complete tasks, get paid in tokens. No boss, no permissions needed.",
+      "communityTitle": "Founding Members Only",
+      "communityDesc": "Join the first 10,000 pioneers building the future of Web3 adoption."
+    },
+    "helpSection": {
+      "title": "This Spot Won't Wait Forever",
+      "whyTitle": "What You Get Today:",
+      "decentralized": "200 CGC deposited instantly to your wallet",
+      "transparent": "Access to 47+ paid tasks (200-3000 CGC each)",
+      "community": "Voting power in a real DAO with on-chain governance",
+      "rewarded": "3-level referral system: invite friends, earn 10-20% per referral"
+    }
+  },
+  "taskData": {
+    "create_web3_authentication_system": {
+      "title": "Create Web3 Authentication System",
+      "description": "Implement wallet authentication using WalletConnect and signature verification for secure DAO access"
+    },
+    "design_main_dashboard_uiux": {
+      "title": "Design Main Dashboard UI/UX",
+      "description": "Create mockups and prototypes of the DAO dashboard with Figma, including responsive design for all devices"
+    },
+    "integrate_ethereum_attestation_service": {
+      "title": "Integrate Ethereum Attestation Service",
+      "description": "Connect the system with EAS for automatic validation of completed tasks"
+    },
+    "configure_discord_bot": {
+      "title": "Configure Discord Bot",
+      "description": "Develop bot to notify tasks, rewards and DAO events on Discord"
+    },
+    "create_technical_documentation": {
+      "title": "Create Technical Documentation",
+      "description": "Write complete docs on architecture, APIs and contribution guidelines"
+    },
+    "implement_voting_system": {
+      "title": "Implement Voting System",
+      "description": "Create interface for proposals and voting using Aragon OSx"
+    },
+    "smart_contract_security_audit": {
+      "title": "Smart Contract Security Audit",
+      "description": "Review and audit the DAO system smart contracts"
+    },
+    "setup_cicd_pipeline": {
+      "title": "Setup CI/CD Pipeline",
+      "description": "Configure GitHub Actions for automatic testing and deployment"
+    },
+    "create_landing_page": {
+      "title": "Create Landing Page",
+      "description": "Develop main project page with DAO information"
+    },
+    "zealy_integration": {
+      "title": "Zealy Integration",
+      "description": "Connect DAO tasks with the Zealy platform for gamification"
+    },
+    "automated_testing": {
+      "title": "Automated Testing",
+      "description": "Write unit and integration tests for the entire system"
+    },
+    "performance_optimization": {
+      "title": "Performance Optimization",
+      "description": "Optimize dashboard and API load and performance"
+    },
+    "notification_system": {
+      "title": "Notification System",
+      "description": "Implement push and email notifications for important events"
+    },
+    "mobile_responsive_design": {
+      "title": "Mobile Responsive Design",
+      "description": "Adapt entire dashboard to work perfectly on mobile devices"
+    },
+    "analytics_and_metrics": {
+      "title": "Analytics and Metrics",
+      "description": "Implement usage tracking and DAO metrics with dashboards"
+    },
+    "internationalization_i18n": {
+      "title": "Internationalization (i18n)",
+      "description": "Add multi-language support to dashboard (EN/ES)"
+    },
+    "api_rate_limiting": {
+      "title": "API Rate Limiting",
+      "description": "Implement rate limiting and anti-spam protection on APIs"
+    },
+    "backup_and_recovery": {
+      "title": "Backup and Recovery",
+      "description": "Setup automatic backup system for database"
+    },
+    "social_media_integration": {
+      "title": "Social Media Integration",
+      "description": "Connect with Twitter/X to share achievements and updates"
+    },
+    "improved_error_handling": {
+      "title": "Improved Error Handling",
+      "description": "Implement robust error handling and logging with Sentry"
+    },
+    "interactive_tutorial": {
+      "title": "Interactive Tutorial",
+      "description": "Create guided tour for new DAO users"
+    },
+    "api_documentation": {
+      "title": "API Documentation",
+      "description": "Create interactive API documentation with Swagger/OpenAPI"
+    },
+    "dark_mode_implementation": {
+      "title": "Dark Mode Implementation",
+      "description": "Implement dark theme for the entire dashboard"
+    },
+    "load_testing": {
+      "title": "Load Testing",
+      "description": "Perform load tests to identify system limits"
+    },
+    "multisignature_wallet_integration": {
+      "title": "Multi-signature Wallet Integration",
+      "description": "Integrate support for multi-sig wallets like Gnosis Safe"
+    },
+    "community_guidelines": {
+      "title": "Community Guidelines",
+      "description": "Write code of conduct and guidelines for contributors"
+    },
+    "nft_rewards_system": {
+      "title": "NFT Rewards System",
+      "description": "Create NFT system as rewards for outstanding contributions"
+    },
+    "database_optimization": {
+      "title": "Database Optimization",
+      "description": "Optimize queries and database structure for better performance"
+    },
+    "legal_compliance_review": {
+      "title": "Legal Compliance Review",
+      "description": "Review legal aspects of the DAO and compliance in different jurisdictions"
+    },
+    "tokenomics_analysis": {
+      "title": "Tokenomics Analysis",
+      "description": "Analyze and optimize CGC token tokenomics"
+    },
+    "monitoring_and_alerts": {
+      "title": "Monitoring and Alerts",
+      "description": "Setup monitoring system with alerts for system health"
+    },
+    "crosschain_integration": {
+      "title": "Cross-chain Integration",
+      "description": "Research and implement support for other blockchains besides Base"
+    },
+    "user_feedback_system": {
+      "title": "User Feedback System",
+      "description": "Implement system to collect and manage user feedback"
+    },
+    "performance_dashboard": {
+      "title": "Performance Dashboard",
+      "description": "Create internal dashboard for DAO performance metrics"
+    }
+  },
+  "socialVerification": {
+    "title": "Social Verification",
+    "description": "Verify your social accounts to build trust with the community",
+    "notConnected": "Not connected",
+    "connect": "Connect",
+    "connecting": "Connecting...",
+    "verified": "Verified",
+    "verifiedOn": "Verified on",
+    "whyVerify": "Why verify your accounts?",
+    "benefit1": "Build trust with other community members",
+    "benefit2": "Easier collaboration and communication",
+    "benefit3": "Access to exclusive features and rewards",
+    "discordWarning": {
+      "title": "⚠️ Important before continuing",
+      "emailRequired": "Discord requires your email to be verified to authorize external apps.",
+      "instructions": "If you haven't verified your Discord email, you'll see an error and won't be able to continue. Verify your email first in Discord → Settings → My Account.",
+      "useAnotherAccount": "Use a different Discord account",
+      "wrongAccount": "Wrong account? Use a different Discord account",
+      "verificationRequired": "Just one more step! 🔐",
+      "verificationNeededDesc": "Discord needs you to verify your account to protect your security",
+      "whyDiscordAsks": "Why does Discord ask for this?",
+      "whyExplanation": "Discord blocks access to external apps for unverified accounts. It's a security measure that protects you against account theft and spam. It only takes 2 minutes to verify!",
+      "benefits": "✨ Benefits of verifying your account:",
+      "benefitSecurity": "Security: Protects your account from unauthorized access",
+      "benefitRecovery": "Recovery: You can recover your account if you forget your password",
+      "benefitFullAccess": "Full access: Use Discord in any app and community",
+      "benefitTrust": "Trust: Serious servers only accept verified accounts",
+      "howToVerify": "How do I verify my account? (2 minutes)",
+      "step1": "Open Discord on your computer or phone",
+      "step2": "Go to Settings → My Account",
+      "step3": "Look for \"Verify Email\" or \"Add Phone\"",
+      "step4": "Follow the instructions (email or SMS)",
+      "step5": "Done! Return here and continue 🎉",
+      "spamTip": "Tip: If you can't find the email, check your spam folder. You can also verify with your phone number.",
+      "retryWithAccount": "Retry with this account",
+      "cancel": "Cancel"
+    }
+  },
+  "socialEngagement": {
+    "title": "Earn {amount} CGC!",
+    "connectedAs": "Connected as {username}",
+    "follow": "follow",
+    "join": "join",
+    "earnReward": "{action} us on {platform} and earn {amount} CGC instantly!",
+    "followButton": "Follow on Twitter/X",
+    "joinButton": "Join Discord",
+    "termsNote": "Reward is claimed once per account. Must have verified social account.",
+    "opening": "Opening {platform}...",
+    "didYouFollow": "Did you follow us on Twitter/X?",
+    "didYouJoin": "Did you join our Discord?",
+    "confirmToEarn": "Confirm to claim your {amount} CGC reward",
+    "tryAgain": "Try Again",
+    "claimReward": "Claim Reward",
+    "claimingReward": "Claiming your reward...",
+    "congratulations": "Congratulations!",
+    "rewardEarned": "You have earned {amount} CGC for your engagement!",
+    "done": "Done",
+    "alreadyClaimed": "Already Claimed",
+    "alreadyClaimedMessage": "You have already claimed this {platform} engagement reward.",
+    "claimError": "Failed to claim reward. Please try again.",
+    "networkError": "Network error. Please check your connection."
+  },
+  "proposals": {
+    "badge": "Community Governance",
+    "title": "Task",
+    "titleHighlight": "Proposals",
+    "subtitle": "Propose new tasks, vote on community ideas, and help shape the future of CryptoGift DAO",
+    "stats": {
+      "active": "Active Proposals",
+      "activeProposals": "Active Proposals",
+      "approved": "Approved",
+      "totalVotes": "Total Votes",
+      "syncedToDiscord": "Synced to Discord"
+    },
+    "actions": {
+      "createProposal": "Create Proposal",
+      "proposeTask": "Propose Task",
+      "syncToDiscord": "Sync to Discord",
+      "refresh": "Refresh",
+      "discordBot": "Discord Bot"
+    },
+    "tabs": {
+      "active": "Active",
+      "voting": "Voting",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "empty": {
+      "active": "No active proposals",
+      "noProposals": "No active proposals",
+      "activeHint": "Be the first to propose a new task!",
+      "beFirst": "Be the first to propose a new task!",
+      "noMatching": "No matching proposals",
+      "approved": "No approved proposals yet",
+      "rejected": "No rejected proposals"
+    },
+    "loading": "Loading proposals...",
+    "loadingText": "Loading proposals...",
+    "card": {
+      "proposedBy": "Proposed by:",
+      "by": "By",
+      "category": "Category",
+      "reward": "Reward",
+      "anonymous": "Anonymous",
+      "noDescription": "No description provided",
+      "votes": "votes",
+      "approval": "approval",
+      "voteFor": "Vote For",
+      "voteAgainst": "Vote Against"
+    },
+    "status": {
+      "pending": "Pending",
+      "voting": "Voting",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "converted": "Task Created"
+    },
+    "createModal": {
+      "title": "Create New Proposal",
+      "subtitle": "Proposals can be created from Discord using the /propose command, or through this web interface.",
+      "description": "Proposals can be created from Discord using the /propose command, or through this web interface.",
+      "titleLabel": "Title",
+      "titlePlaceholder": "e.g., Create landing page for summer campaign",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Describe the task in detail...",
+      "categoryLabel": "Category",
+      "categoryPlaceholder": "Select category",
+      "selectCategory": "Select category",
+      "categories": {
+        "development": "Development",
+        "design": "Design",
+        "content": "Content",
+        "marketing": "Marketing",
+        "community": "Community"
+      },
+      "rewardLabel": "Suggested Reward",
+      "rewardPlaceholder": "e.g., 500",
+      "cancel": "Cancel",
+      "submit": "Create Proposal",
+      "create": "Create Proposal"
+    },
+    "categories": {
+      "development": "Development",
+      "design": "Design",
+      "content": "Content",
+      "marketing": "Marketing",
+      "community": "Community"
+    },
+    "toasts": {
+      "connectWallet": "Connect your wallet to vote",
+      "connectWalletDesc": "You need to connect your wallet to vote on proposals",
+      "voteRecorded": "Vote recorded!",
+      "voteRemoved": "Vote removed",
+      "voteFailed": "Failed to vote",
+      "syncComplete": "Sync complete!",
+      "syncedProposals": "Synced {count} proposals to Discord",
+      "syncFailed": "Sync failed",
+      "comingSoon": "Proposal creation coming soon!"
+    },
+    "errors": {
+      "connectWallet": "Connect Wallet",
+      "connectWalletDesc": "You need to connect your wallet to vote"
+    },
+    "discord": {
+      "badge": "Discord"
+    }
+  },
+  "socialVerify": {
+    "discordWarning": {
+      "title": "Important: Discord Verification Required",
+      "emailRequired": "Discord requires your account to have a verified email before authorizing third-party apps.",
+      "instructions": "If you haven't verified your email, you'll need to do so in Discord Settings → My Account → Email.",
+      "useAnotherAccount": "Use a Different Account",
+      "wrongAccount": "Wrong account? Use a different one",
+      "verificationRequired": "Discord Verification Required",
+      "verificationNeededDesc": "Your Discord account needs email verification before you can authorize apps.",
+      "whyDiscordAsks": "Why does Discord require this?",
+      "whyExplanation": "Discord requires email verification to protect users and prevent spam. This is a Discord security policy, not ours.",
+      "benefits": "Benefits of verifying:",
+      "benefitSecurity": "Your account is more secure",
+      "benefitRecovery": "You can recover your account if needed",
+      "benefitFullAccess": "Full access to all Discord features",
+      "benefitTrust": "Access to exclusive communities like ours",
+      "howToVerify": "How to verify your email:",
+      "step1": "Open Discord (app or discord.com)",
+      "step2": "Go to Settings (gear icon)",
+      "step3": "Click on \"My Account\"",
+      "step4": "Under Email, click \"Verify\" or add your email",
+      "step5": "Check your inbox and click the verification link",
+      "spamTip": "Check your spam/junk folder if you don't see the email!",
+      "retryWithAccount": "I've Verified - Try Again"
+    }
+  },
+  "miniapp": {
+    "tabs": {
+      "dashboard": "Dashboard",
+      "tasks": "Tasks",
+      "referrals": "Referrals"
+    },
+    "dashboard": {
+      "welcomeTitle": "Welcome to CryptoGift DAO",
+      "welcomeDesc": "Complete tasks, earn CGC tokens, and grow your network.",
+      "connectPrompt": "Connect with Farcaster to get started",
+      "error": "Failed to load dashboard",
+      "metrics": {
+        "availableTasks": "Available Tasks",
+        "inProgress": "In Progress",
+        "pendingCGC": "Pending CGC",
+        "referrals": "Referrals",
+        "streak": "Streak Days",
+        "rank": "Your Rank"
+      },
+      "cta": {
+        "viewTasks": "View Available Tasks",
+        "inviteFriends": "Invite Friends & Earn"
+      },
+      "tips": {
+        "completeTask": "You have a task in progress! Complete it to earn CGC."
+      }
+    },
+    "tasks": {
+      "error": "Failed to load tasks",
+      "retry": "Try Again",
+      "sections": {
+        "inProgress": "In Progress",
+        "available": "Available",
+        "completed": "Recently Completed"
+      },
+      "empty": {
+        "available": "No tasks available right now. Check back soon!"
+      },
+      "status": {
+        "available": "Available",
+        "claimed": "Claimed",
+        "in_progress": "In Progress",
+        "completed": "Completed",
+        "validated": "Validated"
+      },
+      "actions": {
+        "claim": "Take Task",
+        "submit": "Submit",
+        "share": "Share"
+      }
+    },
+    "referrals": {
+      "error": "Failed to load referrals",
+      "connectPrompt": "Connect to view your referral stats",
+      "yourLink": "Your Referral Link",
+      "generating": "Generating...",
+      "copy": "Copy",
+      "shareToFeed": "Share to Farcaster Feed",
+      "yourNetwork": "Your Network",
+      "pendingRewards": "Pending Rewards",
+      "conversion": "Conversion Rate",
+      "leaderboard": "Leaderboard",
+      "you": "You"
+    }
+  },
+  "apex": {
+    "panel": {
+      "title": "apeX Profile",
+      "balance": "Balance",
+      "quickStats": "Quick Stats",
+      "quickActions": "Quick Actions",
+      "comingSoon": "Coming Soon",
+      "apexAgent": "apeX AI Agent coming soon"
+    },
+    "stats": {
+      "referrals": "Referrals",
+      "direct": "direct",
+      "pending": "Pending",
+      "earned": "earned",
+      "competitions": "Competitions",
+      "gifts": "Gifts",
+      "sent": "sent",
+      "received": "received"
+    },
+    "actions": {
+      "sendGift": "Send Gift",
+      "sendGiftDesc": "Gift CGC tokens to friends",
+      "viewTasks": "View Tasks",
+      "viewTasksDesc": "Complete tasks to earn CGC",
+      "shareReferral": "Share Referral",
+      "shareReferralDesc": "Invite friends & earn rewards",
+      "myProfile": "My Profile",
+      "myProfileDesc": "View and edit your profile"
+    },
+    "videoAvatar": {
+      "title": "Profile Avatar",
+      "description": "Upload a video or image for your profile avatar",
+      "maxSize": "Max size",
+      "dragDrop": "Drag and drop or click to upload",
+      "formats": "MP4, WebM, MOV, JPG, PNG, WebP, GIF",
+      "uploading": "Uploading...",
+      "remove": "Remove Avatar",
+      "fileTooLarge": "File too large. Maximum size is {size}MB.",
+      "invalidType": "Invalid file type. Please upload a video or image.",
+      "uploadFailed": "Upload failed. Please try again."
+    }
+  }
+}

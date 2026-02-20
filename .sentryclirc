@@ -1,0 +1,7 @@
+[defaults]
+org = cryptogift-wallets
+project = cryptogift-dao
+
+[auth]
+# Token will be added when you run the wizard
+# token = YOUR_AUTH_TOKEN_HERE

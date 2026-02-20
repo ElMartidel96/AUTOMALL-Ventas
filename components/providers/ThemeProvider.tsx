@@ -1,0 +1,69 @@
+'use client';
+import { ThemeProvider as NextThemesProvider, useTheme } from 'next-themes';
+import { useEffect } from 'react';
+
+function ThemeColorUpdater({ children }: { children: React.ReactNode }) {
+  const { theme, systemTheme } = useTheme();
+
+  useEffect(() => {
+    // Determine the actual theme (considering system preference)
+    const currentTheme = theme === 'system' ? systemTheme : theme;
+
+    // Update theme-color meta tag based on current theme
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      // Use EXACT same colors as navbar (bg-bg-primary from globals.css)
+      // Dark mode: #0A0E15 (rgb(10, 14, 21))
+      // Light mode: #FFFFFF (rgb(255, 255, 255))
+      // Using solid hex colors for maximum compatibility
+      const darkColor = '#0A0E15'; // Exacto mismo color que navbar dark
+      const lightColor = '#FFFFFF'; // Exacto mismo color que navbar light
+      metaThemeColor.setAttribute('content', currentTheme === 'dark' ? darkColor : lightColor);
+    } else {
+      // Create the meta tag if it doesn't exist
+      const meta = document.createElement('meta');
+      meta.name = 'theme-color';
+      meta.content = currentTheme === 'dark' ? '#0A0E15' : '#FFFFFF';
+      document.head.appendChild(meta);
+    }
+
+    // For iOS: set translucent status bar
+    const metaStatusBar = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+    if (metaStatusBar) {
+      // black-translucent allows content to show through on iOS
+      metaStatusBar.setAttribute('content', 'black-translucent');
+    }
+
+    // Android Chrome specific: supports alpha channel
+    const metaThemeColorAndroid = document.querySelector('meta[name="theme-color-android"]');
+    if (!metaThemeColorAndroid && navigator.userAgent.includes('Android')) {
+      const meta = document.createElement('meta');
+      meta.name = 'theme-color';
+      meta.content = currentTheme === 'dark' ? 'rgba(10, 14, 21, 0.9)' : 'rgba(255, 255, 255, 0.9)';
+      document.head.appendChild(meta);
+    }
+  }, [theme, systemTheme]);
+
+  // NOTE: Using plain div instead of motion.div to preserve CSS sticky positioning
+  // framer-motion can add will-change/transform which breaks position: sticky
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      {children}
+    </div>
+  );
+}
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme="dark"
+      enableSystem={true}
+      disableTransitionOnChange={false}
+    >
+      <ThemeColorUpdater>
+        {children}
+      </ThemeColorUpdater>
+    </NextThemesProvider>
+  );
+}

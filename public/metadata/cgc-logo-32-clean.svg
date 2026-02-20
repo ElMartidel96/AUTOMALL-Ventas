@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <radialGradient id="mainFace" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" style="stop-color:#ffaa00"/>
+      <stop offset="100%" style="stop-color:#cc6600"/>
+    </radialGradient>
+    <radialGradient id="earGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#ff8800"/>
+      <stop offset="100%" style="stop-color:#aa4400"/>
+    </radialGradient>
+    <linearGradient id="shadowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#663300"/>
+      <stop offset="100%" style="stop-color:#331100"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Main head shape (hexagonal ape face) -->
+  <path d="M16,3 L23,7 L26,14 L26,18 L23,25 L16,29 L9,25 L6,18 L6,14 L9,7 Z" fill="url(#mainFace)" stroke="#331100" stroke-width="0.3"/>
+  
+  <!-- Left ear -->
+  <path d="M7,8 L3,6 L2,11 L5,13 L8,11 Z" fill="url(#earGrad)" stroke="#331100" stroke-width="0.2"/>
+  
+  <!-- Right ear -->
+  <path d="M25,8 L29,6 L30,11 L27,13 L24,11 Z" fill="url(#earGrad)" stroke="#331100" stroke-width="0.2"/>
+  
+  <!-- Forehead shadow -->
+  <path d="M10,8 L16,5 L22,8 L20,11 L16,9 L12,11 Z" fill="url(#shadowGrad)" opacity="0.8"/>
+  
+  <!-- Left eye -->
+  <circle cx="11" cy="14" r="2.5" fill="url(#shadowGrad)" opacity="0.9"/>
+  <ellipse cx="11" cy="14.5" rx="1.2" ry="1.5" fill="#000000"/>
+  
+  <!-- Right eye -->
+  <circle cx="21" cy="14" r="2.5" fill="url(#shadowGrad)" opacity="0.9"/>
+  <ellipse cx="21" cy="14.5" rx="1.2" ry="1.5" fill="#000000"/>
+  
+  <!-- Nose area -->
+  <path d="M14,17 L16,15 L18,17 L17,19 L15,19 Z" fill="url(#shadowGrad)" opacity="0.7"/>
+  
+  <!-- Nostrils -->
+  <ellipse cx="14.8" cy="18" rx="0.6" ry="0.8" fill="#000000"/>
+  <ellipse cx="17.2" cy="18" rx="0.6" ry="0.8" fill="#000000"/>
+  
+  <!-- Mouth area -->
+  <ellipse cx="16" cy="22" rx="4" ry="2.5" fill="url(#mainFace)"/>
+  <path d="M13,22 Q16,24 19,22" stroke="#331100" stroke-width="1" fill="none" stroke-linecap="round"/>
+  
+  <!-- Chin -->
+  <path d="M12,25 L16,27 L20,25 L18,26 L16,26.5 L14,26 Z" fill="url(#shadowGrad)" opacity="0.6"/>
+  
+  <!-- Geometric face lines for poly effect -->
+  <path d="M10,12 L16,10 L22,12" stroke="#663300" stroke-width="0.3" opacity="0.5" fill="none"/>
+  <path d="M8,16 L16,14 L24,16" stroke="#663300" stroke-width="0.3" opacity="0.5" fill="none"/>
+  <path d="M11,20 L16,18 L21,20" stroke="#663300" stroke-width="0.3" opacity="0.5" fill="none"/>
+</svg>

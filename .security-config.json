@@ -1,0 +1,152 @@
+{
+  "enforcement": {
+    "level": "warning",
+    "description": "Security enforcement level: 'warning' for CI/CD learning mode, 'error' for strict blocking mode",
+    "non_blocking": true,
+    "deployment_allowed": true
+  },
+  "patterns": {
+    "unprotected_api_endpoints": {
+      "enabled": true,
+      "severity": "medium",
+      "required_patterns": [
+        "checkRateLimit", 
+        "verifyJWT", 
+        "ADMIN_API_TOKEN", 
+        "authMiddleware", 
+        "requireAuth"
+      ],
+      "directories": [
+        "app/api",
+        "src/app/api", 
+        "src/pages/api",
+        "frontend/src/app/api",
+        "frontend/src/pages/api"
+      ]
+    },
+    "sensitive_data_logs": {
+      "enabled": true,
+      "severity": "critical",
+      "patterns": [
+        "console.log.*private",
+        "console.log.*secret", 
+        "console.log.*token",
+        "console.log.*password",
+        "console.log.*key",
+        "console.log.*wallet",
+        "console.log.*mnemonic"
+      ],
+      "directories": [
+        "app/", 
+        "lib/", 
+        "components/", 
+        "src/", 
+        "scripts/", 
+        "contracts/"
+      ]
+    },
+    "missing_test_coverage": {
+      "enabled": true,
+      "severity": "low",
+      "test_directories": ["__tests__/", "test/", "tests/"],
+      "source_directories": ["lib/", "src/", "app/", "components/"],
+      "excluded_files": ["types", "index", "config", "constants"]
+    },
+    "typescript_errors": {
+      "enabled": true,
+      "severity": "medium",
+      "excluded_directories": ["node_modules", "dist", "build", ".next"],
+      "strict_mode": false
+    },
+    "eslint_violations": {
+      "enabled": true,
+      "severity": "medium",
+      "categories": {
+        "errors": "high",
+        "warnings": "medium"
+      }
+    }
+  },
+  "metrics": {
+    "coverage_threshold": 70,
+    "bypass_limit_per_week": 2,
+    "compliance_score_minimum": 70,
+    "typescript_error_threshold": 50,
+    "eslint_error_threshold": 10,
+    "security_score_calculation": {
+      "api_protection_weight": 30,
+      "secret_exposure_weight": 40,
+      "test_coverage_weight": 15,
+      "code_quality_weight": 15
+    }
+  },
+  "audit": {
+    "log_file": ".security-audit.log",
+    "retention_days": 30,
+    "auto_escalate": false,
+    "detailed_logging": true,
+    "artifact_retention": {
+      "security_reports": 30,
+      "test_results": 7,
+      "build_logs": 7
+    }
+  },
+  "comprehensive_analysis": {
+    "dependency_audit": {
+      "enabled": true,
+      "severity_thresholds": {
+        "critical": 0,
+        "high": 2,
+        "moderate": 10,
+        "low": 50
+      }
+    },
+    "secret_scanning": {
+      "enabled": true,
+      "scan_history": true,
+      "exclude_patterns": [".git", "node_modules", "artifacts"]
+    },
+    "sast_analysis": {
+      "enabled": true,
+      "rulesets": [
+        "security-audit",
+        "owasp-top-ten", 
+        "typescript",
+        "react",
+        "nextjs"
+      ]
+    },
+    "license_compliance": {
+      "enabled": true,
+      "allowed_licenses": [
+        "MIT", "Apache-2.0", "BSD-3-Clause", "ISC"
+      ],
+      "forbidden_licenses": [
+        "GPL-3.0", "AGPL-3.0", "LGPL-3.0", "SSPL-1.0"
+      ]
+    }
+  },
+  "smart_contracts": {
+    "security_analysis": {
+      "enabled": true,
+      "slither": {
+        "enabled": true,
+        "exclude_detectors": [],
+        "severity_blocking": ["high", "critical"]
+      },
+      "mythx": {
+        "enabled": true,
+        "api_key_required": true,
+        "main_branch_only": true
+      },
+      "size_limits": {
+        "warning_threshold": 20480,
+        "error_threshold": 24576
+      },
+      "gas_analysis": {
+        "enabled": true,
+        "optimization_recommendations": true
+      }
+    }
+  }
+}

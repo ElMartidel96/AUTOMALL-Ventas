@@ -1,0 +1,73 @@
+CryptoGift Wallets DAO
+Copyright (c) 2024-2026 MBXarts - The Moon in a Box. All rights reserved.
+
+Made by mbxarts.com The Moon in a Box property
+Co-Author: Godez22
+
+Licensed under the PolyForm Noncommercial License 1.0.0.
+See LICENSE file for the full license text.
+See COMMERCIAL.md for commercial licensing information.
+
+================================================================================
+
+This software includes the following third-party components:
+
+--------------------------------------------------------------------------------
+OpenZeppelin Contracts (v5.0.1)
+License: MIT
+Copyright (c) 2016-2024 OpenZeppelin
+https://github.com/OpenZeppelin/openzeppelin-contracts
+
+--------------------------------------------------------------------------------
+Aragon OSx (v1.4.0)
+License: GPL-3.0
+Copyright (c) 2022-2024 Aragon Association
+https://github.com/aragon/osx
+
+--------------------------------------------------------------------------------
+Next.js (v14.x)
+License: MIT
+Copyright (c) 2024 Vercel, Inc.
+https://github.com/vercel/next.js
+
+--------------------------------------------------------------------------------
+Hardhat
+License: MIT
+Copyright (c) 2019 Nomic Foundation
+https://github.com/NomicFoundation/hardhat
+
+--------------------------------------------------------------------------------
+ethers.js (v5.7.2)
+License: MIT
+Copyright (c) 2019 Richard Moore
+https://github.com/ethers-io/ethers.js
+
+--------------------------------------------------------------------------------
+viem (v2.36.0)
+License: MIT
+Copyright (c) 2023-present wevm
+https://github.com/wevm/viem
+
+--------------------------------------------------------------------------------
+wagmi (v2.16.8)
+License: MIT
+Copyright (c) 2023-present wevm
+https://github.com/wevm/wagmi
+
+--------------------------------------------------------------------------------
+ThirdWeb SDK (v5.x)
+License: Apache-2.0
+Copyright (c) 2023-2024 ThirdWeb Inc.
+https://github.com/thirdweb-dev/js
+
+--------------------------------------------------------------------------------
+EAS SDK (v2.0.0)
+License: MIT
+Copyright (c) 2023 Ethereum Attestation Service
+https://github.com/ethereum-attestation-service/eas-sdk
+
+--------------------------------------------------------------------------------
+Supabase (v2.x)
+License: Apache-2.0
+Copyright (c) 2020-2024 Supabase Inc.
+https://github.com/supabase/supabase-js

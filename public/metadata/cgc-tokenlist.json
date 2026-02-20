@@ -1,0 +1,64 @@
+{
+  "name": "CryptoGift DAO Token List",
+  "timestamp": "2025-09-09T05:07:30.461Z",
+  "version": {
+    "major": 1,
+    "minor": 0,
+    "patch": 1
+  },
+  "tags": {
+    "governance": {
+      "name": "Governance",
+      "description": "Tokens used for governance"
+    },
+    "dao": {
+      "name": "DAO",
+      "description": "DAO governance tokens"
+    },
+    "rewards": {
+      "name": "Rewards",
+      "description": "Reward distribution tokens"
+    },
+    "community": {
+      "name": "Community",
+      "description": "Community driven tokens"
+    }
+  },
+  "logoURI": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/main/public/metadata/cgc-logo-256.png",
+  "keywords": [
+    "cryptogift",
+    "dao",
+    "base",
+    "governance",
+    "rewards"
+  ],
+  "tokens": [
+    {
+      "chainId": 8453,
+      "address": "0x5e3a61b550328f3D8C44f60b3e10a49D3d806175",
+      "name": "CryptoGift Coin",
+      "symbol": "CGC",
+      "decimals": 18,
+      "logoURI": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/main/public/metadata/cgc-logo-256.png",
+      "tags": [
+        "governance",
+        "dao",
+        "rewards",
+        "community"
+      ],
+      "extensions": {
+        "website": "https://mbxarts.com",
+        "discord": "https://discord.gg/XzmKkrvhHc",
+        "twitter": "https://x.com/cryptogiftdao",
+        "coingeckoId": null,
+        "cmcId": null,
+        "easAttestationUid": null,
+        "bridgeInfo": {
+          "8453": {
+            "tokenAddress": "0x5e3a61b550328f3D8C44f60b3e10a49D3d806175"
+          }
+        }
+      }
+    }
+  ]
+}

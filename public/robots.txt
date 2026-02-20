@@ -1,0 +1,22 @@
+# robots.txt for CryptoGift Wallets DAO
+# Website: https://mbxarts.com
+# Last Updated: December 11, 2025
+
+User-agent: *
+Allow: /
+
+# Important pages
+Allow: /docs
+Allow: /referrals
+Allow: /funding
+Allow: /agent
+
+# API endpoints (allow for verification)
+Allow: /api/token/total-supply
+Allow: /api/token/circulating-supply
+
+# Sitemap location
+Sitemap: https://mbxarts.com/sitemap.xml
+
+# Crawl delay (be nice to servers)
+Crawl-delay: 1

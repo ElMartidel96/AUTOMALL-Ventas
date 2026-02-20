@@ -1,0 +1,144 @@
+{
+  "metadata": {
+    "generated": "2025-09-09T04:51:40.340Z",
+    "tokenAddress": "0x5e3a61b550328f3D8C44f60b3e10a49D3d806175",
+    "deployerAddress": "0xc655BF2Bd9AfA997c757Bef290A9Bb6ca41c5dE6",
+    "network": "Base Mainnet (8453)"
+  },
+  "urls": {
+    "logo64": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/main/public/metadata/cgc-logo-64.png",
+    "logo256": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/main/public/metadata/cgc-logo-256.png",
+    "logo512": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/main/public/metadata/cgc-logo-512.png",
+    "tokenList": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/main/public/metadata/cgc-tokenlist.json",
+    "metadata": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/main/public/metadata/token-metadata.json"
+  },
+  "baseScan": {
+    "tokenPage": "https://basescan.org/token/0x5e3a61b550328f3D8C44f60b3e10a49D3d806175",
+    "updateForm": "https://basescan.org/token/0x5e3a61b550328f3D8C44f60b3e10a49D3d806175#tokenInfo",
+    "requiredWallet": "0xc655BF2Bd9AfA997c757Bef290A9Bb6ca41c5dE6",
+    "logoUrl": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/main/public/metadata/cgc-logo-64.png",
+    "formData": {
+      "tokenName": "CryptoGift Coin",
+      "tokenSymbol": "CGC",
+      "website": "https://mbxarts.com",
+      "email": "admin@mbxarts.com",
+      "description": "CryptoGift Coin (CGC) is the governance token of the CryptoGift Wallets DAO. The token enables holders to participate in DAO governance decisions and receive rewards for contributions to the ecosystem.",
+      "discord": "https://discord.gg/XzmKkrvhHc",
+      "twitter": "https://x.com/cryptogiftdao",
+      "github": "https://github.com/CryptoGift-Wallets-DAO",
+      "reddit": "",
+      "telegram": "",
+      "facebook": ""
+    }
+  },
+  "coinbase": {
+    "updateUrl": "https://wallet.coinbase.com",
+    "tokenAddress": "0x5e3a61b550328f3D8C44f60b3e10a49D3d806175",
+    "logoUrl": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/main/public/metadata/cgc-logo-256.png",
+    "requiredWallet": "0xc655BF2Bd9AfA997c757Bef290A9Bb6ca41c5dE6"
+  },
+  "coinGecko": {
+    "listingUrl": "https://support.coingecko.com/hc/en-us/requests/new",
+    "category": "Cryptocurrency Listing Request",
+    "tokenAddress": "0x5e3a61b550328f3D8C44f60b3e10a49D3d806175",
+    "logoUrl": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/main/public/metadata/cgc-logo-256.png",
+    "requiredInfo": {
+      "tokenName": "CryptoGift Coin",
+      "tokenSymbol": "CGC",
+      "contractAddress": "0x5e3a61b550328f3D8C44f60b3e10a49D3d806175",
+      "blockchain": "Base",
+      "website": "https://mbxarts.com",
+      "twitter": "https://x.com/cryptogiftdao",
+      "discord": "https://discord.gg/XzmKkrvhHc",
+      "github": "https://github.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO",
+      "whitepaper": "https://mbxarts.com/CRYPTOGIFT_WHITEPAPER_v1.2.pdf",
+      "description": "CryptoGift Coin (CGC) is the governance token of the CryptoGift Wallets DAO",
+      "totalSupply": "2,000,000",
+      "circulatingSupply": "To be determined",
+      "logoUrl": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/main/public/metadata/cgc-logo-256.png"
+    }
+  },
+  "checklist": [
+    {
+      "task": "Generate optimized logos",
+      "status": "✅ COMPLETED",
+      "description": "Created 64x64, 256x256, 512x512 PNG versions"
+    },
+    {
+      "task": "Create and validate token list",
+      "status": "✅ COMPLETED",
+      "description": "Token list passes Uniswap schema validation"
+    },
+    {
+      "task": "Commit assets to GitHub",
+      "status": "⏳ PENDING",
+      "description": "Push all metadata files to GitHub repository",
+      "action": "git add public/metadata/ && git commit -m \"feat: add CGC token metadata and logos\" && git push"
+    },
+    {
+      "task": "Get commit hash",
+      "status": "⏳ PENDING",
+      "description": "Get specific commit hash for permanent URLs",
+      "action": "git rev-parse HEAD"
+    },
+    {
+      "task": "Update URLs with commit hash",
+      "status": "⏳ PENDING",
+      "description": "Replace \"main\" with commit hash in URLs"
+    },
+    {
+      "task": "Verify contract on BaseScan",
+      "status": "⏳ PENDING",
+      "description": "Ensure contract source code is verified",
+      "action": "node scripts/verify-new-contracts.js"
+    },
+    {
+      "task": "Submit BaseScan update",
+      "status": "⏳ PENDING",
+      "description": "Submit token info update form"
+    },
+    {
+      "task": "Update Coinbase Wallet",
+      "status": "⏳ PENDING",
+      "description": "Submit metadata to Coinbase Wallet"
+    },
+    {
+      "task": "Apply to CoinGecko",
+      "status": "⏳ PENDING",
+      "description": "Submit listing application"
+    },
+    {
+      "task": "Create trading pair (optional)",
+      "status": "⏳ OPTIONAL",
+      "description": "Create CGC/WETH pair on Aerodrome or Uniswap"
+    },
+    {
+      "task": "Verify metadata propagation",
+      "status": "⏳ PENDING",
+      "description": "Check logos appear in wallets after 24-48h"
+    }
+  ],
+  "quickStart": {
+    "immediate": [
+      "Commit and push metadata files to GitHub",
+      "Get commit hash and update URLs",
+      "Verify contract on BaseScan if not done",
+      "Submit BaseScan token update form"
+    ],
+    "nextDay": [
+      "Apply to CoinGecko (requires active community)",
+      "Update Coinbase Wallet metadata",
+      "Consider creating trading pair for liquidity"
+    ],
+    "followUp": [
+      "Monitor for logo appearance (24-48h)",
+      "Submit to additional token lists",
+      "Announce successful listings to community"
+    ]
+  },
+  "troubleshooting": {
+    "baseScanRejection": "Ensure neutral description, correct logo format, and deployer wallet signature",
+    "coinbaseDelay": "Make official social media announcement and resubmit if needed",
+    "coinGeckoRejection": "Ensure active trading pairs and community engagement before reapplying"
+  }
+}

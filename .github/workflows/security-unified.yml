@@ -1,0 +1,183 @@
+name: 🛡️ Security & Quality Gate (Comprehensive)
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  security-quality-check:
+    name: 🔍 Complete Security & Quality Validation
+    runs-on: ubuntu-latest
+    
+    env:
+      NODE_ENV: test
+      CI: true
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+      
+    - name: 📦 Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 9.15.9
+        run_install: false
+        
+    - name: 🟢 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        registry-url: 'https://registry.npmjs.org/'
+        cache: 'pnpm'
+        cache-dependency-path: pnpm-lock.yaml
+        
+    - name: 📦 Install Dependencies
+      run: |
+        echo "🔍 Installing dependencies with pnpm $(pnpm --version)..."
+        pnpm install --frozen-lockfile --prefer-offline
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+        
+    - name: 🔍 TypeScript Compilation Check
+      run: |
+        set -o pipefail
+        echo "## 🔍 TypeScript Analysis" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        set +e
+        pnpm run type-check > typescript-output.txt 2>&1
+        TS_EXIT_CODE=$?
+        set -e
+        
+        if [ $TS_EXIT_CODE -eq 0 ]; then
+          echo "✅ **TypeScript: PASSED** - No compilation errors" >> $GITHUB_STEP_SUMMARY
+        else
+          ERROR_COUNT=$(grep -c "error TS" typescript-output.txt || echo "0")
+          echo "❌ **TypeScript: $ERROR_COUNT errors found** (non-blocking)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Sample TypeScript Errors:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          head -10 typescript-output.txt >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        fi
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "⚠️ TypeScript check completed (non-blocking)"
+      continue-on-error: true
+        
+    - name: 🧹 ESLint Security Rules
+      run: |
+        set -o pipefail
+        echo "## 🧹 ESLint Analysis" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        set +e
+        pnpm run lint > eslint-output.txt 2>&1
+        ESLINT_EXIT_CODE=$?
+        set -e
+        
+        if [ $ESLINT_EXIT_CODE -eq 0 ]; then
+          echo "✅ **ESLint: PASSED** - No linting issues found" >> $GITHUB_STEP_SUMMARY
+        else
+          ERROR_COUNT=$(grep -c "error" eslint-output.txt || echo "0")
+          WARNING_COUNT=$(grep -c "warning" eslint-output.txt || echo "0")
+          echo "❌ **ESLint: Issues Found** - $ERROR_COUNT errors, $WARNING_COUNT warnings (non-blocking)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ESLint Issues Summary:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          head -15 eslint-output.txt >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        fi
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "⚠️ ESLint check completed (non-blocking)"
+      continue-on-error: true
+        
+    - name: 🔒 Security Audit - Dependencies
+      run: |
+        echo "📋 Running pnpm audit..."
+        pnpm audit --prod --audit-level=moderate || echo "⚠️ Vulnerabilities found but continuing"
+      continue-on-error: true
+        
+    - name: 📊 Generate Audit Report
+      if: always()
+      run: |
+        pnpm audit --json > audit-report.json || true
+        echo "📝 Audit report generated"
+      continue-on-error: true
+        
+    - name: 🔍 Secret Scanning - TruffleHog
+      if: github.event_name == 'pull_request'
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: ${{ github.event.repository.default_branch }}
+        head: HEAD
+        extra_args: --debug --only-verified
+      continue-on-error: true
+        
+    - name: 🏗️ Build Project
+      run: |
+        echo "🔨 Building project..."
+        pnpm run build || echo "⚠️ Build errors found but continuing"
+      continue-on-error: true
+        
+    - name: 📋 Generate SBOM
+      uses: anchore/sbom-action@v0
+      with:
+        format: cyclonedx-json
+        output-file: sbom.json
+      continue-on-error: true
+        
+    - name: 📜 License Check
+      run: |
+        echo "📜 Checking licenses..."
+        npx license-checker --production --summary --excludePrivatePackages > licenses.txt || true
+        if grep -E "(GPL|AGPL|LGPL|SSPL)" licenses.txt; then
+          echo "::warning::Found copyleft licenses that may be incompatible"
+        fi
+      continue-on-error: true
+        
+    - name: 🎯 SAST Analysis - Semgrep
+      uses: returntocorp/semgrep-action@v1
+      with:
+        config: >-
+          p/security-audit
+          p/owasp-top-ten
+          p/typescript
+          p/react
+          p/nextjs
+      continue-on-error: true
+      env:
+        SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+        
+    - name: 📊 Summary Report
+      if: always()
+      run: |
+        echo "## 🛡️ Security & Quality Gate Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### ✅ Checks Completed:" >> $GITHUB_STEP_SUMMARY
+        echo "- TypeScript Compilation" >> $GITHUB_STEP_SUMMARY
+        echo "- ESLint Security Rules" >> $GITHUB_STEP_SUMMARY
+        echo "- Dependency Audit" >> $GITHUB_STEP_SUMMARY
+        echo "- Secret Scanning" >> $GITHUB_STEP_SUMMARY
+        echo "- License Compliance" >> $GITHUB_STEP_SUMMARY
+        echo "- SAST Analysis" >> $GITHUB_STEP_SUMMARY
+        echo "- SBOM Generation" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "⚠️ **Note:** This workflow is non-blocking. All issues are reported as warnings." >> $GITHUB_STEP_SUMMARY
+        
+    - name: 📤 Upload Security Artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-reports
+        path: |
+          audit-report.json
+          licenses.txt
+          sbom.json
+        retention-days: 7

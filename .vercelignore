@@ -1,0 +1,127 @@
+# Vercel Ignore - Prevent large files from being included in serverless functions
+
+# Package manager stores (CRITICAL - these are huge!)
+.pnpm-store
+node_modules/.pnpm
+node_modules/.cache
+
+# Development directories
+.git
+.github
+scripts
+test
+tests
+hardhat.config.js
+hardhat.config.production.js
+
+# Build artifacts
+artifacts
+cache
+coverage
+typechain-types
+dist
+build
+
+# Documentation (heavy images)
+*.PNG
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+!app/icon.png
+!public/favicon.ico
+!public/apeX.png
+!public/apeX11.png
+!public/apeX22.PNG
+!public/apeX-aro.png
+!public/apeX-avatar.png
+# Farcaster Mini App Images (CRITICAL for Warpcast Hosted Manifest)
+!public/farcaster-icon-1024.png
+!public/farcaster-splash-200.png
+!public/farcaster-preview-1200x800.png
+!public/farcaster-hero-1200x630.png
+!public/farcaster-og-1200x630.png
+# Main site OG image (with crystal gift logo)
+!public/og-main-1200x630.png
+# Farcaster Screenshots (1284x2778 for Warpcast)
+!public/farcaster-screen-1.png
+!public/farcaster-screen-2.png
+!public/farcaster-screen-3.png
+# CGC Token Logos (CRITICAL for CoinGecko listing)
+!public/cgc-logo-32x32.png
+!public/cgc-logo-200x200.png
+!public/cgc-logo-512x512.png
+!public/metadata/cgc-logo-32x32.png
+!public/metadata/cgc-logo-200x200.png
+!public/metadata/cgc-logo-512x512.png
+!public/metadata/cgc-logo-64.png
+!public/metadata/cgc-logo-256.png
+!public/metadata/cgc-logo-512.png
+# Whitepaper (CRITICAL for CoinGecko listing)
+!public/CRYPTOGIFT_WHITEPAPER_v1.2.html
+!public/CRYPTOGIFT_WHITEPAPER_v1.2.pdf
+!public/metadata/*.pdf
+# SVG Logos (CRITICAL for BaseScan - they require SVG)
+!public/cgc-logo-32x32.svg
+!public/cgc-logo-200x200.svg
+!public/cgc-logo-512x512.svg
+# Team Photos (CRITICAL for BaseScan verification)
+!public/team/rafael-gonzalez.jpg
+!public/team/roberto-legra.jpg
+!public/team/leodanni-avila.jpg
+!public/team/C3C8D6AE-5738-4BF9-873C-39EE8847C3F2.png
+!public/team/IMG_6757.PNG
+!public/team/IMG_6773.PNG
+# Focus Areas Images (CRITICAL for About Us carousel)
+!public/focus-areas/corazon.png
+!public/focus-areas/emocional.jpg
+!public/focus-areas/galeria.jpg
+!public/focus-areas/community.jpg
+!public/focus-areas/laboratory.jpg
+!public/focus-areas/competitions.jpg
+# Focus area stickers (custom branded)
+!public/focus-areas/sticker-dao.png
+!public/focus-areas/sticker-lab.png
+!public/focus-areas/sticker-lab-new.png
+!public/focus-areas/sticker-comp.png
+
+# Contracts (not needed for runtime)
+/contracts
+deployments/*
+!deployments/deployment-base-latest.json
+
+# Backup files (prevent bundling in serverless functions)
+backups
+*.backup
+*.bak
+app/api/*/route.full.ts.backup
+
+# Frontend/Backend folders (if not needed)
+frontend
+ranking-frontend
+ranking-backend
+bots
+
+# Config files
+*.config.js
+*.config.ts
+!next.config.js
+!next.config.mjs
+!tailwind.config.js
+!tailwind.config.ts
+!postcss.config.js
+!sentry.server.config.js
+!sentry.edge.config.js
+
+# Misc
+*.log
+*.lock
+!pnpm-lock.yaml
+.env*
+!.env.production
+*.md
+!CLAUDE.md
+!README.md
+!docs/PLAN_DESARROLLO_COMPLETO.md
+!public/GRANT_APPLICATION_GUIDE.md

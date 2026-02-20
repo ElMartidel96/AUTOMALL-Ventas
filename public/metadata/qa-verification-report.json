@@ -1,0 +1,117 @@
+{
+  "timestamp": "2025-09-09T05:05:21.544Z",
+  "tokenAddress": "0x5e3a61b550328f3D8C44f60b3e10a49D3d806175",
+  "files": {
+    "cgc-logo-64.png": {
+      "exists": true,
+      "size": 3563,
+      "sizeOk": true,
+      "hash": "64281039df605e7473acf56e6b527c643517e634150b16e16e2d91fe74fea21b"
+    },
+    "cgc-logo-256.png": {
+      "exists": true,
+      "size": 22489,
+      "sizeOk": true,
+      "hash": "091fcefba5f8bee4ad5d8e85a8875cb5ed3b4e9eaf1a386a5b18dbadb0582169"
+    },
+    "cgc-logo-512.png": {
+      "exists": true,
+      "size": 79212,
+      "sizeOk": true,
+      "hash": "0beb02aefb0fd73ffc1d0eb13cc0bb7638752f12bfade4a7ae45345adcecc5c0"
+    },
+    "cgc-tokenlist.json": {
+      "exists": true,
+      "size": 1798,
+      "sizeOk": true,
+      "hash": "687af29873685fd8cd27b54568efbab877a62f97eb1abab995ea08b54de3420c"
+    },
+    "token-metadata.json": {
+      "exists": true,
+      "size": 915,
+      "sizeOk": true,
+      "hash": "da3b17333bcafe014b19ea1639127030ef9b15c4021ed550bc512436d4ec7818"
+    },
+    "submission-guide.json": {
+      "exists": true,
+      "size": 6257,
+      "sizeOk": true,
+      "hash": "642f07848a9243c15fd3dcfffc782f6f7b2f5a3b4d7f045c85fe6f676c65fe58"
+    }
+  },
+  "dimensions": {
+    "cgc-logo-64.png": {
+      "actual": {
+        "width": 64,
+        "height": 64
+      },
+      "expected": {
+        "width": 64,
+        "height": 64
+      },
+      "valid": true
+    },
+    "cgc-logo-256.png": {
+      "actual": {
+        "width": 256,
+        "height": 256
+      },
+      "expected": {
+        "width": 256,
+        "height": 256
+      },
+      "valid": true
+    },
+    "cgc-logo-512.png": {
+      "actual": {
+        "width": 512,
+        "height": 512
+      },
+      "expected": {
+        "width": 512,
+        "height": 512
+      },
+      "valid": true
+    }
+  },
+  "tokenList": {
+    "valid": false,
+    "error": "Command failed: node scripts/validate-tokenlist.js"
+  },
+  "urls": {
+    "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/main/public/metadata/cgc-logo-64.png": {
+      "url": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/main/public/metadata/cgc-logo-64.png",
+      "statusCode": 404,
+      "contentType": "text/plain; charset=utf-8",
+      "contentLength": "14",
+      "accessible": false
+    },
+    "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/main/public/metadata/cgc-logo-256.png": {
+      "url": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/main/public/metadata/cgc-logo-256.png",
+      "statusCode": 404,
+      "contentType": "text/plain; charset=utf-8",
+      "contentLength": "14",
+      "accessible": false
+    },
+    "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/main/public/metadata/cgc-tokenlist.json": {
+      "url": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/main/public/metadata/cgc-tokenlist.json",
+      "statusCode": 404,
+      "contentType": "text/plain; charset=utf-8",
+      "contentLength": "14",
+      "accessible": false
+    }
+  },
+  "checksums": {
+    "cgc-logo-64.png": "64281039df605e7473acf56e6b527c643517e634150b16e16e2d91fe74fea21b",
+    "cgc-logo-256.png": "091fcefba5f8bee4ad5d8e85a8875cb5ed3b4e9eaf1a386a5b18dbadb0582169",
+    "cgc-logo-512.png": "0beb02aefb0fd73ffc1d0eb13cc0bb7638752f12bfade4a7ae45345adcecc5c0",
+    "cgc-tokenlist.json": "687af29873685fd8cd27b54568efbab877a62f97eb1abab995ea08b54de3420c",
+    "token-metadata.json": "da3b17333bcafe014b19ea1639127030ef9b15c4021ed550bc512436d4ec7818",
+    "submission-guide.json": "642f07848a9243c15fd3dcfffc782f6f7b2f5a3b4d7f045c85fe6f676c65fe58"
+  },
+  "summary": {
+    "passed": 9,
+    "failed": 4,
+    "warnings": 0
+  }
+}

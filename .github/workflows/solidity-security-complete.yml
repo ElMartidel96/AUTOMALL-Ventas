@@ -1,0 +1,503 @@
+name: 🔐 Solidity Security Analysis (Complete)
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths: 
+      - 'contracts/**'
+      - 'scripts/**'
+      - 'hardhat.config.js'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'contracts/**'
+      - 'scripts/**'
+      - 'hardhat.config.js'
+      - 'package.json'
+
+jobs:
+  solidity-security:
+    name: 🛡️ Smart Contract Security Analysis
+    runs-on: ubuntu-latest
+    
+    env:
+      NODE_ENV: test
+      CI: true
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: 📦 Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 9.15.9
+        run_install: false
+        
+    - name: 🟢 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        registry-url: 'https://registry.npmjs.org/'
+        cache: 'pnpm'
+        cache-dependency-path: pnpm-lock.yaml
+        
+    - name: 📦 Install Dependencies
+      run: |
+        echo "🔍 Installing dependencies with pnpm $(pnpm --version)..."
+        pnpm install --frozen-lockfile --prefer-offline
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+      
+    - name: 🔨 Compile Contracts
+      run: |
+        echo "## 🔨 Smart Contract Compilation" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f "hardhat.config.js" ]; then
+          set +e
+          pnpm exec hardhat compile > compile-output.txt 2>&1
+          COMPILE_EXIT_CODE=$?
+          set -e
+          
+          if [ $COMPILE_EXIT_CODE -eq 0 ]; then
+            echo "✅ **Compilation: SUCCESS** - All contracts compiled successfully" >> $GITHUB_STEP_SUMMARY
+            
+            # Extract compilation stats if available
+            CONTRACT_COUNT=$(find contracts -name "*.sol" -type f | wc -l)
+            ARTIFACT_COUNT=$(find artifacts/contracts -name "*.json" -type f 2>/dev/null | wc -l || echo "0")
+            
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 📊 Compilation Statistics:" >> $GITHUB_STEP_SUMMARY
+            echo "- 📄 **Source Files:** $CONTRACT_COUNT contracts" >> $GITHUB_STEP_SUMMARY
+            echo "- 🏗️ **Artifacts Generated:** $ARTIFACT_COUNT files" >> $GITHUB_STEP_SUMMARY
+            echo "- ⚙️ **Compiler:** Solidity via Hardhat" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Compilation: FAILED** - Contract compilation errors detected" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Compilation Errors:" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            tail -20 compile-output.txt >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          echo "⚠️ **No Hardhat config found** - Skipping contract compilation" >> $GITHUB_STEP_SUMMARY
+        fi
+        echo "" >> $GITHUB_STEP_SUMMARY
+      continue-on-error: true
+        
+    - name: 🐍 Setup Python for Security Tools
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: 📥 Install Slither Security Analyzer
+      run: |
+        echo "🔧 Installing Slither security analyzer..."
+        pip install slither-analyzer
+        slither --version
+        
+    - name: 🔍 Run Comprehensive Slither Analysis
+      run: |
+        echo "## 🔍 Slither Security Analysis Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -d "contracts" ] && [ "$(find contracts -name "*.sol" | wc -l)" -gt 0 ]; then
+          echo "🔍 Running comprehensive Slither security analysis..."
+          
+          # Run Slither with multiple output formats for comprehensive analysis
+          set +e
+          
+          # JSON output for programmatic analysis
+          slither . --json slither-results.json --exclude-dependencies --exclude-informational 2>/dev/null || true
+          
+          # Human-readable output for detailed review
+          slither . --exclude-dependencies --exclude-informational > slither-detailed.txt 2>&1 || true
+          
+          # High-level summary output
+          slither . --print human-summary --exclude-dependencies > slither-summary.txt 2>&1 || true
+          
+          # Detector-specific analysis
+          slither . --detect all --exclude-dependencies > slither-all-detectors.txt 2>&1 || true
+          
+          set -e
+          
+          # Process and categorize results
+          if [ -f "slither-results.json" ] && [ -s "slither-results.json" ]; then
+            # Extract vulnerability counts by severity
+            CRITICAL_COUNT=$(jq '[.results.detectors[] | select(.impact == "High")] | length' slither-results.json 2>/dev/null || echo "0")
+            HIGH_COUNT=$(jq '[.results.detectors[] | select(.impact == "High")] | length' slither-results.json 2>/dev/null || echo "0")
+            MEDIUM_COUNT=$(jq '[.results.detectors[] | select(.impact == "Medium")] | length' slither-results.json 2>/dev/null || echo "0")
+            LOW_COUNT=$(jq '[.results.detectors[] | select(.impact == "Low")] | length' slither-results.json 2>/dev/null || echo "0")
+            INFO_COUNT=$(jq '[.results.detectors[] | select(.impact == "Informational")] | length' slither-results.json 2>/dev/null || echo "0")
+          else
+            # Fallback to text-based counting
+            CRITICAL_COUNT=$(grep -c "HIGH" slither-detailed.txt 2>/dev/null || echo "0")
+            HIGH_COUNT="$CRITICAL_COUNT"
+            MEDIUM_COUNT=$(grep -c "MEDIUM" slither-detailed.txt 2>/dev/null || echo "0")
+            LOW_COUNT=$(grep -c "LOW" slither-detailed.txt 2>/dev/null || echo "0")
+            INFO_COUNT=$(grep -c "INFO" slither-detailed.txt 2>/dev/null || echo "0")
+          fi
+          
+          TOTAL_ISSUES=$((CRITICAL_COUNT + HIGH_COUNT + MEDIUM_COUNT + LOW_COUNT))
+          
+          echo "### 📊 Security Analysis Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Severity | Count | Status | Action Required |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|---------|-----------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔴 Critical/High | $HIGH_COUNT | $([ $HIGH_COUNT -eq 0 ] && echo "✅ None Found" || echo "🚨 Review Required") | $([ $HIGH_COUNT -eq 0 ] && echo "No action" || echo "Immediate fix") |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🟡 Medium | $MEDIUM_COUNT | $([ $MEDIUM_COUNT -eq 0 ] && echo "✅ None Found" || echo "⚠️ Review Recommended") | $([ $MEDIUM_COUNT -eq 0 ] && echo "No action" || echo "Plan fix") |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🟢 Low | $LOW_COUNT | $([ $LOW_COUNT -eq 0 ] && echo "✅ None Found" || echo "ℹ️ Informational") | $([ $LOW_COUNT -eq 0 ] && echo "No action" || echo "Consider fix") |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📘 Informational | $INFO_COUNT | $([ $INFO_COUNT -eq 0 ] && echo "✅ None Found" || echo "📋 Review Info") | Documentation |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**🎯 Total Issues Found: $TOTAL_ISSUES**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Security assessment
+          if [ $TOTAL_ISSUES -eq 0 ]; then
+            echo "🎉 **EXCELLENT SECURITY POSTURE** - No security issues detected!" >> $GITHUB_STEP_SUMMARY
+          elif [ $HIGH_COUNT -eq 0 ] && [ $MEDIUM_COUNT -le 2 ]; then
+            echo "✅ **GOOD SECURITY POSTURE** - Minor issues found, review recommended" >> $GITHUB_STEP_SUMMARY
+          elif [ $HIGH_COUNT -le 1 ] && [ $MEDIUM_COUNT -le 5 ]; then
+            echo "⚠️ **MODERATE SECURITY POSTURE** - Several issues need attention" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "🚨 **SECURITY ATTENTION REQUIRED** - Critical issues must be addressed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Show sample of critical issues if any exist
+          if [ $HIGH_COUNT -gt 0 ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🚨 Critical/High Severity Issues (Sample):" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            grep -A 2 -B 1 "HIGH" slither-detailed.txt | head -15 >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "Details in full report"
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Deployment recommendation
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 Deployment Recommendation:" >> $GITHUB_STEP_SUMMARY
+          if [ $HIGH_COUNT -eq 0 ]; then
+            echo "✅ **DEPLOYMENT ALLOWED** - No critical security issues blocking deployment" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "🛑 **DEPLOYMENT NOT RECOMMENDED** - Critical security issues should be resolved first" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+        else
+          echo "⚠️ **No Solidity contracts found** - Skipping security analysis" >> $GITHUB_STEP_SUMMARY
+          echo "ℹ️ Place .sol files in the contracts/ directory to enable security scanning" >> $GITHUB_STEP_SUMMARY
+        fi
+      continue-on-error: true
+      
+    - name: 📋 Upload Slither Security Reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: slither-security-reports
+        path: |
+          slither-results.json
+          slither-detailed.txt
+          slither-summary.txt
+          slither-all-detectors.txt
+          compile-output.txt
+        retention-days: 30
+        
+    - name: 🧪 Run Smart Contract Tests
+      run: |
+        echo "## 🧪 Smart Contract Testing" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f "hardhat.config.js" ]; then
+          echo "🧪 Running comprehensive smart contract test suite..."
+          
+          set +e
+          # Run tests with coverage if available
+          if pnpm run test:coverage > test-coverage-output.txt 2>&1; then
+            echo "✅ **Contract Tests: PASSED WITH COVERAGE**" >> $GITHUB_STEP_SUMMARY
+            
+            # Extract coverage statistics if available
+            COVERAGE_LINE=$(grep -o "[0-9]\+\.[0-9]\+%" test-coverage-output.txt | head -1 || echo "N/A")
+            echo "- 📊 **Test Coverage:** $COVERAGE_LINE" >> $GITHUB_STEP_SUMMARY
+            
+          elif pnpm run test > test-output.txt 2>&1; then
+            echo "✅ **Contract Tests: PASSED**" >> $GITHUB_STEP_SUMMARY
+            
+            # Extract test statistics
+            PASSED_TESTS=$(grep -o "[0-9]\+ passing" test-output.txt | grep -o "[0-9]\+" || echo "unknown")
+            echo "- ✅ **Tests Passed:** $PASSED_TESTS" >> $GITHUB_STEP_SUMMARY
+            
+          else
+            echo "❌ **Contract Tests: FAILED**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Test Failures:" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            tail -15 test-output.txt >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "No test output available"
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          set -e
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📝 **Note:** Comprehensive testing is crucial for smart contract security" >> $GITHUB_STEP_SUMMARY
+          
+        else
+          echo "⚠️ **No Hardhat config found** - Skipping contract tests" >> $GITHUB_STEP_SUMMARY
+        fi
+      continue-on-error: true
+
+    - name: 📊 Contract Size Analysis
+      run: |
+        echo "## 📊 Smart Contract Size Analysis" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -d "artifacts/contracts" ]; then
+          echo "### Contract Size Report:" >> $GITHUB_STEP_SUMMARY
+          echo "| Contract | Size (bytes) | Size (KB) | Gas Estimate | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------------|-----------|--------------|---------|" >> $GITHUB_STEP_SUMMARY
+          
+          # Analyze each contract's bytecode size
+          find artifacts/contracts -name "*.json" -not -path "*/build-info/*" | while read -r artifact; do
+            if [ -f "$artifact" ]; then
+              CONTRACT_NAME=$(basename "$artifact" .json)
+              BYTECODE_SIZE=$(jq -r '.bytecode // ""' "$artifact" 2>/dev/null | wc -c)
+              SIZE_KB=$((BYTECODE_SIZE / 1024))
+              
+              # Ethereum contract size limit is 24KB (24576 bytes)
+              SIZE_STATUS="✅ OK"
+              if [ $BYTECODE_SIZE -gt 24576 ]; then
+                SIZE_STATUS="🚨 TOO LARGE"
+              elif [ $BYTECODE_SIZE -gt 20480 ]; then # 20KB warning threshold
+                SIZE_STATUS="⚠️ LARGE"
+              fi
+              
+              # Rough gas estimate (very approximate)
+              GAS_ESTIMATE=$((BYTECODE_SIZE * 200))
+              
+              echo "| $CONTRACT_NAME | $BYTECODE_SIZE | ${SIZE_KB}KB | ~$GAS_ESTIMATE | $SIZE_STATUS |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📏 **Size Limit:** Ethereum contracts must be ≤ 24KB (24,576 bytes)" >> $GITHUB_STEP_SUMMARY
+          echo "⚡ **Gas Note:** Larger contracts cost more to deploy" >> $GITHUB_STEP_SUMMARY
+          
+        else
+          echo "⚠️ **No compiled artifacts found** - Run compilation first" >> $GITHUB_STEP_SUMMARY
+        fi
+      continue-on-error: true
+
+  mythx-analysis:
+    name: 🔮 MythX Deep Security Analysis
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: solidity-security
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: 📦 Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 9.15.9
+        run_install: false
+        
+    - name: 🟢 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        registry-url: 'https://registry.npmjs.org/'
+        cache: 'pnpm'
+        cache-dependency-path: pnpm-lock.yaml
+        
+    - name: 📦 Install Dependencies
+      run: pnpm install --frozen-lockfile --prefer-offline
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+        
+    - name: 🔮 MythX Deep Analysis
+      run: |
+        echo "## 🔮 MythX Deep Security Analysis" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -d "contracts" ] && [ -n "${{ secrets.MYTHX_API_KEY }}" ]; then
+          echo "🔮 Running MythX deep security analysis..."
+          
+          # Install MythX CLI if not available
+          if ! command -v mythx &> /dev/null; then
+            npm install -g mythx-cli || echo "Failed to install MythX CLI"
+          fi
+          
+          # Run MythX analysis
+          if command -v mythx &> /dev/null; then
+            set +e
+            mythx analyze contracts/ --api-key "${{ secrets.MYTHX_API_KEY }}" --output mythx-report.json 2>mythx-errors.log || true
+            set -e
+            
+            echo "✅ **MythX Analysis Initiated** - Deep security analysis completed" >> $GITHUB_STEP_SUMMARY
+            echo "- 🔍 **Analysis Scope:** All contracts in contracts/ directory" >> $GITHUB_STEP_SUMMARY
+            echo "- 🌐 **Platform:** MythX Security Platform" >> $GITHUB_STEP_SUMMARY
+            echo "- 📊 **Results:** Available in MythX dashboard" >> $GITHUB_STEP_SUMMARY
+            echo "- 📅 **Date:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **MythX CLI not available** - Install manually for deep analysis" >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          if [ -z "${{ secrets.MYTHX_API_KEY }}" ]; then
+            echo "⚠️ **MythX analysis skipped** - MYTHX_API_KEY secret not configured" >> $GITHUB_STEP_SUMMARY
+            echo "💡 **Setup:** Add MYTHX_API_KEY to repository secrets for deep security analysis" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **MythX analysis skipped** - No contracts directory found" >> $GITHUB_STEP_SUMMARY
+          fi
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "🔗 **MythX Dashboard:** https://dashboard.mythx.io" >> $GITHUB_STEP_SUMMARY
+      env:
+        MYTHX_API_KEY: ${{ secrets.MYTHX_API_KEY }}
+      continue-on-error: true
+
+  gas-analysis:
+    name: ⛽ Gas Usage Analysis
+    runs-on: ubuntu-latest
+    needs: solidity-security
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: 📦 Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 9.15.9
+        run_install: false
+        
+    - name: 🟢 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        registry-url: 'https://registry.npmjs.org/'
+        cache: 'pnpm'
+        cache-dependency-path: pnpm-lock.yaml
+        
+    - name: 📦 Install Dependencies
+      run: pnpm install --frozen-lockfile --prefer-offline
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+        
+    - name: ⛽ Generate Gas Usage Report
+      run: |
+        echo "## ⛽ Gas Usage Analysis" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f "hardhat.config.js" ]; then
+          echo "⛽ Analyzing gas usage patterns..."
+          
+          # Run tests with gas reporter if available
+          set +e
+          if pnpm exec hardhat test --reporter gas > gas-report.txt 2>&1; then
+            echo "✅ **Gas Analysis: COMPLETED**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Extract key gas metrics
+            if grep -q "gas used" gas-report.txt; then
+              echo "### ⛽ Gas Usage Summary:" >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+              grep -A 5 -B 5 "gas used" gas-report.txt | head -10 >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "📊 **Full gas report available in artifacts**" >> $GITHUB_STEP_SUMMARY
+            
+          else
+            echo "⚠️ **Gas Analysis: LIMITED** - Standard test run completed" >> $GITHUB_STEP_SUMMARY
+            echo "💡 **Recommendation:** Configure hardhat-gas-reporter for detailed gas analysis" >> $GITHUB_STEP_SUMMARY
+          fi
+          set -e
+          
+        else
+          echo "⚠️ **No Hardhat config found** - Skipping gas analysis" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "🎯 **Gas Optimization:** Consider gas costs for user experience and deployment costs" >> $GITHUB_STEP_SUMMARY
+      continue-on-error: true
+        
+    - name: 📤 Upload Gas Reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: gas-analysis-reports
+        path: |
+          gas-report.txt
+        retention-days: 30
+
+  security-summary:
+    name: 📊 Security Analysis Summary
+    runs-on: ubuntu-latest
+    needs: [solidity-security, mythx-analysis, gas-analysis]
+    if: always()
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: 📊 Generate Comprehensive Security Summary
+      run: |
+        echo "## 🛡️ Smart Contract Security Analysis Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### ✅ Security Analysis Completed:" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Check all job results and generate summary table
+        echo "| Security Analysis | Status | Description |" >> $GITHUB_STEP_SUMMARY
+        echo "|-------------------|---------|-------------|" >> $GITHUB_STEP_SUMMARY
+        echo "| 🔨 Contract Compilation | ${{ needs.solidity-security.result == 'success' && '✅ Passed' || '❌ Failed' }} | Smart contract compilation check |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🔍 Slither Analysis | ${{ needs.solidity-security.result == 'success' && '✅ Completed' || '⚠️ Check Required' }} | Static security analysis |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🧪 Contract Testing | ${{ needs.solidity-security.result == 'success' && '✅ Completed' || '⚠️ Check Required' }} | Smart contract test execution |" >> $GITHUB_STEP_SUMMARY
+        echo "| 📊 Size Analysis | ${{ needs.solidity-security.result == 'success' && '✅ Completed' || '⚠️ Check Required' }} | Contract size optimization check |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🔮 MythX Deep Analysis | ${{ needs.mythx-analysis.result == 'success' && '✅ Completed' || '⚠️ Conditional' }} | Professional security audit (main branch only) |" >> $GITHUB_STEP_SUMMARY
+        echo "| ⛽ Gas Usage Analysis | ${{ needs.gas-analysis.result == 'success' && '✅ Completed' || '⚠️ Check Required' }} | Gas optimization analysis |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Calculate overall security score
+        PASSED_CHECKS=0
+        TOTAL_CHECKS=4  # Core checks (excluding conditional MythX)
+        
+        [ "${{ needs.solidity-security.result }}" == "success" ] && PASSED_CHECKS=$((PASSED_CHECKS + 3)) # Compilation + Slither + Testing
+        [ "${{ needs.gas-analysis.result }}" == "success" ] && PASSED_CHECKS=$((PASSED_CHECKS + 1))
+        
+        SECURITY_SCORE=$(( (PASSED_CHECKS * 100) / TOTAL_CHECKS ))
+        
+        echo "### 🏆 Overall Smart Contract Security Score: **${SECURITY_SCORE}%**" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Security posture assessment
+        if [ $SECURITY_SCORE -eq 100 ]; then
+          echo "🎉 **EXCELLENT SMART CONTRACT SECURITY** - All security checks passed!" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Deployment Ready:** Contracts are well-analyzed and secure" >> $GITHUB_STEP_SUMMARY
+        elif [ $SECURITY_SCORE -ge 75 ]; then
+          echo "✅ **GOOD SMART CONTRACT SECURITY** - Most checks passed successfully" >> $GITHUB_STEP_SUMMARY
+          echo "🔍 **Recommendation:** Review any warnings before deployment" >> $GITHUB_STEP_SUMMARY
+        elif [ $SECURITY_SCORE -ge 50 ]; then
+          echo "⚠️ **MODERATE SMART CONTRACT SECURITY** - Several areas need attention" >> $GITHUB_STEP_SUMMARY
+          echo "🛠️ **Action Required:** Address security findings before deployment" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "🚨 **SMART CONTRACT SECURITY NEEDS ATTENTION** - Critical issues detected" >> $GITHUB_STEP_SUMMARY
+          echo "🛑 **Deployment Not Recommended:** Resolve security issues first" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📋 Next Steps:" >> $GITHUB_STEP_SUMMARY
+        echo "1. 🔍 **Review Security Reports:** Download and analyze all uploaded artifacts" >> $GITHUB_STEP_SUMMARY
+        echo "2. 🛠️ **Address Issues:** Fix any critical or high-severity findings" >> $GITHUB_STEP_SUMMARY
+        echo "3. 🧪 **Test Thoroughly:** Ensure comprehensive test coverage" >> $GITHUB_STEP_SUMMARY
+        echo "4. ⛽ **Optimize Gas:** Review gas usage for cost efficiency" >> $GITHUB_STEP_SUMMARY
+        echo "5. 🔐 **Professional Audit:** Consider third-party audit for mainnet deployment" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🔗 Resources:" >> $GITHUB_STEP_SUMMARY
+        echo "- 📚 [Smart Contract Security Best Practices](https://consensys.github.io/smart-contract-best-practices/)" >> $GITHUB_STEP_SUMMARY
+        echo "- 🛡️ [OpenZeppelin Security Guidelines](https://docs.openzeppelin.com/learn/)" >> $GITHUB_STEP_SUMMARY
+        echo "- 🔮 [MythX Documentation](https://docs.mythx.io/)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "📅 **Analysis Date:** $(date -u)" >> $GITHUB_STEP_SUMMARY

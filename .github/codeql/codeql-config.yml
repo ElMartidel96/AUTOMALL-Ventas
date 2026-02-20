@@ -1,0 +1,115 @@
+name: "CodeQL Security Analysis Configuration"
+
+# CodeQL configuration for comprehensive security analysis
+# Configured for JavaScript/TypeScript with Next.js, React and Smart Contract projects
+
+disable-default-queries: false
+
+queries:
+  - name: security-extended
+    uses: security-extended
+  - name: security-and-quality
+    uses: security-and-quality
+
+# Custom query packs for enhanced security analysis
+packs:
+  - "codeql/javascript-queries:AlertSuppression.ql"
+  - "codeql/javascript-queries:Security"
+  - "codeql/javascript-queries:external/cwe"
+
+# Path-based filtering
+paths-ignore:
+  - "node_modules/**"
+  - "dist/**"
+  - "build/**" 
+  - ".next/**"
+  - "coverage/**"
+  - "artifacts/**"
+  - "cache/**"
+  - "test/**/*.json"
+  - "*.d.ts"
+
+paths:
+  - "app/**"
+  - "components/**"
+  - "lib/**"
+  - "src/**"
+  - "scripts/**"
+  - "contracts/**"
+
+# Language-specific configuration
+languages:
+  javascript:
+    # Focus on security-relevant patterns
+    extraction:
+      # Include TypeScript and JSX files
+      typescript: true
+      jsx: true
+      
+    # Enhanced security queries
+    queries:
+      - name: javascript-security
+        uses: security-extended
+      - name: javascript-code-quality  
+        uses: code-scanning
+        
+# Custom security patterns for Web3/DAO projects
+custom-queries:
+  - name: "crypto-wallet-security"
+    description: "Security patterns specific to crypto wallets and smart contracts"
+    patterns:
+      - "private.*key"
+      - "mnemonic"
+      - "seed.*phrase"
+      - "wallet.*connect"
+      - "contract.*call"
+
+# Analysis scope
+analysis-scope:
+  include:
+    - "**/*.js"
+    - "**/*.jsx" 
+    - "**/*.ts"
+    - "**/*.tsx"
+    - "**/*.mjs"
+    - "**/*.cjs"
+  exclude:
+    - "**/*.test.js"
+    - "**/*.spec.js"
+    - "**/*.test.ts"
+    - "**/*.spec.ts"
+    - "**/test/**"
+    - "**/tests/**"
+    - "**/__tests__/**"
+    - "**/node_modules/**"
+
+# Security-focused configuration
+security:
+  # Enable all security-related detectors
+  enable-all-security-queries: true
+  
+  # Specific security categories
+  categories:
+    - "security"
+    - "external/cwe/cwe-079"  # XSS
+    - "external/cwe/cwe-089"  # SQL Injection  
+    - "external/cwe/cwe-200"  # Information Exposure
+    - "external/cwe/cwe-259"  # Hard-coded Password
+    - "external/cwe/cwe-312"  # Cleartext Storage
+    - "external/cwe/cwe-327"  # Weak Crypto
+    - "external/cwe/cwe-502"  # Deserialization
+    - "external/cwe/cwe-798"  # Hard-coded Credentials
+
+# Output configuration
+output:
+  format: "sarif-latest"
+  upload: true
+  
+# Performance tuning
+performance:
+  # Reasonable timeout for CI/CD
+  timeout: "20m"
+  # Memory limits
+  max-memory: "4096m"
+  # Threads for analysis
+  threads: 2

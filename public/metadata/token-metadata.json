@@ -1,0 +1,29 @@
+{
+  "name": "CryptoGift Coin",
+  "symbol": "CGC",
+  "decimals": 18,
+  "address": "0x5e3a61b550328f3D8C44f60b3e10a49D3d806175",
+  "chainId": 8453,
+  "network": "base",
+  "logoSizes": {
+    "64x64": "cgc-logo-64.png",
+    "256x256": "cgc-logo-256.png",
+    "512x512": "cgc-logo-512.png",
+    "original": "cgc-logo-original.png"
+  },
+  "urls": {
+    "website": "https://mbxarts.com",
+    "github": "https://github.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO",
+    "discord": "https://discord.gg/XzmKkrvhHc",
+    "twitter": "https://x.com/cryptogiftdao"
+  },
+  "description": "CryptoGift Coin (CGC) is the governance token of the CryptoGift Wallets DAO, enabling community-driven decision making and rewards distribution for educational achievements.",
+  "tags": [
+    "governance",
+    "dao",
+    "rewards",
+    "education",
+    "community"
+  ],
+  "generated": "2025-09-09T04:48:01.979Z"
+}

@@ -1,0 +1,120 @@
+{
+  "generated": "2025-09-09T05:07:30.466Z",
+  "frozenVersion": {
+    "tagName": "token-metadata-v1.0.0",
+    "commit": "9d304a6f746573011583c06dd42d50d2d94edd90",
+    "version": "1.0.0",
+    "created": "2025-09-09T05:07:30.451Z",
+    "urls": {
+      "version": "1.0.0",
+      "commit": "9d304a6f746573011583c06dd42d50d2d94edd90",
+      "immutable": true,
+      "assets": {
+        "logo64": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/9d304a6f746573011583c06dd42d50d2d94edd90/public/metadata/cgc-logo-64.png",
+        "logo256": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/9d304a6f746573011583c06dd42d50d2d94edd90/public/metadata/cgc-logo-256.png",
+        "logo512": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/9d304a6f746573011583c06dd42d50d2d94edd90/public/metadata/cgc-logo-512.png",
+        "tokenList": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/9d304a6f746573011583c06dd42d50d2d94edd90/public/metadata/cgc-tokenlist.json",
+        "metadata": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/9d304a6f746573011583c06dd42d50d2d94edd90/public/metadata/token-metadata.json",
+        "submissionGuide": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/9d304a6f746573011583c06dd42d50d2d94edd90/public/metadata/submission-guide.json"
+      }
+    }
+  },
+  "rollback": {
+    "version": "1.0.0",
+    "commit": "9d304a6f746573011583c06dd42d50d2d94edd90",
+    "tagName": "token-metadata-v1.0.0",
+    "emergencySteps": [
+      {
+        "step": 1,
+        "action": "Revert to frozen tag",
+        "command": "git checkout token-metadata-v1.0.0",
+        "description": "Switch to known-good version"
+      },
+      {
+        "step": 2,
+        "action": "Update token list URLs",
+        "command": "Edit cgc-tokenlist.json logoURI fields",
+        "description": "Point to frozen commit URLs"
+      },
+      {
+        "step": 3,
+        "action": "Re-submit to BaseScan",
+        "command": "Use frozen logo URL in form",
+        "description": "Submit with verified frozen assets"
+      },
+      {
+        "step": 4,
+        "action": "Verify HEAD request",
+        "command": "curl -I https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/9d304a6f746573011583c06dd42d50d2d94edd90/public/metadata/cgc-logo-64.png",
+        "description": "Confirm asset accessibility"
+      },
+      {
+        "step": 5,
+        "action": "Test in wallet",
+        "command": "Clear cache and test display",
+        "description": "Verify logo appears correctly"
+      }
+    ],
+    "successCriteria": [
+      "HTTP 200 response for all asset URLs",
+      "Logo displays correctly in BaseScan",
+      "Logo displays correctly in test wallet",
+      "No artifact or distortion visible",
+      "File sizes within limits (<30KB for 64x64)"
+    ],
+    "fallbackContacts": [
+      "BaseScan Priority Support (if urgent)",
+      "Coinbase Wallet support",
+      "GitHub repository maintainers"
+    ]
+  },
+  "versionUpdate": {
+    "previous": {
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    },
+    "current": {
+      "major": 1,
+      "minor": 0,
+      "patch": 1
+    },
+    "changeType": "patch"
+  },
+  "security": {
+    "keyManagement": [
+      "✅ Deployer EOA is in hardware wallet",
+      "✅ BASESCAN_API_KEY rotated post-verification",
+      "✅ API keys moved to secret manager",
+      "⏳ Role account created for listings (no funds)",
+      "⏳ Document which address used for each platform"
+    ],
+    "assetIntegrity": [
+      "✅ SHA256 checksums calculated and documented",
+      "✅ File sizes verified (<30KB for critical assets)",
+      "✅ Image dimensions verified (exact pixels)",
+      "✅ No compression artifacts detected",
+      "✅ URLs use immutable GitHub commit hashes"
+    ],
+    "accessControl": [
+      "✅ Only deployer can update BaseScan info",
+      "✅ GitHub repository has proper access controls",
+      "✅ No secrets committed to repository",
+      "✅ Environment variables properly configured",
+      "⏳ EAS attestation created for metadata verification"
+    ],
+    "monitoring": [
+      "⏳ Asset URL monitoring setup",
+      "⏳ Logo display verification in multiple wallets",
+      "⏳ Automated checksum verification",
+      "⏳ Alert system for unauthorized changes",
+      "⏳ Regular audit schedule established"
+    ]
+  },
+  "quickReference": {
+    "emergencyRollback": "git checkout token-metadata-v1.0.0",
+    "verifyAssets": "curl -I https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/9d304a6f746573011583c06dd42d50d2d94edd90/public/metadata/cgc-logo-64.png",
+    "currentVersion": "1.0.1",
+    "frozenCommit": "9d304a6f746573011583c06dd42d50d2d94edd90"
+  }
+}

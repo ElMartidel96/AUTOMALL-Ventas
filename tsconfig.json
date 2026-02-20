@@ -1,0 +1,74 @@
+{
+  "compilerOptions": {
+    /* Language and Environment - Optimized for Next.js 14 */
+    "target": "es2020",
+    "lib": ["dom", "dom.iterable", "es2020", "esnext"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    
+    /* Next.js App Router Requirements */
+    "allowJs": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "jsx": "preserve",
+    "incremental": true,
+    
+    /* Strict Type-Checking Options */
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipDefaultLibCheck": true,
+    
+    /* Module Resolution Options */
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "typeRoots": ["./node_modules/@types"],
+    "types": ["node", "react", "react-dom"],
+    
+    /* Path Mappings */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"],
+      "@/components/*": ["./components/*"],
+      "@/components-en/*": ["./components-en/*"],
+      "@/lib/*": ["./lib/*"],
+      "@/app/*": ["./app/*"],
+      "@/config/*": ["./config/*"]
+    },
+    
+    /* Next.js Plugin */
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts", 
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    "dist",
+    "build", 
+    "coverage",
+    "artifacts",
+    "cache",
+    "typechain-types",
+    "contracts/*.sol",
+    "contracts/hardhat",
+    "scripts",
+    "test",
+    "tests",
+    "hardhat.config.*",
+    "bots",
+    "docs",
+    "ranking-backend",
+    "ranking-frontend",
+    "cloned-repo"
+  ]
+}

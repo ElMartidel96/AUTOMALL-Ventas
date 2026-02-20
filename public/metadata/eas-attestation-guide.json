@@ -1,0 +1,95 @@
+{
+  "schema": {
+    "name": "OfficialTokenMetadataV1",
+    "description": "Official token metadata attestation with asset verification",
+    "schema": "address token,uint256 chainId,string logoURI64,string logoURI256,string tokenlistURI,bytes32 sha256Logo64,bytes32 sha256Logo256,bytes32 sha256Tokenlist,address issuedBy,uint256 validUntil,string version",
+    "fields": [
+      {
+        "name": "token",
+        "type": "address",
+        "description": "Token contract address"
+      },
+      {
+        "name": "chainId",
+        "type": "uint256",
+        "description": "Blockchain chain ID"
+      },
+      {
+        "name": "logoURI64",
+        "type": "string",
+        "description": "64x64 logo URL"
+      },
+      {
+        "name": "logoURI256",
+        "type": "string",
+        "description": "256x256 logo URL"
+      },
+      {
+        "name": "tokenlistURI",
+        "type": "string",
+        "description": "Token list URL"
+      },
+      {
+        "name": "sha256Logo64",
+        "type": "bytes32",
+        "description": "SHA256 of 64x64 logo"
+      },
+      {
+        "name": "sha256Logo256",
+        "type": "bytes32",
+        "description": "SHA256 of 256x256 logo"
+      },
+      {
+        "name": "sha256Tokenlist",
+        "type": "bytes32",
+        "description": "SHA256 of token list"
+      },
+      {
+        "name": "issuedBy",
+        "type": "address",
+        "description": "Issuer address (deployer)"
+      },
+      {
+        "name": "validUntil",
+        "type": "uint256",
+        "description": "Expiration timestamp (0 = no expiry)"
+      },
+      {
+        "name": "version",
+        "type": "string",
+        "description": "Metadata version"
+      }
+    ]
+  },
+  "attestation": {
+    "schemaUid": "SCHEMA_UID_PLACEHOLDER",
+    "attestationData": {
+      "token": "0x5e3a61b550328f3D8C44f60b3e10a49D3d806175",
+      "chainId": 8453,
+      "logoURI64": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/9d304a6f746573011583c06dd42d50d2d94edd90/public/metadata/cgc-logo-64.png",
+      "logoURI256": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/9d304a6f746573011583c06dd42d50d2d94edd90/public/metadata/cgc-logo-256.png",
+      "tokenlistURI": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/9d304a6f746573011583c06dd42d50d2d94edd90/public/metadata/cgc-tokenlist.json",
+      "sha256Logo64": "0x64281039df605e7473acf56e6b527c643517e634150b16e16e2d91fe74fea21b",
+      "sha256Logo256": "0x091fcefba5f8bee4ad5d8e85a8875cb5ed3b4e9eaf1a386a5b18dbadb0582169",
+      "sha256Tokenlist": "0x45a5c5af087e5f9b6e951445af6b366948341afd467e3f2164fa8c35df5d150c",
+      "issuedBy": "0xc655BF2Bd9AfA997c757Bef290A9Bb6ca41c5dE6",
+      "validUntil": 0,
+      "version": "1.0.0"
+    },
+    "encodedData": "0x0000000000000000000000005e3a61b550328f3d8c44f60b3e10a49d3d80617500000000000000000000000000000000000000000000000000000000000021050000000000000000000000000000000000000000000000000000000000000160000000000000000000000000000000000000000000000000000000000000022000000000000000000000000000000000000000000000000000000000000002e064281039df605e7473acf56e6b527c643517e634150b16e16e2d91fe74fea21b091fcefba5f8bee4ad5d8e85a8875cb5ed3b4e9eaf1a386a5b18dbadb058216945a5c5af087e5f9b6e951445af6b366948341afd467e3f2164fa8c35df5d150c000000000000000000000000c655bf2bd9afa997c757bef290a9bb6ca41c5de6000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003a0000000000000000000000000000000000000000000000000000000000000009868747470733a2f2f7261772e67697468756275736572636f6e74656e742e636f6d2f43727970746f476966742d57616c6c6574732d44414f2f43727970746f476966742d57616c6c6574732d44414f2f396433303461366637343635373330313135383363303664643432643530643264393465646439302f7075626c69632f6d657461646174612f6367632d6c6f676f2d36342e706e670000000000000000000000000000000000000000000000000000000000000000000000000000009968747470733a2f2f7261772e67697468756275736572636f6e74656e742e636f6d2f43727970746f476966742d57616c6c6574732d44414f2f43727970746f476966742d57616c6c6574732d44414f2f396433303461366637343635373330313135383363303664643432643530643264393465646439302f7075626c69632f6d657461646174612f6367632d6c6f676f2d3235362e706e6700000000000000000000000000000000000000000000000000000000000000000000000000009b68747470733a2f2f7261772e67697468756275736572636f6e74656e742e636f6d2f43727970746f476966742d57616c6c6574732d44414f2f43727970746f476966742d57616c6c6574732d44414f2f396433303461366637343635373330313135383363303664643432643530643264393465646439302f7075626c69632f6d657461646174612f6367632d746f6b656e6c6973742e6a736f6e00000000000000000000000000000000000000000000000000000000000000000000000005312e302e30000000000000000000000000000000000000000000000000000000",
+    "instructions": {
+      "schemaRegistry": "0x4200000000000000000000000000000000000020",
+      "easContract": "0x4200000000000000000000000000000000000021",
+      "deployer": "0xc655BF2Bd9AfA997c757Bef290A9Bb6ca41c5dE6"
+    }
+  },
+  "verification": {
+    "example": "See console output above",
+    "requirements": [
+      "Connect with deployer wallet",
+      "Have sufficient ETH for gas",
+      "Schema must be registered first",
+      "Save all UIDs for future reference"
+    ]
+  }
+}

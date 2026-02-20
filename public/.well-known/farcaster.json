@@ -1,0 +1,22 @@
+{
+  "accountAssociation": {
+    "header": "TODO_GENERATE_VIA_FARCASTER_DEVELOPER_TOOLS",
+    "payload": "TODO_GENERATE_VIA_FARCASTER_DEVELOPER_TOOLS",
+    "signature": "TODO_GENERATE_VIA_FARCASTER_DEVELOPER_TOOLS"
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "CryptoGift DAO",
+    "iconUrl": "https://mbxarts.com/farcaster-icon-1024.png",
+    "splashImageUrl": "https://mbxarts.com/farcaster-splash-200.png",
+    "splashBackgroundColor": "#1a1a2e",
+    "homeUrl": "https://mbxarts.com/miniapp",
+    "webhookUrl": "https://mbxarts.com/api/miniapp/webhook",
+    "subtitle": "Earn CGC by completing tasks",
+    "description": "Complete tasks, earn CGC tokens, and grow your network. Join the CryptoGift DAO community.",
+    "tagline": "Learn. Earn. Co-govern.",
+    "primaryCategory": "utility",
+    "tags": ["dao", "governance", "tasks", "crypto", "community"],
+    "requiredChains": ["eip155:8453"]
+  }
+}

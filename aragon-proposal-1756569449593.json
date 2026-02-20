@@ -1,0 +1,13 @@
+{
+  "title": "Transfer 400K CGC to GovTokenVault",
+  "description": "Initial token distribution according to tokenomics: Transfer 400,000 CGC tokens from DAO treasury to GovTokenVault contract for governance operations.",
+  "actions": [
+    {
+      "to": "0xe8AF8cF18DA5c540daffe76Ae5fEE31C80c74899",
+      "value": "0",
+      "data": "0xa9059cbb000000000000000000000000f5606020e772308cc66f2fc3d0832bf9e17e68e00000000000000000000000000000000000000000000054b40b1f852bda000000",
+      "description": "Transfer 400,000 CGC tokens to vault"
+    }
+  ],
+  "timestamp": "2025-08-30T15:57:29.593Z"
+}

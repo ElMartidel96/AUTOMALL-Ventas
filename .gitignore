@@ -1,0 +1,187 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js build output - CRITICAL: NEVER COMMIT
+.next/
+out/
+
+# Testing
+coverage/
+coverage.json
+.nyc_output/
+
+# Production
+build/
+dist/
+artifacts/
+cache/
+typechain-types/
+
+# Environment files - CRITICAL SECURITY
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.deployment
+.env.deployment.*
+.env.*
+!.env.example
+!.env.deployment.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Hardhat
+cache/
+artifacts/
+typechain/
+typechain-types/
+deployments/local/
+
+# Testing & Coverage
+coverage/
+coverage.json
+.coverage_contracts/
+.coverage_artifacts/
+gasReporterOutput.json
+
+# Build info
+.tsbuildinfo
+*.tsbuildinfo
+
+# Deployment outputs (keep structure but not content)
+deployments/*.json
+!deployments/.gitkeep
+proposals/*.json
+!proposals/.gitkeep
+
+# Bot specific
+bots/*/node_modules/
+bots/*/.env
+bots/*/dist/
+bots/*/logs/
+
+# Documentation build
+docs/_build/
+docs/.docusaurus/
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Private keys and secrets - NEVER COMMIT
+*.pem
+*.key
+*.cert
+*.pfx
+*private-key*
+*private_key*
+*-key.json
+*key.json
+deployment-*.json
+verification-report-*.json
+test-report-*.json
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# IPFS
+.ipfs/
+
+# Package lock files (use only one)
+# Keep pnpm-lock.yaml, ignore others
+package-lock.json
+yarn.lock
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
+# Backup files
+*.backup
+*.bak
+*.old
+
+# Compiled files
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# Archives
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+# Sentry Config File
+.env.sentry-build-plugin
+
+# Environment files
+.env.dao
+.env.local
+.env.sentry-build-plugin
+
+# ========================================
+# AUTOMALL - Project-specific ignores
+# ========================================
+# Concept documents and reference materials
+AutosMall/
+AutoMALL.PNG
+cloned-repo/
+
+# Windows path artifacts
+C:/
+
+# Screenshots and captures (too large for git)
+CAPTURAS/
+
+# Media files
+*.MOV
+*.mov
+
+# Company confidential documents
+METRICAS/
+DELIVERABLES/
+TEMPLATES/
+
+# ========================================
+# SECURITY - Test files with potential secrets
+# ========================================
+test-openai*.js
+test-final*.js
+test-*.js
+!test-*.spec.js
+!test-*.test.js

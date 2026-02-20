@@ -1,0 +1,470 @@
+name: 🛡️ Security & Quality Gate (Non-blocking)
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  security-quality-check:
+    name: Security & Quality Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: 📦 Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 9.15.9
+        run_install: false
+        
+    - name: 🟢 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        registry-url: 'https://registry.npmjs.org/'
+        cache: 'pnpm'
+        cache-dependency-path: pnpm-lock.yaml
+        
+    - name: 📦 Install Dependencies
+      run: |
+        echo "🔍 Installing dependencies with pnpm $(pnpm --version)..."
+        pnpm install --frozen-lockfile --prefer-offline
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+        
+    - name: 🔍 TypeScript Compilation Check  
+      run: |
+        set -o pipefail
+        echo "Running TypeScript check..."
+        echo "## 🔍 TypeScript Build Status" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Run TypeScript check with proper error detection
+        set +e
+        pnpm run type-check > typescript-output.txt 2>&1
+        TS_EXIT_CODE=$?
+        set -e
+        
+        if [ $TS_EXIT_CODE -eq 0 ]; then
+          echo "✅ TypeScript compilation successful - No errors found" >> $GITHUB_STEP_SUMMARY
+          echo "✅ TypeScript compilation successful"
+        else
+          # Count total errors
+          TOTAL_ERRORS=$(grep -c "error TS" typescript-output.txt || echo "0")
+          echo "❌ **TypeScript Build: Issues Found** ($TOTAL_ERRORS errors)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Compilation Errors:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          head -30 typescript-output.txt >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ TypeScript errors found (non-blocking)"
+        fi
+      continue-on-error: true
+        
+    - name: 🧹 ESLint Security Rules
+      run: |
+        set -o pipefail
+        echo "## 🧹 ESLint Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if pnpm run lint > eslint-output.txt 2>&1; then
+          echo "✅ **ESLint: PASSED** - No linting issues found" >> $GITHUB_STEP_SUMMARY
+          echo "✅ ESLint validation successful"
+        else
+          echo "❌ **ESLint: Issues Found**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ESLint Issues:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          tail -30 eslint-output.txt >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ ESLint found issues (non-blocking)"
+        fi
+      continue-on-error: true
+
+    - name: 🧪 Run Test Suite
+      run: |
+        set -o pipefail
+        echo "## 🧪 Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if pnpm run test:ci > test-output.txt 2>&1; then
+          echo "✅ **Tests: PASSED** - All tests successful" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Test suite passed"
+        else
+          echo "❌ **Tests: Issues Found** - Failures detected" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Failures:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          tail -20 test-output.txt >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ Test failures (non-blocking)"
+        fi
+      continue-on-error: true
+
+    - name: 📊 Coverage Threshold Check (70% minimum)
+      run: |
+        echo "## 📊 Coverage Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if pnpm run test:coverage > coverage-output.txt 2>&1; then
+          # Extract coverage percentage if available
+          COVERAGE=$(grep -oP 'All files.*?(\d+\.?\d*)%' coverage-output.txt | tail -1 | grep -oP '\d+\.?\d*' || echo "0")
+          if [ $(echo "$COVERAGE > 70" | bc -l 2>/dev/null || echo 0) -eq 1 ]; then
+            echo "✅ **Coverage: PASSED** ($COVERAGE% > 70% threshold)" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Coverage threshold met: $COVERAGE%"
+          else
+            echo "⚠️ **Coverage: BELOW THRESHOLD** ($COVERAGE% < 70% required)" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ Coverage below 70%: $COVERAGE%"
+          fi
+        else
+          echo "❌ **Coverage: FAILED** - Could not generate coverage report" >> $GITHUB_STEP_SUMMARY
+          echo "❌ Coverage generation failed"
+        fi
+        
+    - name: 🔒 Security Pattern Validation (Non-blocking)
+      run: |
+        set -o pipefail
+        # Initialize counters
+        WARNINGS=0
+        ERRORS=0
+        
+        # Load enforcement level (default to warning for CI)
+        ENFORCEMENT_LEVEL="warning"
+        if [ -f "../.security-config.json" ]; then
+          ENFORCEMENT_LEVEL=$(node -p "JSON.parse(require('fs').readFileSync('../.security-config.json', 'utf8')).enforcement.level" 2>/dev/null || echo "warning")
+        fi
+        
+        echo "🎚️  CI Security enforcement level: $ENFORCEMENT_LEVEL"
+        
+        echo "## 🔒 Security Pattern Validation" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Check for unprotected API endpoints (App Router and Pages Router) with enhanced detection
+        echo "🔍 Checking for unprotected API endpoints..."
+        SEARCH_PATHS=(
+          "app/api"
+          "src/app/api"
+          "src/pages/api"
+          "frontend/src/app/api"
+          "frontend/src/pages/api"
+        )
+        
+        total_api_files=0
+        protected_api_files=0
+        unprotected_endpoints=""
+        
+        echo "### API Endpoint Security Analysis:" >> $GITHUB_STEP_SUMMARY
+        echo "| Directory | Total Files | Protected | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----------|-------------|-----------|---------|" >> $GITHUB_STEP_SUMMARY
+        
+        for p in "${SEARCH_PATHS[@]}"; do
+          if [ -d "$p" ]; then
+            dir_total=$(find "$p" -type f \( -name "*.ts" -o -name "*.tsx" \) 2>/dev/null | wc -l)
+            dir_protected=0
+            
+            while IFS= read -r file; do
+              total_api_files=$((total_api_files + 1))
+              if grep -q "checkRateLimit\|verifyJWT\|ADMIN_API_TOKEN\|authMiddleware\|requireAuth\|allowedDomains\|isValidOrigin\|admin-token\|Unauthorized origin" "$file" 2>/dev/null; then
+                protected_api_files=$((protected_api_files + 1))
+                dir_protected=$((dir_protected + 1))
+              else
+                unprotected_endpoints+="$file"$'\n'
+              fi
+            done < <(find "$p" -type f \( -name "*.ts" -o -name "*.tsx" \) 2>/dev/null)
+            
+            if [ $dir_total -gt 0 ]; then
+              echo "| $p/ | $dir_total | $dir_protected | $([ $dir_protected -eq $dir_total ] && echo "✅ All Secure" || echo "⚠️ Some Unprotected") |" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+        done
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ ! -z "$unprotected_endpoints" ]; then
+          echo "⚠️  **SECURITY WARNING:** $((total_api_files - protected_api_files)) unprotected API endpoints found" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Unprotected Endpoints:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "$unprotected_endpoints" | head -10 >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "📊 **Recommendation:** Add rate limiting, authentication, or authorization middleware" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          WARNINGS=$((WARNINGS + 1))
+        else
+          echo "✅ **All API endpoints are properly protected**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Check for sensitive data in logs (CRITICAL - always error) with enhanced patterns
+        echo "🔍 Checking for sensitive data patterns..."
+        
+        SENSITIVE_PATTERNS=(
+          "console\.log.*private.*key.*[^)]"
+          "console\.log.*secret.*[^(].*[^)].*[^t]$"
+          "console\.log.*mnemonic.*[^)]"
+          "console\.log.*password.*[^)].*[^t]$"
+          "console\.log.*wallet.*0x[0-9a-fA-F]{40}.*[^)]"
+        )
+        
+        sensitive_found=false
+        for pattern in "${SENSITIVE_PATTERNS[@]}"; do
+          # Use a temp file to avoid broken pipe issues
+          if grep -r "$pattern" . --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" --exclude-dir=node_modules > /tmp/grep_results.tmp 2>/dev/null && [ -s /tmp/grep_results.tmp ]; then
+            
+            # Filter out legitimate security warnings and reminders
+            grep -v "NEVER expose" /tmp/grep_results.tmp | \
+            grep -v "Make sure you have backed up" | \
+            grep -v "⚠️.*IMPORTANT" | \
+            grep -v "security reminder" | \
+            grep -v "\.slice(-4)" | \
+            grep -v "\.slice(0, 6)" > /tmp/filtered_results.tmp || true
+            
+            # Only flag if there are actual sensitive exposures after filtering
+            if [ -s /tmp/filtered_results.tmp ]; then
+              if [ "$sensitive_found" = false ]; then
+                echo "❌ **CRITICAL SECURITY ERROR:** Potential sensitive data exposure in logs" >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "### Sensitive Patterns Found:" >> $GITHUB_STEP_SUMMARY
+                echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+                sensitive_found=true
+              fi
+              head -5 /tmp/filtered_results.tmp >> $GITHUB_STEP_SUMMARY 2>/dev/null || true
+            fi
+          fi
+        done
+        
+        if [ "$sensitive_found" = true ]; then
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "🔴 **CRITICAL:** This is a critical security risk that must be addressed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          ERRORS=$((ERRORS + 1))
+        else
+          echo "✅ **No sensitive data patterns found in logs**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Check for missing test files (WARNING only) with better path handling
+        echo "🔍 Checking for missing test coverage..."
+        missing_tests=0
+        
+        # Check for lib directories in various locations
+        LIB_PATHS=(
+          "frontend/src/lib"
+          "src/lib"
+          "lib"
+          "utils"
+          "src/utils"
+        )
+        
+        for lib_path in "${LIB_PATHS[@]}"; do
+          if [ -d "$lib_path" ]; then
+            echo "📂 Checking test coverage for: $lib_path"
+            find "$lib_path" -name "*.ts" -type f 2>/dev/null | while read -r lib_file; do
+              base_name=$(basename "$lib_file" .ts)
+              test_dirs=("test" "tests" "__tests__" "src/test" "frontend/src/test")
+              
+              has_test=false
+              for test_dir in "${test_dirs[@]}"; do
+                if [ -f "$test_dir/${base_name}.test.ts" ] || [ -f "$test_dir/${base_name}.spec.ts" ]; then
+                  has_test=true
+                  break
+                fi
+              done
+              
+              if [ "$has_test" = false ] && [ "$base_name" != "types" ] && [ "$base_name" != "index" ]; then
+                echo "⚠️  Missing test file for $lib_file"
+                missing_tests=$((missing_tests + 1))
+              fi
+            done
+          fi
+        done
+        
+        if [ $missing_tests -gt 0 ]; then
+          WARNINGS=$((WARNINGS + 1))
+        fi
+        
+        # Generate comprehensive security summary (never fail)
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📊 Security Check Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Metric | Count | Level |" >> $GITHUB_STEP_SUMMARY
+        echo "|--------|-------|-------|" >> $GITHUB_STEP_SUMMARY
+        echo "| 🔍 API Endpoints Total | $total_api_files | Info |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🔒 API Endpoints Protected | $protected_api_files | $([ $protected_api_files -eq $total_api_files ] && echo "✅ Good" || echo "⚠️ Warning") |" >> $GITHUB_STEP_SUMMARY
+        echo "| ⚠️ Security Warnings | $WARNINGS | $([ $WARNINGS -eq 0 ] && echo "✅ None" || echo "⚠️ Review") |" >> $GITHUB_STEP_SUMMARY
+        echo "| ❌ Security Errors | $ERRORS | $([ $ERRORS -eq 0 ] && echo "✅ None" || echo "🔴 Critical") |" >> $GITHUB_STEP_SUMMARY
+        echo "| ⚙️ Enforcement Level | $ENFORCEMENT_LEVEL | $([ "$ENFORCEMENT_LEVEL" = "error" ] && echo "🔒 Strict" || echo "🔶 Learning") |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Calculate security score
+        SECURITY_SCORE=100
+        if [ $total_api_files -gt 0 ]; then
+          PROTECTION_RATE=$(( (protected_api_files * 100) / total_api_files ))
+          SECURITY_SCORE=$(( SECURITY_SCORE - (100 - PROTECTION_RATE) / 4 ))
+        fi
+        SECURITY_SCORE=$(( SECURITY_SCORE - WARNINGS * 10 - ERRORS * 25 ))
+        SECURITY_SCORE=$([ $SECURITY_SCORE -lt 0 ] && echo "0" || echo "$SECURITY_SCORE")
+        
+        echo "#### 🏆 Overall Security Score: **${SECURITY_SCORE}%**" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ $SECURITY_SCORE -gt 90 ]; then
+          echo "🎉 **EXCELLENT SECURITY POSTURE** - Well protected!" >> $GITHUB_STEP_SUMMARY
+        elif [ $SECURITY_SCORE -gt 70 ]; then
+          echo "🟡 **GOOD SECURITY POSTURE** - Minor improvements recommended" >> $GITHUB_STEP_SUMMARY
+        elif [ $SECURITY_SCORE -gt 50 ]; then
+          echo "🟠 **MODERATE SECURITY POSTURE** - Several issues need attention" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "🔴 **SECURITY POSTURE NEEDS ATTENTION** - Critical issues require immediate action" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ **Security check completed (non-blocking)** - Deployment allowed" >> $GITHUB_STEP_SUMMARY
+        
+        if [ $WARNINGS -gt 0 ] || [ $ERRORS -gt 0 ]; then
+          echo "🎯 **Action Items:** Review and address security findings for better protection" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Cleanup temp files
+        rm -f /tmp/grep_results.tmp /tmp/filtered_results.tmp typescript-output.txt eslint-output.txt
+      continue-on-error: true
+        
+    - name: 🏗️ Production Build Test
+      run: |
+        set -o pipefail
+        echo "## 🏗️ Production Build Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Run build with proper error detection
+        set +e
+        timeout 300 pnpm run build > build-output.txt 2>&1
+        BUILD_EXIT_CODE=$?
+        set -e
+        
+        if [ $BUILD_EXIT_CODE -eq 0 ]; then
+          echo "✅ **Production Build: SUCCESS** - Build completed successfully" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Production build successful"
+        else
+          echo "❌ **Production Build: Issues Found** - Build errors detected" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Errors:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          tail -30 build-output.txt >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ Production build issues (non-blocking)"
+        fi
+      continue-on-error: true
+        
+    - name: ✅ Security Gate Status
+      run: |
+        echo "## 🏁 Quality & Security Gate Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📋 All Checks Completed (Non-blocking):" >> $GITHUB_STEP_SUMMARY
+        echo "- 🔍 TypeScript compilation analysis" >> $GITHUB_STEP_SUMMARY
+        echo "- 🧹 ESLint security rules validation" >> $GITHUB_STEP_SUMMARY
+        echo "- 🧪 Test suite execution" >> $GITHUB_STEP_SUMMARY
+        echo "- 📊 Coverage threshold assessment" >> $GITHUB_STEP_SUMMARY
+        echo "- 🔒 Security pattern validation" >> $GITHUB_STEP_SUMMARY
+        echo "- 🏗️ Production build verification" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ **All quality and security checks completed**" >> $GITHUB_STEP_SUMMARY
+        echo "🚀 **Deployment Status: ALLOWED** - Issues reported as non-blocking warnings" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "📊 **Next Steps:** Review the detailed reports above and address findings in future iterations" >> $GITHUB_STEP_SUMMARY
+        
+        echo "🎉 Quality & Security gate completed!"
+        echo "🚀 Deployment is allowed - all issues are non-blocking"
+        echo "📊 Check Step Summary for detailed analysis"
+
+  security-metrics:
+    name: 📊 Security Metrics & Dashboard
+    runs-on: ubuntu-latest
+    needs: security-quality-check
+    if: always()
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: 📦 Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 9.15.9
+        run_install: false
+        
+    - name: 🟢 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        registry-url: 'https://registry.npmjs.org/'
+        cache: 'pnpm'
+        cache-dependency-path: pnpm-lock.yaml
+        
+    - name: 📦 Install Dependencies
+      run: |
+        echo "🔍 Installing dependencies with pnpm $(pnpm --version)..."
+        pnpm install --frozen-lockfile --prefer-offline
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+        
+    - name: 📊 Generate Security Metrics
+      run: |
+        set -o pipefail
+        # Get test results and coverage
+        COVERAGE=$(pnpm run test:coverage 2>/dev/null | grep -oP 'All files.*?(\d+\.?\d*)%' | tail -1 | grep -oP '\d+\.?\d*' || echo "0")
+        TEST_RESULTS=$(pnpm run test 2>&1 | grep -oP '\d+ passed' || echo "0 passed")
+        
+        # Use the already calculated API metrics from the security check above
+        # total_api_files and protected_api_files are already available
+        
+        # Analyze bypass usage
+        BYPASS_COUNT=$(grep -c "\[BYPASS\]" ../.security-audit.log 2>/dev/null || echo "0")
+        LAST_WEEK_BYPASSES=$(grep "\[BYPASS\]" ../.security-audit.log 2>/dev/null | tail -7 | wc -l || echo "0")
+        
+        # Current enforcement level
+        ENFORCEMENT_LEVEL=$(node -p "JSON.parse(require('fs').readFileSync('../.security-config.json', 'utf8')).enforcement.level" 2>/dev/null || echo "warning")
+        
+        echo "## 🛡️ Security & Quality Dashboard" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Metric | Value | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|---------|--------|---------|" >> $GITHUB_STEP_SUMMARY
+        echo "| 📊 Test Coverage | ${COVERAGE}% | $([ $(echo "$COVERAGE > 70" | bc -l 2>/dev/null || echo 0) -eq 1 ] && echo "✅ Excellent" || echo "⚠️ Needs Improvement") |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🧪 Test Results | $TEST_RESULTS | $(echo "$TEST_RESULTS" | grep -q "0 passed" && echo "❌ Failed" || echo "✅ Passing") |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🔒 Protected Endpoints | ${protected_api}/${total_api} | $([ ${protected_api} -eq ${total_api} ] && echo "✅ All Secure" || echo "⚠️ Some Unprotected") |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🚪 Total Bypasses | $BYPASS_COUNT | $([ $BYPASS_COUNT -lt 5 ] && echo "✅ Low Usage" || echo "⚠️ High Usage") |" >> $GITHUB_STEP_SUMMARY
+        echo "| 📅 Week Bypasses | $LAST_WEEK_BYPASSES | $([ $LAST_WEEK_BYPASSES -lt 2 ] && echo "✅ Acceptable" || echo "⚠️ Review Needed") |" >> $GITHUB_STEP_SUMMARY
+        echo "| ⚙️ Enforcement Level | $ENFORCEMENT_LEVEL | $([ "$ENFORCEMENT_LEVEL" = "error" ] && echo "🔒 Strict" || echo "⚠️ Learning") |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Compliance score calculation
+        COMPLIANCE_SCORE=$((100 - LAST_WEEK_BYPASSES * 20))
+        COMPLIANCE_SCORE=$([ $COMPLIANCE_SCORE -lt 0 ] && echo "0" || echo "$COMPLIANCE_SCORE")
+        
+        echo "### 📈 Overall Compliance Score: ${COMPLIANCE_SCORE}%" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ $COMPLIANCE_SCORE -gt 90 ]; then
+          echo "🎉 **EXCELLENT SECURITY COMPLIANCE** - Team following best practices!" >> $GITHUB_STEP_SUMMARY
+        elif [ $COMPLIANCE_SCORE -gt 70 ]; then
+          echo "✅ **GOOD SECURITY COMPLIANCE** - Minor improvements recommended" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⚠️ **SECURITY COMPLIANCE NEEDS ATTENTION** - Review patterns and reduce bypasses" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+    - name: 🔄 Auto-Escalate Security Enforcement
+      run: |
+        echo "⚠️ Auto-escalation script not configured for DAO project"
+        # node scripts/auto-escalate-security.js
+        
+    - name: 📋 Final Status
+      run: |
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🎯 Deployment Status" >> $GITHUB_STEP_SUMMARY
+        echo "🚀 **Deployment allowed** - All issues are reported as non-blocking warnings" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "_Security dashboard updated: $(date -u)_" >> $GITHUB_STEP_SUMMARY

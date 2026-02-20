@@ -1,0 +1,46 @@
+{
+  "name": "CryptoGift DAO Token List",
+  "timestamp": "2025-09-09T05:05:56.084Z",
+  "version": {
+    "major": 1,
+    "minor": 0,
+    "patch": 0
+  },
+  "tags": {
+    "governance": {
+      "name": "Governance",
+      "description": "Tokens used for governance"
+    },
+    "dao": {
+      "name": "DAO",
+      "description": "DAO governance tokens"
+    },
+    "rewards": {
+      "name": "Rewards",
+      "description": "Reward distribution tokens"
+    },
+    "community": {
+      "name": "Community",
+      "description": "Community driven tokens"
+    }
+  },
+  "logoURI": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/main/public/metadata/cgc-logo-256.png",
+  "keywords": [
+    "cryptogift",
+    "dao",
+    "base",
+    "governance",
+    "rewards"
+  ],
+  "tokens": [
+    {
+      "chainId": 8453,
+      "address": "0x5e3a61b550328f3D8C44f60b3e10a49D3d806175",
+      "name": "CryptoGift Coin",
+      "symbol": "CGC",
+      "decimals": 18,
+      "logoURI": "https://raw.githubusercontent.com/CryptoGift-Wallets-DAO/CryptoGift-Wallets-DAO/main/public/metadata/cgc-logo-256.png",
+      "tags": ["governance", "dao", "rewards", "community"]
+    }
+  ]
+}
