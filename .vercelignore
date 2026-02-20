@@ -31,6 +31,36 @@ build
 *.ico
 !app/icon.png
 !public/favicon.ico
+
+# ══════════════════════════════════════════════════════════════════
+# AutoMALL Branding (CRITICAL - site identity, logos, icons)
+# ══════════════════════════════════════════════════════════════════
+# Navbar & Footer logos
+!public/logo-automall.png
+!public/logo-automall-nav.png
+!public/logo-automall-footer.png
+# Favicons & App Icons
+!app/favicon.ico
+!public/favicon-32x32.png
+!public/icon-192x192.png
+!public/icon-512x512.png
+!public/apple-touch-icon.png
+# OpenGraph / Social sharing
+!public/og-automall.png
+# Car brand logos (dealer home page grid)
+!public/brands/toyota.png
+!public/brands/ford.png
+!public/brands/chevrolet.png
+!public/brands/nissan.png
+!public/brands/gmc.png
+!public/brands/dodge.png
+!public/brands/jeep.png
+!public/brands/mazda.png
+!public/brands/mercedes.png
+
+# ══════════════════════════════════════════════════════════════════
+# Legacy CryptoGift/DAO Assets (preserved from original codebase)
+# ══════════════════════════════════════════════════════════════════
 !public/apeX.png
 !public/apeX11.png
 !public/apeX22.PNG
