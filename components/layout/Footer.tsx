@@ -31,24 +31,18 @@ export const Footer: React.FC = () => {
         <div className="grid md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="col-span-1">
-            <div className="flex items-center space-x-2 mb-4">
-              <div className="relative w-10 h-10">
-                <Image
-                  src="/logo-automall-square.png"
-                  alt="Autos MALL"
-                  width={40}
-                  height={40}
-                  className="rounded-xl object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                  }}
-                />
-              </div>
-              <div>
-                <div className="font-bold text-xl">Autos</div>
-                <div className="text-xs font-bold -mt-1 text-am-orange">MALL</div>
-              </div>
+            <div className="mb-4">
+              <Image
+                src="/logo-automall-footer.png"
+                alt="Autos MALL"
+                width={160}
+                height={88}
+                className="h-12 w-auto drop-shadow-md"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                }}
+              />
             </div>
             <p className="text-gray-400 text-sm mb-4">
               {t('brand.description')}

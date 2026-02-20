@@ -45,25 +45,19 @@ export const Navbar: React.FC = () => {
         <div className="flex justify-between items-center py-3">
           {/* Logo and Brand */}
           <div className="flex items-center space-x-2">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="relative w-12 h-12">
-                <Image
-                  src="/logo-automall-square.png"
-                  alt="Autos MALL"
-                  width={48}
-                  height={48}
-                  className="rounded-xl object-cover shadow-lg"
-                  priority
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                  }}
-                />
-              </div>
-              <div>
-                <div className="font-bold text-xl text-gray-900 dark:text-white">Autos</div>
-                <div className="text-xs font-bold -mt-1 text-am-orange dark:text-am-orange">MALL</div>
-              </div>
+            <Link href="/" className="flex items-center">
+              <Image
+                src="/logo-automall-nav.png"
+                alt="Autos MALL"
+                width={120}
+                height={66}
+                className="h-11 w-auto drop-shadow-md"
+                priority
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                }}
+              />
             </Link>
           </div>
 
