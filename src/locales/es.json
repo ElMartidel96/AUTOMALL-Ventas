@@ -2325,5 +2325,69 @@
       "invalidType": "Tipo de archivo inválido. Por favor sube un video o imagen.",
       "uploadFailed": "Error al subir. Por favor intenta de nuevo."
     }
+  },
+  "dealer": {
+    "hero": {
+      "welcome": "Bienvenido a",
+      "tagline": "Encuentra tu auto perfecto — sin presión, sin complicaciones.",
+      "searchPlaceholder": "¿Qué auto estás buscando?",
+      "searchButton": "Buscar",
+      "trust1": "Vehículos Verificados",
+      "trust2": "Financiamiento Disponible",
+      "trust3": "Houston, TX"
+    },
+    "search": {
+      "allMakes": "Todas las Marcas",
+      "allModels": "Todos los Modelos",
+      "anyPrice": "Cualquier Precio",
+      "under15k": "Menos de $15K",
+      "15to25k": "$15K - $25K",
+      "25to40k": "$25K - $40K",
+      "over40k": "$40K+",
+      "browseAll": "Ver Todos los Vehículos"
+    },
+    "why": {
+      "title": "¿Por qué Autos MALL?",
+      "subtitle": "Hacemos que comprar un auto se sienta como debe ser — simple, transparente y agradable.",
+      "inspected": "Totalmente Inspeccionados",
+      "inspectedDesc": "Cada vehículo pasa por una inspección completa de múltiples puntos antes de publicarse.",
+      "transparent": "Precios Transparentes",
+      "transparentDesc": "Sin cargos ocultos, sin sorpresas. El precio que ves es el precio que pagas.",
+      "financing": "Financiamiento Fácil",
+      "financingDesc": "Planes de pago flexibles que se adaptan a tu presupuesto. Pre-aprobación en minutos.",
+      "support": "Atención Personal",
+      "supportDesc": "Personas reales que se preocupan por ti. Te acompañamos desde el primer clic hasta tu primer viaje."
+    },
+    "brands": {
+      "title": "Busca por Marca",
+      "subtitle": "Encuentra tu marca favorita en nuestra selección"
+    },
+    "featured": {
+      "title": "Vehículos Destacados",
+      "subtitle": "Seleccionados por nuestro equipo, listos para ti",
+      "comingSoon": "Próximamente",
+      "comingSoonDesc": "Estamos preparando nuestro inventario. Vuelve pronto para ofertas increíbles.",
+      "getNotified": "Avísame"
+    },
+    "testimonials": {
+      "title": "Lo Que Dicen Nuestros Clientes",
+      "subtitle": "Historias reales de personas reales",
+      "t1Name": "María G.",
+      "t1Text": "Estaba nerviosa por comprar un auto en línea, pero el equipo de Autos MALL lo hizo muy fácil. ¡Encontré mi SUV soñada en 10 minutos!",
+      "t1Role": "Compradora primeriza",
+      "t2Name": "Carlos R.",
+      "t2Text": "El proceso de financiamiento fue increíblemente fácil. Me aprobaron el mismo día y me fui a casa en mi nueva camioneta.",
+      "t2Role": "Cliente frecuente",
+      "t3Name": "Jennifer L.",
+      "t3Text": "La mejor experiencia comprando un auto que he tenido. Transparente, rápido, y el auto estaba exactamente como lo describieron.",
+      "t3Role": "Compradora verificada"
+    },
+    "cta": {
+      "title": "¿Listo para encontrar tu próximo auto?",
+      "subtitle": "Explora nuestro inventario o déjanos ayudarte a encontrar el auto perfecto.",
+      "browse": "Ver Inventario",
+      "contact": "Habla con Nosotros",
+      "phone": "Llámanos"
+    }
   }
 }

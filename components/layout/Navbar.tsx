@@ -25,7 +25,6 @@ import {
   User,
   LayoutDashboard,
   Users,
-  FileText,
 } from 'lucide-react';
 import { FEATURE_WEB3_VISIBLE, FEATURE_CGC_TOKEN } from '@/lib/config/features';
 
@@ -49,7 +48,7 @@ export const Navbar: React.FC = () => {
             <Link href="/" className="flex items-center space-x-2">
               <div className="relative w-12 h-12">
                 <Image
-                  src="/logo-automall.png"
+                  src="/logo-automall-square.png"
                   alt="Autos MALL"
                   width={48}
                   height={48}
@@ -85,12 +84,7 @@ export const Navbar: React.FC = () => {
               <Users className="w-3 h-3" />
             </Link>
 
-            <Link
-              href="/docs"
-              className="text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors text-sm font-bold px-2"
-            >
-              {t('aboutUs')}
-            </Link>
+            {/* /docs route reserved for future lab collaboration - not part of dealer UI */}
 
             {/* Separator */}
             <div className="w-px h-6 bg-gradient-to-b from-transparent via-gray-300 dark:via-am-blue-light/30 to-transparent opacity-40 mx-2"></div>
@@ -158,16 +152,7 @@ export const Navbar: React.FC = () => {
 
               <div className="mx-4 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-am-blue/30 to-transparent opacity-30"></div>
 
-              <Link
-                href="/docs"
-                className="block text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors px-4 py-3 font-bold text-base flex items-center gap-2"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <FileText className="w-4 h-4" />
-                {t('aboutUs')}
-              </Link>
-
-              <div className="mx-4 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-am-blue/30 to-transparent opacity-30"></div>
+              {/* /docs route reserved for future lab collaboration - not part of dealer UI */}
 
               {/* Mobile Language and Theme Toggles */}
               <div className="px-4 py-3 flex items-center justify-between">

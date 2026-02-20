@@ -1,7 +1,13 @@
 /**
- * 📚 Documentation Page
- * Complete technical documentation for CryptoGift Wallets DAO
- * 🌐 i18n: Full translation support for EN/ES
+ * Documentation Page
+ *
+ * STATUS: Reserved for future lab collaboration.
+ * This route is NOT part of the Autos MALL dealer UI.
+ * It belongs to the shared lab infrastructure and is hidden from navigation.
+ * When ready, this can be repurposed for dealer documentation or partner portal.
+ *
+ * Original: CryptoGift Wallets DAO technical docs
+ * i18n: Full translation support for EN/ES
  */
 
 'use client';

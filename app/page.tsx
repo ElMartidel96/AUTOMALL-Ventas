@@ -1,15 +1,20 @@
 'use client';
 
 /**
- * Autos MALL - Landing Page
+ * Autos MALL - Dealer Home Page
  *
- * Professional landing page for the AI-powered car sales platform.
+ * The customer-facing welcome page for the Autos MALL dealer.
+ * Designed with buyer psychology in mind:
+ * - Reduce anxiety: clean, simple, no-pressure language
+ * - Build trust: inspections, transparent pricing, social proof
+ * - Create desire: beautiful visuals, aspirational feel
+ * - Minimize friction: search front-and-center, easy navigation
+ *
  * Glass morphism design system with AM brand colors.
  * i18n: Full bilingual support (EN/ES)
  */
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -17,350 +22,482 @@ import { Navbar, NavbarSpacer } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { useAccount } from '@/lib/thirdweb';
 import {
-  Users,
-  Zap,
+  Search,
   Shield,
-  ArrowRight,
-  CheckCircle2,
-  Sparkles,
+  DollarSign,
+  Heart,
+  Headphones,
   Star,
-  Car,
-  MessageSquare,
-  BarChart3,
-  Globe,
-  UserPlus,
-  Bot,
-  Layout,
-  TrendingUp,
-  Target,
+  ChevronRight,
+  MapPin,
+  BadgeCheck,
+  CreditCard,
+  Phone,
+  MessageCircle,
+  ArrowRight,
+  Sparkles,
+  Bell,
 } from 'lucide-react';
+
+/* ─── Car Brand Logo SVGs ──────────────────────────────────────────────
+   Inline SVGs ensure zero external dependencies, perfect sizing,
+   instant load, and dark/light mode compatibility.
+   All logos render at a uniform 80x80 container for visual consistency.
+   ──────────────────────────────────────────────────────────────────── */
+
+function ChevroletLogo({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 80 80" className={className} aria-label="Chevrolet">
+      <rect x="10" y="30" width="60" height="20" rx="2" fill="#D4A843" stroke="#C49A38" strokeWidth="2"/>
+      <rect x="18" y="34" width="18" height="12" rx="1" fill="#FFFFFF"/>
+      <rect x="44" y="34" width="18" height="12" rx="1" fill="#FFFFFF"/>
+    </svg>
+  );
+}
+
+function FordLogo({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 80 80" className={className} aria-label="Ford">
+      <ellipse cx="40" cy="40" rx="34" ry="22" fill="#003478" stroke="#002D6B" strokeWidth="1.5"/>
+      <text x="40" y="46" textAnchor="middle" fill="#FFFFFF" fontFamily="serif" fontStyle="italic" fontSize="22" fontWeight="bold">Ford</text>
+    </svg>
+  );
+}
+
+function GMCLogo({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 80 80" className={className} aria-label="GMC">
+      <rect x="8" y="26" width="64" height="28" rx="3" fill="#CC0000" stroke="#AA0000" strokeWidth="1.5"/>
+      <text x="40" y="46" textAnchor="middle" fill="#FFFFFF" fontFamily="Arial, sans-serif" fontSize="22" fontWeight="bold" letterSpacing="2">GMC</text>
+    </svg>
+  );
+}
+
+function DodgeLogo({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 80 80" className={className} aria-label="Dodge">
+      <rect x="6" y="24" width="68" height="32" rx="3" fill="#1A1A1A" stroke="#333" strokeWidth="1"/>
+      <text x="40" y="45" textAnchor="middle" fill="#FFFFFF" fontFamily="Arial, sans-serif" fontSize="17" fontWeight="bold" letterSpacing="3">DODGE</text>
+      <line x1="14" y1="50" x2="66" y2="50" stroke="#CC0000" strokeWidth="2"/>
+    </svg>
+  );
+}
+
+function JeepLogo({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 80 80" className={className} aria-label="Jeep">
+      <rect x="8" y="28" width="64" height="24" rx="2" fill="#3D6B35" stroke="#2D5525" strokeWidth="1.5"/>
+      <text x="40" y="45" textAnchor="middle" fill="#FFFFFF" fontFamily="Arial, sans-serif" fontSize="19" fontWeight="bold" letterSpacing="4">JEEP</text>
+    </svg>
+  );
+}
+
+function NissanLogo({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 80 80" className={className} aria-label="Nissan">
+      <circle cx="40" cy="40" r="28" fill="none" stroke="#C3002F" strokeWidth="3"/>
+      <rect x="12" y="34" width="56" height="12" fill="#C3002F"/>
+      <text x="40" y="44" textAnchor="middle" fill="#FFFFFF" fontFamily="Arial, sans-serif" fontSize="12" fontWeight="bold" letterSpacing="2">NISSAN</text>
+    </svg>
+  );
+}
+
+function MazdaLogo({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 80 80" className={className} aria-label="Mazda">
+      <ellipse cx="40" cy="38" rx="28" ry="22" fill="none" stroke="#1A1A1A" strokeWidth="2.5" className="dark:stroke-gray-300"/>
+      <path d="M20 38 Q30 26 40 30 Q50 26 60 38" fill="none" stroke="#1A1A1A" strokeWidth="2.5" className="dark:stroke-gray-300"/>
+      <text x="40" y="58" textAnchor="middle" fill="#1A1A1A" className="dark:fill-gray-300" fontFamily="Arial, sans-serif" fontSize="11" fontWeight="bold" letterSpacing="3">MAZDA</text>
+    </svg>
+  );
+}
+
+function ToyotaLogo({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 80 80" className={className} aria-label="Toyota">
+      <ellipse cx="40" cy="36" rx="30" ry="20" fill="none" stroke="#CC0000" strokeWidth="2.5"/>
+      <ellipse cx="40" cy="36" rx="18" ry="12" fill="none" stroke="#CC0000" strokeWidth="2.5"/>
+      <ellipse cx="40" cy="36" rx="8" ry="18" fill="none" stroke="#CC0000" strokeWidth="2.5"/>
+      <text x="40" y="64" textAnchor="middle" fill="#CC0000" fontFamily="Arial, sans-serif" fontSize="10" fontWeight="bold" letterSpacing="3">TOYOTA</text>
+    </svg>
+  );
+}
+
+function HondaLogo({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 80 80" className={className} aria-label="Honda">
+      <rect x="16" y="22" width="48" height="36" rx="3" fill="none" stroke="#CC0000" strokeWidth="2.5"/>
+      <text x="40" y="46" textAnchor="middle" fill="#CC0000" fontFamily="Arial, sans-serif" fontSize="18" fontWeight="bold" letterSpacing="1">H</text>
+      <text x="40" y="68" textAnchor="middle" fill="#1A1A1A" className="dark:fill-gray-300" fontFamily="Arial, sans-serif" fontSize="10" fontWeight="bold" letterSpacing="3">HONDA</text>
+    </svg>
+  );
+}
+
+function HyundaiLogo({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 80 80" className={className} aria-label="Hyundai">
+      <ellipse cx="40" cy="36" rx="28" ry="20" fill="none" stroke="#002C5F" strokeWidth="2.5"/>
+      <text x="40" y="42" textAnchor="middle" fill="#002C5F" fontFamily="Arial, sans-serif" fontSize="20" fontWeight="bold" fontStyle="italic">H</text>
+      <text x="40" y="66" textAnchor="middle" fill="#002C5F" fontFamily="Arial, sans-serif" fontSize="9" fontWeight="bold" letterSpacing="2">HYUNDAI</text>
+    </svg>
+  );
+}
+
+function KiaLogo({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 80 80" className={className} aria-label="Kia">
+      <rect x="8" y="28" width="64" height="24" rx="12" fill="#05141F" stroke="#05141F" strokeWidth="1"/>
+      <text x="40" y="46" textAnchor="middle" fill="#FFFFFF" fontFamily="Arial, sans-serif" fontSize="22" fontWeight="bold" fontStyle="italic" letterSpacing="2">KIA</text>
+    </svg>
+  );
+}
+
+function BMWLogo({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 80 80" className={className} aria-label="BMW">
+      <circle cx="40" cy="38" r="24" fill="#FFFFFF" stroke="#1A1A1A" strokeWidth="3"/>
+      <circle cx="40" cy="38" r="20" fill="none" stroke="#1A1A1A" strokeWidth="2"/>
+      <path d="M40 18 L40 38 L20 38" fill="#0066B1"/>
+      <path d="M40 38 L40 58 L60 38" fill="#0066B1"/>
+      <text x="40" y="72" textAnchor="middle" fill="#1A1A1A" className="dark:fill-gray-300" fontFamily="Arial, sans-serif" fontSize="9" fontWeight="bold" letterSpacing="2">BMW</text>
+    </svg>
+  );
+}
+
+const brandLogos = [
+  { name: 'Toyota', Logo: ToyotaLogo },
+  { name: 'Honda', Logo: HondaLogo },
+  { name: 'Ford', Logo: FordLogo },
+  { name: 'Chevrolet', Logo: ChevroletLogo },
+  { name: 'Nissan', Logo: NissanLogo },
+  { name: 'Hyundai', Logo: HyundaiLogo },
+  { name: 'GMC', Logo: GMCLogo },
+  { name: 'Dodge', Logo: DodgeLogo },
+  { name: 'Jeep', Logo: JeepLogo },
+  { name: 'Mazda', Logo: MazdaLogo },
+  { name: 'Kia', Logo: KiaLogo },
+  { name: 'BMW', Logo: BMWLogo },
+];
 
 export default function Home() {
   const [isVisible, setIsVisible] = useState(false);
-  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedMake, setSelectedMake] = useState('');
+  const [selectedPrice, setSelectedPrice] = useState('');
   const { isConnected } = useAccount();
-  const t = useTranslations('landing');
+  const t = useTranslations('dealer');
 
   useEffect(() => {
     const timer = setTimeout(() => setIsVisible(true), 100);
     return () => clearTimeout(timer);
   }, []);
 
-  // Car brand logos from reference images
-  const carBrands = [
-    { name: 'Chevrolet', color: 'from-yellow-500 to-yellow-600' },
-    { name: 'Ford', color: 'from-blue-600 to-blue-700' },
-    { name: 'GMC', color: 'from-red-600 to-red-700' },
-    { name: 'Dodge', color: 'from-gray-600 to-gray-700' },
-    { name: 'Jeep', color: 'from-green-600 to-green-700' },
-    { name: 'Nissan', color: 'from-gray-500 to-gray-600' },
-    { name: 'Mazda', color: 'from-red-500 to-red-600' },
-    { name: 'Toyota', color: 'from-red-600 to-red-700' },
-  ];
-
   return (
     <div className="min-h-screen theme-gradient-bg">
       <Navbar />
       <NavbarSpacer />
 
-      {/* ====================================================
-         HERO SECTION
-         ==================================================== */}
-      <section className="relative overflow-hidden py-12 md:py-20 px-4">
-        {/* Background decorative elements */}
+      {/* ════════════════════════════════════════════════════════════
+         HERO SECTION — Warm welcome, search-first, trust-building
+         ════════════════════════════════════════════════════════════ */}
+      <section className="relative overflow-hidden py-16 md:py-24 px-4">
+        {/* Ambient background */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-am-blue/5 dark:bg-am-blue/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-am-orange/5 dark:bg-am-orange/10 rounded-full blur-3xl"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-am-green/3 dark:bg-am-green/5 rounded-full blur-3xl"></div>
+          <div className="absolute top-10 left-10 w-80 h-80 bg-am-blue/5 dark:bg-am-blue/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-10 right-10 w-96 h-96 bg-am-orange/5 dark:bg-am-orange/10 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-am-green/3 dark:bg-am-green/5 rounded-full blur-3xl" />
         </div>
 
-        <div className="container mx-auto max-w-7xl relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Left Column - Text */}
-            <div className={`transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2 bg-am-orange/10 dark:bg-am-orange/20 text-am-orange dark:text-am-orange-light px-4 py-1.5 rounded-full text-sm font-medium mb-6">
-                <Sparkles className="w-4 h-4" />
-                {t('hero.badge')}
-              </div>
-
-              {/* Main Headline */}
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
-                <span className="text-gray-900 dark:text-white">{t('hero.titleLine1')}</span>
-                <br />
-                <span className="text-holographic">{t('hero.titleLine2')}</span>
-              </h1>
-
-              {/* Subtitle */}
-              <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-lg">
-                {t('hero.subtitle')}
-              </p>
-
-              {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                <Link
-                  href={isConnected ? '/dashboard' : '#'}
-                  onClick={(e) => {
-                    if (!isConnected) {
-                      e.preventDefault();
-                      // Trigger login modal via ConnectButton
-                      const btn = document.querySelector('[data-connect-button]') as HTMLButtonElement;
-                      btn?.click();
-                    }
-                  }}
-                  className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-am-blue to-am-blue-light hover:from-am-blue-dark hover:to-am-blue text-white px-8 py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
-                >
-                  {t('hero.ctaPrimary')}
-                  <ArrowRight className="w-5 h-5" />
-                </Link>
-                <Link
-                  href="/docs"
-                  className="inline-flex items-center justify-center gap-2 glass-button px-8 py-4 rounded-xl font-bold text-lg"
-                >
-                  {t('hero.ctaSecondary')}
-                </Link>
-              </div>
-
-              {/* Trust Indicators */}
-              <div className="flex flex-wrap gap-6">
-                {[
-                  { icon: Shield, text: t('hero.trust1') },
-                  { icon: Globe, text: t('hero.trust2') },
-                  { icon: Zap, text: t('hero.trust3') },
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                    <item.icon className="w-4 h-4 text-am-green" />
-                    <span>{item.text}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Right Column - Hero Visual */}
-            <div className={`transition-all duration-1000 delay-300 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-              <div className="relative">
-                {/* Main logo display with glass effect */}
-                <div className="glass-crystal-enhanced rounded-3xl p-8 md:p-12 text-center">
-                  <div className="relative w-full max-w-md mx-auto">
-                    <Image
-                      src="/logo-automall.png"
-                      alt="Autos MALL"
-                      width={500}
-                      height={280}
-                      className="w-full h-auto drop-shadow-2xl"
-                      priority
-                    />
-                  </div>
-                  {/* Floating particles */}
-                  <div className="absolute top-4 right-4 w-3 h-3 bg-am-blue rounded-full float opacity-60"></div>
-                  <div className="absolute bottom-8 left-4 w-2 h-2 bg-am-orange rounded-full float opacity-60" style={{ animationDelay: '1s' }}></div>
-                  <div className="absolute top-1/2 right-8 w-2 h-2 bg-am-green rounded-full float opacity-60" style={{ animationDelay: '2s' }}></div>
-                </div>
-              </div>
+        <div className="container mx-auto max-w-5xl relative z-10 text-center">
+          {/* Logo */}
+          <div className={`transition-all duration-1000 ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
+            <div className="mx-auto mb-8 w-48 md:w-64">
+              <Image
+                src="/logo-automall.png"
+                alt="Autos MALL"
+                width={500}
+                height={280}
+                className="w-full h-auto drop-shadow-2xl"
+                priority
+              />
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* ====================================================
-         STATS SECTION
-         ==================================================== */}
-      <section className="py-12 px-4">
-        <div className="container mx-auto max-w-5xl">
-          <div className="glass-crystal-enhanced rounded-2xl p-6 md:p-8">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-              {[
-                { value: '150+', label: t('stats.sellers'), color: 'text-am-blue dark:text-am-blue-light' },
-                { value: '2,400+', label: t('stats.listings'), color: 'text-am-orange dark:text-am-orange-light' },
-                { value: '8,500+', label: t('stats.clients'), color: 'text-am-green dark:text-am-green-light' },
-                { value: '95%', label: t('stats.satisfaction'), color: 'text-am-blue dark:text-am-blue-light' },
-              ].map((stat, i) => (
-                <div key={i}>
-                  <div className={`text-2xl md:text-3xl font-bold ${stat.color}`}>{stat.value}</div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{stat.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ====================================================
-         PROBLEM / SOLUTION SECTION
-         ==================================================== */}
-      <section className="py-16 md:py-24 px-4">
-        <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              {t('problem.title')}
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Problems */}
-            <div className="glass-crystal rounded-2xl p-6 md:p-8 border-l-4 border-red-500">
-              <h3 className="text-xl font-bold text-red-500 dark:text-red-400 mb-6 flex items-center gap-2">
-                <Target className="w-5 h-5" />
-                {t('problem.problemTitle')}
-              </h3>
-              <ul className="space-y-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <li key={i} className="flex items-start gap-3">
-                    <span className="text-red-400 mt-0.5">&#10005;</span>
-                    <span className="text-gray-600 dark:text-gray-300">{t(`problem.problem${i}`)}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Solutions */}
-            <div className="glass-crystal rounded-2xl p-6 md:p-8 border-l-4 border-am-green">
-              <h3 className="text-xl font-bold text-am-green dark:text-am-green-light mb-6 flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5" />
-                {t('problem.solutionTitle')}
-              </h3>
-              <ul className="space-y-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <li key={i} className="flex items-start gap-3">
-                    <CheckCircle2 className="w-4 h-4 text-am-green mt-0.5 flex-shrink-0" />
-                    <span className="text-gray-600 dark:text-gray-300">{t(`problem.solution${i}`)}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ====================================================
-         HOW IT WORKS
-         ==================================================== */}
-      <section className="py-16 md:py-24 px-4">
-        <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              {t('howItWorks.title')}
-            </h2>
-            <p className="text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
-              {t('howItWorks.subtitle')}
+          {/* Welcome text */}
+          <div className={`transition-all duration-1000 delay-200 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
+            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
+              <span className="text-gray-900 dark:text-white">{t('hero.welcome')}</span>
+              {' '}
+              <span className="text-holographic">Autos MALL</span>
+            </h1>
+            <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 mb-10 max-w-2xl mx-auto">
+              {t('hero.tagline')}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-            {/* Connector lines (desktop only) */}
-            <div className="hidden md:block absolute top-16 left-[33%] right-[33%] h-0.5 bg-gradient-to-r from-am-blue via-am-orange to-am-green opacity-30"></div>
+          {/* Search bar — the centerpiece */}
+          <div className={`transition-all duration-1000 delay-400 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
+            <div className="glass-crystal-enhanced rounded-2xl p-4 md:p-6 max-w-3xl mx-auto">
+              <div className="flex flex-col md:flex-row gap-3">
+                {/* Text search */}
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={t('hero.searchPlaceholder')}
+                    className="w-full pl-10 pr-4 py-3.5 rounded-xl bg-white dark:bg-am-dark/80 border border-gray-200 dark:border-am-blue/30 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-am-orange/50 focus:border-am-orange transition-all text-base"
+                  />
+                </div>
 
+                {/* Make dropdown */}
+                <select
+                  value={selectedMake}
+                  onChange={(e) => setSelectedMake(e.target.value)}
+                  className="px-4 py-3.5 rounded-xl bg-white dark:bg-am-dark/80 border border-gray-200 dark:border-am-blue/30 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-am-orange/50 focus:border-am-orange transition-all text-sm md:w-40"
+                >
+                  <option value="">{t('search.allMakes')}</option>
+                  {brandLogos.map((b) => (
+                    <option key={b.name} value={b.name}>{b.name}</option>
+                  ))}
+                </select>
+
+                {/* Price dropdown */}
+                <select
+                  value={selectedPrice}
+                  onChange={(e) => setSelectedPrice(e.target.value)}
+                  className="px-4 py-3.5 rounded-xl bg-white dark:bg-am-dark/80 border border-gray-200 dark:border-am-blue/30 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-am-orange/50 focus:border-am-orange transition-all text-sm md:w-40"
+                >
+                  <option value="">{t('search.anyPrice')}</option>
+                  <option value="0-15000">{t('search.under15k')}</option>
+                  <option value="15000-25000">{t('search.15to25k')}</option>
+                  <option value="25000-40000">{t('search.25to40k')}</option>
+                  <option value="40000+">{t('search.over40k')}</option>
+                </select>
+
+                {/* Search button */}
+                <Link
+                  href="/inventory"
+                  className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-am-orange to-am-orange-light hover:from-am-orange-dark hover:to-am-orange text-white px-6 py-3.5 rounded-xl font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 whitespace-nowrap"
+                >
+                  <Search className="w-5 h-5" />
+                  {t('hero.searchButton')}
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Trust indicators */}
+          <div className={`flex flex-wrap justify-center gap-6 mt-8 transition-all duration-1000 delay-500 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
             {[
-              {
-                step: '01',
-                icon: UserPlus,
-                title: t('howItWorks.step1Title'),
-                desc: t('howItWorks.step1Desc'),
-                color: 'from-am-blue to-am-blue-light',
-                iconColor: 'text-am-blue',
-              },
-              {
-                step: '02',
-                icon: Car,
-                title: t('howItWorks.step2Title'),
-                desc: t('howItWorks.step2Desc'),
-                color: 'from-am-orange to-am-orange-light',
-                iconColor: 'text-am-orange',
-              },
-              {
-                step: '03',
-                icon: TrendingUp,
-                title: t('howItWorks.step3Title'),
-                desc: t('howItWorks.step3Desc'),
-                color: 'from-am-green to-am-green-light',
-                iconColor: 'text-am-green',
-              },
+              { icon: BadgeCheck, text: t('hero.trust1'), color: 'text-am-green' },
+              { icon: CreditCard, text: t('hero.trust2'), color: 'text-am-blue dark:text-am-blue-light' },
+              { icon: MapPin, text: t('hero.trust3'), color: 'text-am-orange' },
             ].map((item, i) => (
-              <div key={i} className="glass-crystal-enhanced rounded-2xl p-6 text-center relative">
-                {/* Step badge */}
-                <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${item.color} flex items-center justify-center text-white font-bold text-lg mx-auto mb-4 shadow-lg`}>
-                  {item.step}
-                </div>
-                <item.icon className={`w-8 h-8 ${item.iconColor} mx-auto mb-4`} />
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{item.title}</h3>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">{item.desc}</p>
+              <div key={i} className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                <item.icon className={`w-4 h-4 ${item.color}`} />
+                <span>{item.text}</span>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ====================================================
-         FEATURES SECTION
-         ==================================================== */}
-      <section className="py-16 md:py-24 px-4">
+      {/* ════════════════════════════════════════════════════════════
+         SHOP BY BRAND — Official logos, uniform sizing
+         ════════════════════════════════════════════════════════════ */}
+      <section className="py-12 md:py-16 px-4">
         <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              {t('features.title')}
-            </h2>
-            <p className="text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
-              {t('features.subtitle')}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { icon: Bot, title: t('features.f1Title'), desc: t('features.f1Desc'), color: 'text-am-blue' },
-              { icon: MessageSquare, title: t('features.f2Title'), desc: t('features.f2Desc'), color: 'text-am-green' },
-              { icon: Layout, title: t('features.f3Title'), desc: t('features.f3Desc'), color: 'text-am-orange' },
-              { icon: BarChart3, title: t('features.f4Title'), desc: t('features.f4Desc'), color: 'text-am-blue-light' },
-              { icon: Users, title: t('features.f5Title'), desc: t('features.f5Desc'), color: 'text-am-green' },
-              { icon: Shield, title: t('features.f6Title'), desc: t('features.f6Desc'), color: 'text-am-orange' },
-            ].map((feat, i) => (
-              <div key={i} className="glass-crystal rounded-xl p-6 hover:scale-[1.02] transition-transform duration-300">
-                <feat.icon className={`w-8 h-8 ${feat.color} mb-4`} />
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{feat.title}</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{feat.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ====================================================
-         CAR BRANDS SHOWCASE
-         ==================================================== */}
-      <section className="py-16 md:py-24 px-4">
-        <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">
               {t('brands.title')}
             </h2>
-            <p className="text-lg text-gray-500 dark:text-gray-400">
+            <p className="text-gray-500 dark:text-gray-400">
               {t('brands.subtitle')}
             </p>
           </div>
 
-          <div className="glass-crystal-enhanced rounded-2xl p-8">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {carBrands.map((brand, i) => (
-                <div
-                  key={i}
-                  className="glass-crystal rounded-xl p-4 text-center hover:scale-105 transition-transform duration-300 cursor-default"
-                >
-                  <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${brand.color} flex items-center justify-center mx-auto mb-3 shadow-md`}>
-                    <Car className="w-7 h-7 text-white" />
-                  </div>
-                  <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{brand.name}</span>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+            {brandLogos.map((brand) => (
+              <Link
+                key={brand.name}
+                href="/inventory"
+                className="glass-crystal rounded-xl p-4 flex flex-col items-center justify-center gap-2 hover:scale-105 hover:shadow-lg transition-all duration-300 group cursor-pointer"
+              >
+                <div className="w-16 h-16 md:w-20 md:h-20 flex items-center justify-center">
+                  <brand.Logo className="w-full h-full" />
                 </div>
-              ))}
-            </div>
+                <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 group-hover:text-am-orange dark:group-hover:text-am-orange-light transition-colors">
+                  {brand.name}
+                </span>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* ====================================================
-         FINAL CTA SECTION
-         ==================================================== */}
+      {/* ════════════════════════════════════════════════════════════
+         WHY AUTOS MALL — Trust building, anxiety reduction
+         ════════════════════════════════════════════════════════════ */}
+      <section className="py-16 md:py-24 px-4">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              {t('why.title')}
+            </h2>
+            <p className="text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
+              {t('why.subtitle')}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                icon: Shield,
+                title: t('why.inspected'),
+                desc: t('why.inspectedDesc'),
+                color: 'text-am-green',
+                bg: 'bg-am-green/10 dark:bg-am-green/20',
+              },
+              {
+                icon: DollarSign,
+                title: t('why.transparent'),
+                desc: t('why.transparentDesc'),
+                color: 'text-am-blue dark:text-am-blue-light',
+                bg: 'bg-am-blue/10 dark:bg-am-blue/20',
+              },
+              {
+                icon: CreditCard,
+                title: t('why.financing'),
+                desc: t('why.financingDesc'),
+                color: 'text-am-orange',
+                bg: 'bg-am-orange/10 dark:bg-am-orange/20',
+              },
+              {
+                icon: Heart,
+                title: t('why.support'),
+                desc: t('why.supportDesc'),
+                color: 'text-pink-500',
+                bg: 'bg-pink-500/10 dark:bg-pink-500/20',
+              },
+            ].map((item, i) => (
+              <div key={i} className="glass-crystal rounded-2xl p-6 text-center hover:scale-[1.02] transition-all duration-300">
+                <div className={`w-14 h-14 rounded-2xl ${item.bg} flex items-center justify-center mx-auto mb-4`}>
+                  <item.icon className={`w-7 h-7 ${item.color}`} />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{item.title}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════
+         FEATURED VEHICLES — Coming soon placeholder
+         ════════════════════════════════════════════════════════════ */}
+      <section className="py-16 md:py-24 px-4">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              {t('featured.title')}
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400">
+              {t('featured.subtitle')}
+            </p>
+          </div>
+
+          <div className="glass-crystal-enhanced rounded-3xl p-8 md:p-12 text-center">
+            <div className="w-20 h-20 rounded-full bg-am-orange/10 dark:bg-am-orange/20 flex items-center justify-center mx-auto mb-6">
+              <Sparkles className="w-10 h-10 text-am-orange" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
+              {t('featured.comingSoon')}
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
+              {t('featured.comingSoonDesc')}
+            </p>
+            <button
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-am-blue to-am-blue-light hover:from-am-blue-dark hover:to-am-blue text-white px-6 py-3 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5"
+            >
+              <Bell className="w-4 h-4" />
+              {t('featured.getNotified')}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════
+         TESTIMONIALS — Social proof, real human stories
+         ════════════════════════════════════════════════════════════ */}
+      <section className="py-16 md:py-24 px-4">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              {t('testimonials.title')}
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400">
+              {t('testimonials.subtitle')}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              {
+                name: t('testimonials.t1Name'),
+                text: t('testimonials.t1Text'),
+                role: t('testimonials.t1Role'),
+                gradient: 'from-am-blue to-am-green',
+              },
+              {
+                name: t('testimonials.t2Name'),
+                text: t('testimonials.t2Text'),
+                role: t('testimonials.t2Role'),
+                gradient: 'from-am-orange to-am-blue',
+              },
+              {
+                name: t('testimonials.t3Name'),
+                text: t('testimonials.t3Text'),
+                role: t('testimonials.t3Role'),
+                gradient: 'from-am-green to-am-orange',
+              },
+            ].map((testimonial, i) => (
+              <div key={i} className="glass-crystal rounded-2xl p-6 flex flex-col">
+                {/* Stars */}
+                <div className="flex gap-0.5 mb-4">
+                  {[...Array(5)].map((_, j) => (
+                    <Star key={j} className="w-4 h-4 text-am-orange fill-am-orange" />
+                  ))}
+                </div>
+
+                {/* Quote */}
+                <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed flex-1 mb-4">
+                  &ldquo;{testimonial.text}&rdquo;
+                </p>
+
+                {/* Author */}
+                <div className="flex items-center gap-3 pt-4 border-t border-gray-200/50 dark:border-am-blue/20">
+                  <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${testimonial.gradient} flex items-center justify-center text-white font-bold text-sm`}>
+                    {testimonial.name.charAt(0)}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-gray-900 dark:text-white text-sm">{testimonial.name}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{testimonial.role}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════
+         FINAL CTA — Low friction, multiple contact options
+         ════════════════════════════════════════════════════════════ */}
       <section className="py-16 md:py-24 px-4">
         <div className="container mx-auto max-w-4xl text-center">
-          <div className="glass-crystal-enhanced rounded-3xl p-8 md:p-16">
+          <div className="glass-crystal-enhanced rounded-3xl p-8 md:p-14">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
               {t('cta.title')}
             </h2>
@@ -368,43 +505,30 @@ export default function Home() {
               {t('cta.subtitle')}
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href={isConnected ? '/dashboard' : '#'}
-                onClick={(e) => {
-                  if (!isConnected) {
-                    e.preventDefault();
-                    const btn = document.querySelector('[data-connect-button]') as HTMLButtonElement;
-                    btn?.click();
-                  }
-                }}
+                href="/inventory"
                 className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-am-orange to-am-orange-light hover:from-am-orange-dark hover:to-am-orange text-white px-8 py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
               >
-                {t('cta.button')}
+                {t('cta.browse')}
                 <ArrowRight className="w-5 h-5" />
               </Link>
-            </div>
 
-            {/* Social proof */}
-            <div className="flex items-center justify-center gap-4">
-              <div className="flex -space-x-2">
-                {[...Array(5)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="w-8 h-8 rounded-full bg-gradient-to-br from-am-blue to-am-orange border-2 border-white dark:border-am-dark"
-                  ></div>
-                ))}
-              </div>
-              <div className="text-left">
-                <div className="flex items-center gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 text-am-orange fill-am-orange" />
-                  ))}
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {t('cta.socialProof')}
-                </p>
-              </div>
+              <a
+                href="mailto:info@autosmall.com"
+                className="inline-flex items-center justify-center gap-2 glass-button px-8 py-4 rounded-xl font-bold text-lg"
+              >
+                <MessageCircle className="w-5 h-5" />
+                {t('cta.contact')}
+              </a>
+
+              <a
+                href="tel:+1-832-000-0000"
+                className="inline-flex items-center justify-center gap-2 glass-button px-8 py-4 rounded-xl font-bold text-lg"
+              >
+                <Phone className="w-5 h-5" />
+                {t('cta.phone')}
+              </a>
             </div>
           </div>
         </div>

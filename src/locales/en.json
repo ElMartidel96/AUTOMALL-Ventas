@@ -2325,5 +2325,69 @@
       "invalidType": "Invalid file type. Please upload a video or image.",
       "uploadFailed": "Upload failed. Please try again."
     }
+  },
+  "dealer": {
+    "hero": {
+      "welcome": "Welcome to",
+      "tagline": "Find your perfect car — no pressure, no hassle.",
+      "searchPlaceholder": "What car are you looking for?",
+      "searchButton": "Search",
+      "trust1": "Verified Vehicles",
+      "trust2": "Financing Available",
+      "trust3": "Houston, TX"
+    },
+    "search": {
+      "allMakes": "All Makes",
+      "allModels": "All Models",
+      "anyPrice": "Any Price",
+      "under15k": "Under $15K",
+      "15to25k": "$15K - $25K",
+      "25to40k": "$25K - $40K",
+      "over40k": "$40K+",
+      "browseAll": "Browse All Vehicles"
+    },
+    "why": {
+      "title": "Why Autos MALL?",
+      "subtitle": "We make buying a car feel like it should — simple, transparent, and enjoyable.",
+      "inspected": "Fully Inspected",
+      "inspectedDesc": "Every vehicle goes through a thorough multi-point inspection before listing.",
+      "transparent": "Transparent Pricing",
+      "transparentDesc": "No hidden fees, no surprises. The price you see is the price you pay.",
+      "financing": "Easy Financing",
+      "financingDesc": "Flexible payment plans to fit your budget. Get pre-approved in minutes.",
+      "support": "Personal Support",
+      "supportDesc": "Real humans who care. We're with you from first click to first drive."
+    },
+    "brands": {
+      "title": "Shop by Brand",
+      "subtitle": "Find your favorite make from our curated selection"
+    },
+    "featured": {
+      "title": "Featured Vehicles",
+      "subtitle": "Hand-picked by our team, ready for you",
+      "comingSoon": "Coming Soon",
+      "comingSoonDesc": "Our inventory is being curated. Check back soon for amazing deals.",
+      "getNotified": "Get Notified"
+    },
+    "testimonials": {
+      "title": "What Our Customers Say",
+      "subtitle": "Real stories from real people",
+      "t1Name": "Maria G.",
+      "t1Text": "I was nervous about buying a car online, but the team at Autos MALL made it so easy. Found my dream SUV in 10 minutes!",
+      "t1Role": "First-time buyer",
+      "t2Name": "Carlos R.",
+      "t2Text": "The financing process was incredibly smooth. Got approved the same day and drove home in my new truck.",
+      "t2Role": "Returning customer",
+      "t3Name": "Jennifer L.",
+      "t3Text": "Best car buying experience I've ever had. Transparent, fast, and the car was exactly as described.",
+      "t3Role": "Verified buyer"
+    },
+    "cta": {
+      "title": "Ready to find your next car?",
+      "subtitle": "Browse our inventory or let us help you find the perfect match.",
+      "browse": "Browse Inventory",
+      "contact": "Talk to Us",
+      "phone": "Call Us"
+    }
   }
 }

@@ -34,7 +34,7 @@ export const Footer: React.FC = () => {
             <div className="flex items-center space-x-2 mb-4">
               <div className="relative w-10 h-10">
                 <Image
-                  src="/logo-automall.png"
+                  src="/logo-automall-square.png"
                   alt="Autos MALL"
                   width={40}
                   height={40}
@@ -125,26 +125,19 @@ export const Footer: React.FC = () => {
             <h3 className="font-semibold text-lg mb-4">{t('resources.title')}</h3>
             <ul className="space-y-2 text-sm text-gray-400">
               <li>
-                <Link href="/docs" className="hover:text-am-orange transition-colors">
-                  {t('resources.docs')}
-                </Link>
-              </li>
-              <li>
-                <Link href="/docs" className="hover:text-am-orange transition-colors">
-                  {t('resources.faq')}
-                </Link>
-              </li>
-              <li>
-                <Link href="/docs" className="hover:text-am-orange transition-colors">
-                  {t('resources.blog')}
-                </Link>
+                <a
+                  href="mailto:soporte@autosmall.com"
+                  className="hover:text-am-orange transition-colors"
+                >
+                  {t('resources.support')}
+                </a>
               </li>
               <li>
                 <a
                   href="mailto:soporte@autosmall.com"
                   className="hover:text-am-orange transition-colors"
                 >
-                  {t('resources.support')}
+                  {t('resources.faq')}
                 </a>
               </li>
             </ul>
@@ -155,9 +148,12 @@ export const Footer: React.FC = () => {
             <h3 className="font-semibold text-lg mb-4">{t('company.title')}</h3>
             <ul className="space-y-2 text-sm text-gray-400">
               <li>
-                <Link href="/docs" className="hover:text-am-orange transition-colors">
+                <a
+                  href="mailto:info@autosmall.com"
+                  className="hover:text-am-orange transition-colors"
+                >
                   {t('company.about')}
-                </Link>
+                </a>
               </li>
               <li>
                 <a
@@ -166,16 +162,6 @@ export const Footer: React.FC = () => {
                 >
                   {t('company.contact')}
                 </a>
-              </li>
-              <li>
-                <Link href="/docs" className="hover:text-am-orange transition-colors">
-                  {t('company.terms')}
-                </Link>
-              </li>
-              <li>
-                <Link href="/docs" className="hover:text-am-orange transition-colors">
-                  {t('company.privacy')}
-                </Link>
               </li>
             </ul>
           </div>
