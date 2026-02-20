@@ -86,12 +86,12 @@ export default function Home() {
         <div className="container mx-auto max-w-5xl relative z-10 text-center">
           {/* Logo */}
           <div className={`transition-all duration-1000 ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
-            <div className="mx-auto mb-8 w-48 md:w-64">
+            <div className="mx-auto mb-8 w-64 md:w-80">
               <Image
                 src="/logo-automall.png"
                 alt="Autos MALL"
-                width={500}
-                height={280}
+                width={600}
+                height={330}
                 className="w-full h-auto drop-shadow-2xl"
                 priority
               />

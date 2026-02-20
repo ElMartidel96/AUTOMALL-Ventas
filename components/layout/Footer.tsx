@@ -35,9 +35,9 @@ export const Footer: React.FC = () => {
               <Image
                 src="/logo-automall-footer.png"
                 alt="Autos MALL"
-                width={160}
-                height={88}
-                className="h-12 w-auto drop-shadow-md"
+                width={220}
+                height={120}
+                className="h-20 w-auto drop-shadow-md"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.style.display = 'none';

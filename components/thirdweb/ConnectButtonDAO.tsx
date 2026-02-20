@@ -94,8 +94,8 @@ export function ConnectButtonDAO({
           subtitle: 'Inicia sesion para acceder a tu panel de vendedor',
           img: {
             src: '/logo-automall.png',
-            width: 200,
-            height: 100,
+            width: 280,
+            height: 150,
           },
         },
         showThirdwebBranding: false,

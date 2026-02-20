@@ -48,7 +48,7 @@ export const FEATURE_SELLER_SUBDOMAINS = envBool('NEXT_PUBLIC_FEATURE_SELLER_SUB
 export const FEATURE_AI_SALES_AGENT = envBool('NEXT_PUBLIC_FEATURE_AI_SALES_AGENT', false)
 
 /** Enable vehicle inventory management */
-export const FEATURE_INVENTORY = envBool('NEXT_PUBLIC_FEATURE_INVENTORY', false)
+export const FEATURE_INVENTORY = envBool('NEXT_PUBLIC_FEATURE_INVENTORY', true)
 
 /** Enable CRM / client management */
 export const FEATURE_CRM = envBool('NEXT_PUBLIC_FEATURE_CRM', false)

@@ -644,6 +644,139 @@ export interface Database {
           metadata?: Json | null
         }
       }
+      vehicles: {
+        Row: {
+          id: string
+          seller_address: string
+          vin: string | null
+          brand: string
+          model: string
+          year: number
+          trim: string | null
+          body_type: string | null
+          doors: number | null
+          price: number
+          price_negotiable: boolean
+          mileage: number
+          condition: 'new' | 'like_new' | 'excellent' | 'good' | 'fair'
+          exterior_color: string | null
+          interior_color: string | null
+          transmission: 'automatic' | 'manual' | 'cvt' | null
+          fuel_type: 'gasoline' | 'diesel' | 'electric' | 'hybrid' | 'plugin_hybrid' | null
+          drivetrain: 'fwd' | 'rwd' | 'awd' | '4wd' | null
+          engine: string | null
+          description: string | null
+          features: string[]
+          status: 'draft' | 'active' | 'sold' | 'archived'
+          primary_image_url: string | null
+          image_count: number
+          views_count: number
+          inquiries_count: number
+          created_at: string
+          updated_at: string
+          published_at: string | null
+          sold_at: string | null
+        }
+        Insert: {
+          id?: string
+          seller_address: string
+          vin?: string | null
+          brand: string
+          model: string
+          year: number
+          trim?: string | null
+          body_type?: string | null
+          doors?: number | null
+          price: number
+          price_negotiable?: boolean
+          mileage: number
+          condition?: 'new' | 'like_new' | 'excellent' | 'good' | 'fair'
+          exterior_color?: string | null
+          interior_color?: string | null
+          transmission?: 'automatic' | 'manual' | 'cvt' | null
+          fuel_type?: 'gasoline' | 'diesel' | 'electric' | 'hybrid' | 'plugin_hybrid' | null
+          drivetrain?: 'fwd' | 'rwd' | 'awd' | '4wd' | null
+          engine?: string | null
+          description?: string | null
+          features?: string[]
+          status?: 'draft' | 'active' | 'sold' | 'archived'
+          primary_image_url?: string | null
+          image_count?: number
+          views_count?: number
+          inquiries_count?: number
+          created_at?: string
+          updated_at?: string
+          published_at?: string | null
+          sold_at?: string | null
+        }
+        Update: {
+          id?: string
+          seller_address?: string
+          vin?: string | null
+          brand?: string
+          model?: string
+          year?: number
+          trim?: string | null
+          body_type?: string | null
+          doors?: number | null
+          price?: number
+          price_negotiable?: boolean
+          mileage?: number
+          condition?: 'new' | 'like_new' | 'excellent' | 'good' | 'fair'
+          exterior_color?: string | null
+          interior_color?: string | null
+          transmission?: 'automatic' | 'manual' | 'cvt' | null
+          fuel_type?: 'gasoline' | 'diesel' | 'electric' | 'hybrid' | 'plugin_hybrid' | null
+          drivetrain?: 'fwd' | 'rwd' | 'awd' | '4wd' | null
+          engine?: string | null
+          description?: string | null
+          features?: string[]
+          status?: 'draft' | 'active' | 'sold' | 'archived'
+          primary_image_url?: string | null
+          image_count?: number
+          views_count?: number
+          inquiries_count?: number
+          created_at?: string
+          updated_at?: string
+          published_at?: string | null
+          sold_at?: string | null
+        }
+      }
+      vehicle_images: {
+        Row: {
+          id: string
+          vehicle_id: string
+          storage_path: string
+          public_url: string
+          display_order: number
+          file_size: number | null
+          mime_type: string | null
+          is_primary: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          vehicle_id: string
+          storage_path: string
+          public_url: string
+          display_order?: number
+          file_size?: number | null
+          mime_type?: string | null
+          is_primary?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          vehicle_id?: string
+          storage_path?: string
+          public_url?: string
+          display_order?: number
+          file_size?: number | null
+          mime_type?: string | null
+          is_primary?: boolean
+          created_at?: string
+        }
+      }
     }
     Views: {
       leaderboard_view: {
@@ -1606,3 +1739,19 @@ export const GRANT_TRACKER_AUTHORIZED_WALLETS = [
   '0x3514433534c281D546B3c3b913c908Bd90689D29', // Safe signer
   '0x11323672b5f9bB899Fa332D5d464CC4e66637b42'  // Safe Owner
 ].map(addr => addr.toLowerCase())
+
+// =====================================================
+// Vehicle Inventory Types
+// =====================================================
+
+export type Vehicle = Database['public']['Tables']['vehicles']['Row']
+export type VehicleInsert = Database['public']['Tables']['vehicles']['Insert']
+export type VehicleUpdate = Database['public']['Tables']['vehicles']['Update']
+export type VehicleImage = Database['public']['Tables']['vehicle_images']['Row']
+export type VehicleImageInsert = Database['public']['Tables']['vehicle_images']['Insert']
+
+export type VehicleCondition = Vehicle['condition']
+export type VehicleStatus = Vehicle['status']
+export type VehicleTransmission = NonNullable<Vehicle['transmission']>
+export type VehicleFuelType = NonNullable<Vehicle['fuel_type']>
+export type VehicleDrivetrain = NonNullable<Vehicle['drivetrain']>

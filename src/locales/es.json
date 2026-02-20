@@ -2389,5 +2389,167 @@
       "contact": "Habla con Nosotros",
       "phone": "Llámanos"
     }
+  },
+  "inventory": {
+    "list": {
+      "title": "Mi Inventario",
+      "subtitle": "{count} vehículos",
+      "search": "Buscar por marca, modelo...",
+      "loading": "Cargando vehículos...",
+      "empty": "Aún no hay vehículos",
+      "emptyDesc": "Agrega tu primer vehículo para empezar a construir tu inventario y atraer compradores.",
+      "noResults": "No se encontraron vehículos",
+      "noResultsDesc": "Intenta ajustar tu búsqueda o filtros para encontrar lo que buscas."
+    },
+    "status": {
+      "all": "Todos",
+      "active": "Activos",
+      "draft": "Borradores",
+      "sold": "Vendidos",
+      "archived": "Archivados"
+    },
+    "actions": {
+      "addVehicle": "Agregar Vehículo",
+      "addFirst": "Agrega Tu Primer Vehículo",
+      "edit": "Editar",
+      "markSold": "Marcar Vendido",
+      "cancel": "Cancelar",
+      "back": "Atrás",
+      "next": "Siguiente",
+      "publish": "Publicar",
+      "saveDraft": "Guardar Borrador"
+    },
+    "form": {
+      "brand": "Marca",
+      "model": "Modelo",
+      "year": "Año",
+      "trim": "Versión",
+      "mileage": "Kilometraje",
+      "condition": "Condición",
+      "transmission": "Transmisión",
+      "fuelType": "Combustible",
+      "drivetrain": "Tracción",
+      "bodyType": "Tipo de Carrocería",
+      "exteriorColor": "Color Exterior",
+      "interiorColor": "Color Interior",
+      "engine": "Motor",
+      "doors": "Puertas",
+      "features": "Características",
+      "price": "Precio (USD)",
+      "negotiable": "Precio negociable",
+      "description": "Descripción",
+      "descriptionPlaceholder": "Describe este vehículo — historial de mantenimiento, características destacadas, razón de venta...",
+      "required": "Este campo es requerido",
+      "select": "Seleccionar..."
+    },
+    "steps": {
+      "vehicle": "Vehículo",
+      "specs": "Detalles",
+      "photos": "Fotos",
+      "publish": "Publicar",
+      "vehicleTitle": "Identificación del Vehículo",
+      "manualEntry": "O ingresa los datos manualmente:",
+      "specsTitle": "Especificaciones y Características",
+      "photosTitle": "Fotos del Vehículo",
+      "photosDesc": "Agrega hasta 10 fotos. La primera imagen será la foto principal. Arrastra para reordenar.",
+      "publishTitle": "Precio y Publicación",
+      "summary": "Resumen del Vehículo"
+    },
+    "vin": {
+      "title": "Decodificador VIN",
+      "placeholder": "Ingresa el VIN de 17 caracteres",
+      "decode": "Decodificar",
+      "hint": "Ingresa el Número de Identificación del Vehículo para auto-completar los datos",
+      "notFound": "VIN no encontrado. Por favor ingresa los datos manualmente.",
+      "found": "{count} campos decodificados exitosamente",
+      "apply": "Aplicar al Formulario",
+      "fieldBrand": "Marca",
+      "fieldModel": "Modelo",
+      "fieldYear": "Año",
+      "fieldEngine": "Motor"
+    },
+    "images": {
+      "dropzone": "Arrastra y suelta fotos aquí, o haz clic para explorar",
+      "formats": "JPG, PNG, WebP",
+      "maxSize": "Máx 5MB cada una",
+      "primary": "Principal",
+      "upload": "Subir Fotos",
+      "photos": "fotos"
+    },
+    "specs": {
+      "condition": {
+        "new": "Nuevo",
+        "like_new": "Como Nuevo",
+        "excellent": "Excelente",
+        "good": "Bueno",
+        "fair": "Regular"
+      },
+      "transmission": {
+        "automatic": "Automática",
+        "manual": "Manual",
+        "cvt": "CVT"
+      },
+      "fuel": {
+        "gasoline": "Gasolina",
+        "diesel": "Diésel",
+        "electric": "Eléctrico",
+        "hybrid": "Híbrido",
+        "plugin_hybrid": "Híbrido Enchufable"
+      },
+      "fuel_type": {
+        "gasoline": "Gasolina",
+        "diesel": "Diésel",
+        "electric": "Eléctrico",
+        "hybrid": "Híbrido",
+        "plugin_hybrid": "Híbrido Enchufable"
+      },
+      "drivetrain": {
+        "fwd": "Tracción Delantera",
+        "rwd": "Tracción Trasera",
+        "awd": "Tracción Total",
+        "4wd": "4x4"
+      },
+      "body_type": {
+        "Sedan": "Sedán",
+        "SUV": "SUV",
+        "Truck": "Camioneta",
+        "Coupe": "Coupé",
+        "Convertible": "Convertible",
+        "Hatchback": "Hatchback",
+        "Wagon": "Familiar",
+        "Van": "Van",
+        "Minivan": "Minivan",
+        "Crossover": "Crossover"
+      },
+      "exterior_color": {
+        "White": "Blanco",
+        "Black": "Negro",
+        "Silver": "Plata",
+        "Gray": "Gris",
+        "Red": "Rojo",
+        "Blue": "Azul",
+        "Brown": "Marrón",
+        "Green": "Verde",
+        "Beige": "Beige",
+        "Gold": "Dorado",
+        "Orange": "Naranja",
+        "Yellow": "Amarillo",
+        "Purple": "Morado",
+        "Other": "Otro"
+      },
+      "interior_color": {
+        "Black": "Negro",
+        "Gray": "Gris",
+        "Beige": "Beige",
+        "Brown": "Marrón",
+        "White": "Blanco",
+        "Red": "Rojo",
+        "Blue": "Azul",
+        "Other": "Otro"
+      }
+    },
+    "messages": {
+      "confirmDelete": "¿Estás seguro de que quieres eliminar este vehículo? Esta acción no se puede deshacer."
+    }
   }
 }

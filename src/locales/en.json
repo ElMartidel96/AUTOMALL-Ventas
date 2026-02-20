@@ -2389,5 +2389,167 @@
       "contact": "Talk to Us",
       "phone": "Call Us"
     }
+  },
+  "inventory": {
+    "list": {
+      "title": "My Inventory",
+      "subtitle": "{count} vehicles",
+      "search": "Search by brand, model...",
+      "loading": "Loading vehicles...",
+      "empty": "No vehicles yet",
+      "emptyDesc": "Add your first vehicle to start building your inventory and attract buyers.",
+      "noResults": "No vehicles found",
+      "noResultsDesc": "Try adjusting your search or filters to find what you're looking for."
+    },
+    "status": {
+      "all": "All",
+      "active": "Active",
+      "draft": "Draft",
+      "sold": "Sold",
+      "archived": "Archived"
+    },
+    "actions": {
+      "addVehicle": "Add Vehicle",
+      "addFirst": "Add Your First Vehicle",
+      "edit": "Edit",
+      "markSold": "Mark Sold",
+      "cancel": "Cancel",
+      "back": "Back",
+      "next": "Next",
+      "publish": "Publish",
+      "saveDraft": "Save Draft"
+    },
+    "form": {
+      "brand": "Brand",
+      "model": "Model",
+      "year": "Year",
+      "trim": "Trim",
+      "mileage": "Mileage",
+      "condition": "Condition",
+      "transmission": "Transmission",
+      "fuelType": "Fuel Type",
+      "drivetrain": "Drivetrain",
+      "bodyType": "Body Type",
+      "exteriorColor": "Exterior Color",
+      "interiorColor": "Interior Color",
+      "engine": "Engine",
+      "doors": "Doors",
+      "features": "Features",
+      "price": "Price (USD)",
+      "negotiable": "Price is negotiable",
+      "description": "Description",
+      "descriptionPlaceholder": "Describe this vehicle — maintenance history, notable features, reason for selling...",
+      "required": "This field is required",
+      "select": "Select..."
+    },
+    "steps": {
+      "vehicle": "Vehicle",
+      "specs": "Specs",
+      "photos": "Photos",
+      "publish": "Publish",
+      "vehicleTitle": "Vehicle Identification",
+      "manualEntry": "Or enter details manually:",
+      "specsTitle": "Specifications & Features",
+      "photosTitle": "Vehicle Photos",
+      "photosDesc": "Add up to 10 photos. The first image will be the main photo. Drag to reorder.",
+      "publishTitle": "Price & Publish",
+      "summary": "Vehicle Summary"
+    },
+    "vin": {
+      "title": "VIN Decoder",
+      "placeholder": "Enter 17-character VIN",
+      "decode": "Decode",
+      "hint": "Enter the Vehicle Identification Number to auto-fill details",
+      "notFound": "VIN not found. Please enter details manually.",
+      "found": "{count} fields decoded successfully",
+      "apply": "Apply to Form",
+      "fieldBrand": "Brand",
+      "fieldModel": "Model",
+      "fieldYear": "Year",
+      "fieldEngine": "Engine"
+    },
+    "images": {
+      "dropzone": "Drag & drop photos here, or click to browse",
+      "formats": "JPG, PNG, WebP",
+      "maxSize": "Max 5MB each",
+      "primary": "Main",
+      "upload": "Upload Photos",
+      "photos": "photos"
+    },
+    "specs": {
+      "condition": {
+        "new": "New",
+        "like_new": "Like New",
+        "excellent": "Excellent",
+        "good": "Good",
+        "fair": "Fair"
+      },
+      "transmission": {
+        "automatic": "Automatic",
+        "manual": "Manual",
+        "cvt": "CVT"
+      },
+      "fuel": {
+        "gasoline": "Gasoline",
+        "diesel": "Diesel",
+        "electric": "Electric",
+        "hybrid": "Hybrid",
+        "plugin_hybrid": "Plug-in Hybrid"
+      },
+      "fuel_type": {
+        "gasoline": "Gasoline",
+        "diesel": "Diesel",
+        "electric": "Electric",
+        "hybrid": "Hybrid",
+        "plugin_hybrid": "Plug-in Hybrid"
+      },
+      "drivetrain": {
+        "fwd": "FWD",
+        "rwd": "RWD",
+        "awd": "AWD",
+        "4wd": "4WD"
+      },
+      "body_type": {
+        "Sedan": "Sedan",
+        "SUV": "SUV",
+        "Truck": "Truck",
+        "Coupe": "Coupe",
+        "Convertible": "Convertible",
+        "Hatchback": "Hatchback",
+        "Wagon": "Wagon",
+        "Van": "Van",
+        "Minivan": "Minivan",
+        "Crossover": "Crossover"
+      },
+      "exterior_color": {
+        "White": "White",
+        "Black": "Black",
+        "Silver": "Silver",
+        "Gray": "Gray",
+        "Red": "Red",
+        "Blue": "Blue",
+        "Brown": "Brown",
+        "Green": "Green",
+        "Beige": "Beige",
+        "Gold": "Gold",
+        "Orange": "Orange",
+        "Yellow": "Yellow",
+        "Purple": "Purple",
+        "Other": "Other"
+      },
+      "interior_color": {
+        "Black": "Black",
+        "Gray": "Gray",
+        "Beige": "Beige",
+        "Brown": "Brown",
+        "White": "White",
+        "Red": "Red",
+        "Blue": "Blue",
+        "Other": "Other"
+      }
+    },
+    "messages": {
+      "confirmDelete": "Are you sure you want to delete this vehicle? This action cannot be undone."
+    }
   }
 }

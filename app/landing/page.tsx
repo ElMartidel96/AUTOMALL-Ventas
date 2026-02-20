@@ -142,12 +142,12 @@ export default function LandingPage() {
               <div className="relative">
                 {/* Main logo display with glass effect */}
                 <div className="glass-crystal-enhanced rounded-3xl p-8 md:p-12 text-center">
-                  <div className="relative w-full max-w-md mx-auto">
+                  <div className="relative w-full max-w-lg mx-auto">
                     <Image
                       src="/logo-automall.png"
                       alt="Autos MALL"
-                      width={500}
-                      height={280}
+                      width={600}
+                      height={330}
                       className="w-full h-auto drop-shadow-2xl"
                       priority
                     />

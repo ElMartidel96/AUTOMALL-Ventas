@@ -49,9 +49,9 @@ export const Navbar: React.FC = () => {
               <Image
                 src="/logo-automall-nav.png"
                 alt="Autos MALL"
-                width={120}
-                height={66}
-                className="h-11 w-auto drop-shadow-md"
+                width={180}
+                height={100}
+                className="h-16 w-auto drop-shadow-md"
                 priority
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
