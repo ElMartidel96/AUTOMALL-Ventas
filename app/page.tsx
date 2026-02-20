@@ -26,9 +26,7 @@ import {
   Shield,
   DollarSign,
   Heart,
-  Headphones,
   Star,
-  ChevronRight,
   MapPin,
   BadgeCheck,
   CreditCard,
@@ -39,144 +37,21 @@ import {
   Bell,
 } from 'lucide-react';
 
-/* ─── Car Brand Logo SVGs ──────────────────────────────────────────────
-   Inline SVGs ensure zero external dependencies, perfect sizing,
-   instant load, and dark/light mode compatibility.
-   All logos render at a uniform 80x80 container for visual consistency.
+/* ─── Car Brand Logos ─────────────────────────────────────────────────
+   Real brand logos as transparent PNGs (200x200) in public/brands/.
+   Processed from official source files with background removal.
    ──────────────────────────────────────────────────────────────────── */
 
-function ChevroletLogo({ className = '' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 80 80" className={className} aria-label="Chevrolet">
-      <rect x="10" y="30" width="60" height="20" rx="2" fill="#D4A843" stroke="#C49A38" strokeWidth="2"/>
-      <rect x="18" y="34" width="18" height="12" rx="1" fill="#FFFFFF"/>
-      <rect x="44" y="34" width="18" height="12" rx="1" fill="#FFFFFF"/>
-    </svg>
-  );
-}
-
-function FordLogo({ className = '' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 80 80" className={className} aria-label="Ford">
-      <ellipse cx="40" cy="40" rx="34" ry="22" fill="#003478" stroke="#002D6B" strokeWidth="1.5"/>
-      <text x="40" y="46" textAnchor="middle" fill="#FFFFFF" fontFamily="serif" fontStyle="italic" fontSize="22" fontWeight="bold">Ford</text>
-    </svg>
-  );
-}
-
-function GMCLogo({ className = '' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 80 80" className={className} aria-label="GMC">
-      <rect x="8" y="26" width="64" height="28" rx="3" fill="#CC0000" stroke="#AA0000" strokeWidth="1.5"/>
-      <text x="40" y="46" textAnchor="middle" fill="#FFFFFF" fontFamily="Arial, sans-serif" fontSize="22" fontWeight="bold" letterSpacing="2">GMC</text>
-    </svg>
-  );
-}
-
-function DodgeLogo({ className = '' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 80 80" className={className} aria-label="Dodge">
-      <rect x="6" y="24" width="68" height="32" rx="3" fill="#1A1A1A" stroke="#333" strokeWidth="1"/>
-      <text x="40" y="45" textAnchor="middle" fill="#FFFFFF" fontFamily="Arial, sans-serif" fontSize="17" fontWeight="bold" letterSpacing="3">DODGE</text>
-      <line x1="14" y1="50" x2="66" y2="50" stroke="#CC0000" strokeWidth="2"/>
-    </svg>
-  );
-}
-
-function JeepLogo({ className = '' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 80 80" className={className} aria-label="Jeep">
-      <rect x="8" y="28" width="64" height="24" rx="2" fill="#3D6B35" stroke="#2D5525" strokeWidth="1.5"/>
-      <text x="40" y="45" textAnchor="middle" fill="#FFFFFF" fontFamily="Arial, sans-serif" fontSize="19" fontWeight="bold" letterSpacing="4">JEEP</text>
-    </svg>
-  );
-}
-
-function NissanLogo({ className = '' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 80 80" className={className} aria-label="Nissan">
-      <circle cx="40" cy="40" r="28" fill="none" stroke="#C3002F" strokeWidth="3"/>
-      <rect x="12" y="34" width="56" height="12" fill="#C3002F"/>
-      <text x="40" y="44" textAnchor="middle" fill="#FFFFFF" fontFamily="Arial, sans-serif" fontSize="12" fontWeight="bold" letterSpacing="2">NISSAN</text>
-    </svg>
-  );
-}
-
-function MazdaLogo({ className = '' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 80 80" className={className} aria-label="Mazda">
-      <ellipse cx="40" cy="38" rx="28" ry="22" fill="none" stroke="#1A1A1A" strokeWidth="2.5" className="dark:stroke-gray-300"/>
-      <path d="M20 38 Q30 26 40 30 Q50 26 60 38" fill="none" stroke="#1A1A1A" strokeWidth="2.5" className="dark:stroke-gray-300"/>
-      <text x="40" y="58" textAnchor="middle" fill="#1A1A1A" className="dark:fill-gray-300" fontFamily="Arial, sans-serif" fontSize="11" fontWeight="bold" letterSpacing="3">MAZDA</text>
-    </svg>
-  );
-}
-
-function ToyotaLogo({ className = '' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 80 80" className={className} aria-label="Toyota">
-      <ellipse cx="40" cy="36" rx="30" ry="20" fill="none" stroke="#CC0000" strokeWidth="2.5"/>
-      <ellipse cx="40" cy="36" rx="18" ry="12" fill="none" stroke="#CC0000" strokeWidth="2.5"/>
-      <ellipse cx="40" cy="36" rx="8" ry="18" fill="none" stroke="#CC0000" strokeWidth="2.5"/>
-      <text x="40" y="64" textAnchor="middle" fill="#CC0000" fontFamily="Arial, sans-serif" fontSize="10" fontWeight="bold" letterSpacing="3">TOYOTA</text>
-    </svg>
-  );
-}
-
-function HondaLogo({ className = '' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 80 80" className={className} aria-label="Honda">
-      <rect x="16" y="22" width="48" height="36" rx="3" fill="none" stroke="#CC0000" strokeWidth="2.5"/>
-      <text x="40" y="46" textAnchor="middle" fill="#CC0000" fontFamily="Arial, sans-serif" fontSize="18" fontWeight="bold" letterSpacing="1">H</text>
-      <text x="40" y="68" textAnchor="middle" fill="#1A1A1A" className="dark:fill-gray-300" fontFamily="Arial, sans-serif" fontSize="10" fontWeight="bold" letterSpacing="3">HONDA</text>
-    </svg>
-  );
-}
-
-function HyundaiLogo({ className = '' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 80 80" className={className} aria-label="Hyundai">
-      <ellipse cx="40" cy="36" rx="28" ry="20" fill="none" stroke="#002C5F" strokeWidth="2.5"/>
-      <text x="40" y="42" textAnchor="middle" fill="#002C5F" fontFamily="Arial, sans-serif" fontSize="20" fontWeight="bold" fontStyle="italic">H</text>
-      <text x="40" y="66" textAnchor="middle" fill="#002C5F" fontFamily="Arial, sans-serif" fontSize="9" fontWeight="bold" letterSpacing="2">HYUNDAI</text>
-    </svg>
-  );
-}
-
-function KiaLogo({ className = '' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 80 80" className={className} aria-label="Kia">
-      <rect x="8" y="28" width="64" height="24" rx="12" fill="#05141F" stroke="#05141F" strokeWidth="1"/>
-      <text x="40" y="46" textAnchor="middle" fill="#FFFFFF" fontFamily="Arial, sans-serif" fontSize="22" fontWeight="bold" fontStyle="italic" letterSpacing="2">KIA</text>
-    </svg>
-  );
-}
-
-function BMWLogo({ className = '' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 80 80" className={className} aria-label="BMW">
-      <circle cx="40" cy="38" r="24" fill="#FFFFFF" stroke="#1A1A1A" strokeWidth="3"/>
-      <circle cx="40" cy="38" r="20" fill="none" stroke="#1A1A1A" strokeWidth="2"/>
-      <path d="M40 18 L40 38 L20 38" fill="#0066B1"/>
-      <path d="M40 38 L40 58 L60 38" fill="#0066B1"/>
-      <text x="40" y="72" textAnchor="middle" fill="#1A1A1A" className="dark:fill-gray-300" fontFamily="Arial, sans-serif" fontSize="9" fontWeight="bold" letterSpacing="2">BMW</text>
-    </svg>
-  );
-}
-
 const brandLogos = [
-  { name: 'Toyota', Logo: ToyotaLogo },
-  { name: 'Honda', Logo: HondaLogo },
-  { name: 'Ford', Logo: FordLogo },
-  { name: 'Chevrolet', Logo: ChevroletLogo },
-  { name: 'Nissan', Logo: NissanLogo },
-  { name: 'Hyundai', Logo: HyundaiLogo },
-  { name: 'GMC', Logo: GMCLogo },
-  { name: 'Dodge', Logo: DodgeLogo },
-  { name: 'Jeep', Logo: JeepLogo },
-  { name: 'Mazda', Logo: MazdaLogo },
-  { name: 'Kia', Logo: KiaLogo },
-  { name: 'BMW', Logo: BMWLogo },
+  { name: 'Toyota', src: '/brands/toyota.png' },
+  { name: 'Ford', src: '/brands/ford.png' },
+  { name: 'Chevrolet', src: '/brands/chevrolet.png' },
+  { name: 'Nissan', src: '/brands/nissan.png' },
+  { name: 'GMC', src: '/brands/gmc.png' },
+  { name: 'Dodge', src: '/brands/dodge.png' },
+  { name: 'Jeep', src: '/brands/jeep.png' },
+  { name: 'Mazda', src: '/brands/mazda.png' },
+  { name: 'Mercedes', src: '/brands/mercedes.png' },
 ];
 
 export default function Home() {
@@ -318,15 +193,21 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+          <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 gap-4 max-w-3xl mx-auto">
             {brandLogos.map((brand) => (
               <Link
                 key={brand.name}
                 href="/inventory"
                 className="glass-crystal rounded-xl p-4 flex flex-col items-center justify-center gap-2 hover:scale-105 hover:shadow-lg transition-all duration-300 group cursor-pointer"
               >
-                <div className="w-16 h-16 md:w-20 md:h-20 flex items-center justify-center">
-                  <brand.Logo className="w-full h-full" />
+                <div className="w-16 h-16 md:w-20 md:h-20 relative flex items-center justify-center">
+                  <Image
+                    src={brand.src}
+                    alt={brand.name}
+                    width={80}
+                    height={80}
+                    className="object-contain w-full h-full drop-shadow-sm"
+                  />
                 </div>
                 <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 group-hover:text-am-orange dark:group-hover:text-am-orange-light transition-colors">
                   {brand.name}
