@@ -191,12 +191,12 @@ export async function POST(request: NextRequest) {
       referrer: invite?.referrer_wallet?.slice(0, 6) + '...' + invite?.referrer_wallet?.slice(-4),
     });
 
-    // 🎯 CRITICAL: Distribute signup bonus (200 CGC + commissions)
+    // 🎯 CRITICAL: Distribute signup bonus ($200 USD + commissions)
     // This triggers automatic distribution to:
-    // - New user: 200 CGC
-    // - Level 1 referrer: 20 CGC (10%)
-    // - Level 2 referrer: 10 CGC (5%)
-    // - Level 3 referrer: 5 CGC (2.5%)
+    // - New buyer: $200 USD
+    // - Level 1 referrer: $20 USD (10%)
+    // - Level 2 referrer: $10 USD (5%)
+    // - Level 3 referrer: $5 USD (2.5%)
     const { completePermanentInviteSignup } = await import('@/lib/referrals/permanent-invite-integration-service');
 
     try {

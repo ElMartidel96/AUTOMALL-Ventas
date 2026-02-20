@@ -172,7 +172,7 @@ export const POST = authHelpers.protected(async (request: NextRequest, context: 
         newUserBonus: result.newUserBonus,
         referrerCommissions: result.referrerCommissions,
         totalDistributed: result.totalDistributed,
-        message: `Successfully distributed ${result.totalDistributed} CGC`,
+        message: `Successfully recorded $${result.totalDistributed} USD in referral rewards`,
       },
     });
 

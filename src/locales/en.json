@@ -7,7 +7,7 @@
     "expandHintShort": "Double-click to expand the video",
     "tapToPlay": "Tap to play",
     "salesMasterclass": {
-      "discoverPill": "Discover CryptoGift",
+      "discoverPill": "Discover AutoMALL",
       "theGift": {
         "title": "The Gift",
         "description": "The first step towards real trust.\n\nHow many times did you want to share the future of Web3 with someone you love?"
@@ -94,7 +94,7 @@
     "loading": "Loading your invitation...",
     "alreadyClaimed": {
       "title": "You Already Claimed This Invitation",
-      "desc": "You are already part of CryptoGift DAO through this permanent link.",
+      "desc": "You are already part of AutoMALL through this permanent link.",
       "shareTip": "This is a permanent link - You can share it with others!",
       "goToDashboard": "Go to Dashboard"
     },
@@ -724,7 +724,7 @@
     "columns": {
       "rank": "Rank",
       "address": "Address",
-      "cgcEarned": "CGC Earned",
+      "cgcEarned": "USD Earned",
       "tasks": "Tasks",
       "level": "Level"
     },
@@ -880,9 +880,9 @@
   },
   "referrals": {
     "title": "Referrals Network",
-    "subtitle": "Grow your network, earn CGC rewards",
+    "subtitle": "Grow your network, earn cash rewards",
     "accessTitle": "Referrals Access",
-    "accessDescription": "The referral program is exclusively available to CGC token holders. Connect your wallet and hold at least 0.01 CGC to participate and earn referral rewards.",
+    "accessDescription": "Available to all AutoMALL sellers. Connect to participate and earn referral rewards.",
     "stats": {
       "totalReferrals": "Total Referrals",
       "activeReferrals": "Active Referrals",
@@ -898,7 +898,7 @@
     },
     "code": {
       "title": "Your Referral Code",
-      "description": "Share this code with friends to earn CGC rewards",
+      "description": "Share this code. Earn $200 for each referral who buys!",
       "copyCode": "Copy Code",
       "copied": "Copied!",
       "shareTitle": "Share Your Link",
@@ -911,20 +911,20 @@
     },
     "rewards": {
       "title": "Reward Structure",
-      "description": "Earn CGC tokens when your referrals complete tasks",
+      "description": "Earn USD cash when your referrals buy a car",
       "level1Title": "Direct Referrals",
-      "level1Desc": "Earn 10% of your direct referrals task earnings",
+      "level1Desc": "$20 USD per car sale from your direct referrals",
       "level2Title": "Second Level",
-      "level2Desc": "Earn 5% from referrals of your referrals",
+      "level2Desc": "$10 USD from second-level referral car sales",
       "level3Title": "Third Level",
-      "level3Desc": "Earn 2.5% from third-level network",
+      "level3Desc": "$5 USD from third-level referral car sales",
       "bonusTitle": "Milestone Bonuses",
       "bonusDesc": "Extra rewards for reaching referral milestones",
-      "milestone5": "5 Referrals: +50 CGC Bonus",
-      "milestone10": "10 Referrals: +150 CGC Bonus",
-      "milestone25": "25 Referrals: +500 CGC Bonus",
-      "milestone50": "50 Referrals: +1500 CGC Bonus",
-      "milestone100": "100 Referrals: +5000 CGC Bonus"
+      "milestone5": "5 Sales: +$50 USD Bonus",
+      "milestone10": "10 Sales: +$150 USD Bonus",
+      "milestone25": "25 Sales: +$500 USD Bonus",
+      "milestone50": "50 Sales: +$1,500 USD Bonus",
+      "milestone100": "100 Sales: +$5,000 USD Bonus"
     },
     "network": {
       "title": "Your Network",
@@ -937,13 +937,13 @@
       "viewDetails": "View Details",
       "referralDate": "Joined",
       "tasksCompleted": "Tasks",
-      "cgcEarned": "CGC Earned",
+      "usdEarned": "USD Earned",
       "you": "YOU",
       "level1": "Level 1 - Direct Referrals",
       "level2": "Level 2",
       "level3": "Level 3",
       "earned": "earned",
-      "checkActivation": "Check CGC & Activate",
+      "checkActivation": "Check Status & Activate",
       "viewProfile": "View Profile",
       "status": {
         "active": "Active",
@@ -975,10 +975,10 @@
       "pending": "Pending",
       "activated": "Activated",
       "anonymous": "Anonymous User",
-      "checkCGC": "Check CGC",
+      "checkStatus": "Check Status",
       "connected": "Wallet Connected",
       "activatedAt": "Activated At",
-      "cgcEarned": "CGC Earned",
+      "usdEarned": "USD Earned",
       "noReferrals": "No direct referrals yet",
       "shareLink": "Share your referral link to invite friends",
       "types": {
@@ -997,17 +997,17 @@
       "title": "Signup Bonus",
       "description": "Automatic rewards for new users joining via referral",
       "newUserBonus": "Welcome Bonus",
-      "newUserBonusDesc": "New users receive 200 CGC automatically when joining via a referral link",
+      "newUserBonusDesc": "Referrals receive $200 USD cash back when they purchase a car through your link",
       "commissions": "Referrer Commissions",
       "commissionsDesc": "Referrers earn commissions from their network when new users join",
       "level1Commission": "Direct Referrer (Level 1)",
-      "level1Desc": "10% commission = 20 CGC per signup",
+      "level1Desc": "$20 USD per car sale (Level 1)",
       "level2Commission": "Second Level Referrer",
-      "level2Desc": "5% commission = 10 CGC per signup",
+      "level2Desc": "$10 USD per car sale (Level 2)",
       "level3Commission": "Third Level Referrer",
-      "level3Desc": "2.5% commission = 5 CGC per signup",
+      "level3Desc": "$5 USD per car sale (Level 3)",
       "totalDistribution": "Total Distribution",
-      "totalDistributionDesc": "Up to 235 CGC distributed per referral signup",
+      "totalDistributionDesc": "Up to $235 USD distributed per referral car purchase",
       "bonusReceived": "Bonus Received",
       "bonusPending": "Bonus Pending",
       "bonusEligible": "You are eligible for the signup bonus",
@@ -1042,7 +1042,7 @@
       },
       "step4": {
         "title": "Earn Rewards",
-        "desc": "Earn CGC when your referrals complete tasks and milestones"
+        "desc": "Earn cash when your referrals buy a car"
       }
     },
     "analytics": {
@@ -1061,11 +1061,11 @@
       "copyLink": "Copy Link",
       "qrCode": "QR Code",
       "downloadQR": "Download QR",
-      "message": "Join CryptoGift DAO with my referral link and earn CGC tokens!"
+      "message": "Buy your next car at AutoMALL and get $200 cash back! Use my referral link:"
     },
     "qrModal": {
       "title": "Your Referral QR Code",
-      "description": "Scan to join CryptoGift DAO",
+      "description": "Scan to visit AutoMALL",
       "code": "Referral Code",
       "link": "Referral Link",
       "copy": "Copy",
@@ -1084,7 +1084,7 @@
     },
     "notifications": {
       "newReferral": "New referral joined!",
-      "rewardEarned": "You earned {amount} CGC from referrals",
+      "rewardEarned": "You earned ${amount} USD from referrals",
       "milestoneReached": "Congratulations! You reached {count} referrals"
     },
     "special": {
@@ -1094,9 +1094,9 @@
       "badge": "Premium",
       "benefits": {
         "title": "Why Use Special Links?",
-        "education": "Recipients learn about CryptoGift before joining",
+        "education": "Recipients learn about AutoMALL before buying",
         "quality": "Attract more engaged and committed members",
-        "rewards": "Earn bonus CGC for educated referrals"
+        "rewards": "Earn bonus cash for referral car sales"
       },
       "form": {
         "password": "Optional Password",
@@ -1104,7 +1104,7 @@
         "passwordHelp": "Add a password to make this invite exclusive",
         "message": "Custom Welcome Message",
         "messagePlaceholder": "Enter a personalized message for your invite...",
-        "messageDefault": "You have been invited to join CryptoGift DAO! Complete the Sales Masterclass to unlock your membership and start earning CGC tokens.",
+        "messageDefault": "You have been invited to join AutoMALL! Complete the Sales Masterclass to unlock your membership and start earning cash rewards.",
         "messageHelp": "This message will be shown to recipients",
         "masterclassType": "Educational Experience",
         "masterclassTypeHelp": "Select which Sales Masterclass version this person will see",
@@ -1167,7 +1167,7 @@
       },
       "form": {
         "customTitle": "Custom Title (optional)",
-        "customTitlePlaceholder": "Permanent Invitation to CryptoGift DAO",
+        "customTitlePlaceholder": "Permanent Invitation to AutoMALL",
         "customImage": "Custom Image (optional)",
         "uploadPrompt": "Click to upload an image",
         "uploadFormat": "JPG, PNG or GIF (max 5MB)",
@@ -1181,7 +1181,7 @@
         "maxClaimsPlaceholder": "Leave empty for unlimited users",
         "maxClaimsHelp": "Set a maximum number of users who can claim this link (empty = unlimited)",
         "customMessage": "Custom Message (optional)",
-        "customMessagePlaceholder": "I invite you to join CryptoGift DAO...",
+        "customMessagePlaceholder": "I invite you to buy at AutoMALL...",
         "customMessageHelp": "Customize the welcome message",
         "masterclassType": "Educational Experience",
         "masterclassTypeHelp": "Select which Sales Masterclass version your invitees will see",
@@ -1249,7 +1249,7 @@
     "clickToEnlarge": "Click to enlarge",
     "placeholder": {
       "title": "Special Invitation",
-      "subtitle": "CryptoGift DAO"
+      "subtitle": "AutoMALL"
     },
     "updateStatus": "Update status",
     "code": "Code",
@@ -1273,19 +1273,19 @@
       "revoked": "❌ This invitation has been revoked"
     },
     "metadata": {
-      "description": "Special invitation to join CryptoGift DAO",
+      "description": "Special invitation to AutoMALL",
       "type": "Type",
       "typeValue": "Special Invitation",
       "status": "Status",
       "referrer": "Referrer"
     },
     "introVideo": {
-      "badge": "Discover CryptoGift",
+      "badge": "Discover AutoMALL",
       "urgencyTitle": "This Place Won't Wait Forever",
-      "benefit1": "Start with governance tokens. 1 CGC = 1 Vote in real decisions.",
+      "benefit1": "Get $200 cash back on your first car purchase.",
       "benefit2": "Complete tasks, get paid in tokens. No boss, no permissions needed.",
       "benefit3": "Join the first 10,000 pioneers building the future of Web3 adoption.",
-      "earnRange": "Earn 200-3000 CGC",
+      "earnRange": "Earn $200+ USD",
       "founderMembers": "Founding Members Only"
     }
   },

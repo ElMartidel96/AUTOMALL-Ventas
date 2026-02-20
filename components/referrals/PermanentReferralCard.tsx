@@ -435,7 +435,7 @@ export function PermanentReferralCard({ referralCode, walletAddress }: Permanent
       // Build the permanent invite URL
       const baseUrl = typeof window !== 'undefined'
         ? window.location.origin
-        : 'https://cryptogift-dao.com';
+        : 'https://autosmall.com';
 
       const permanentLink = `${baseUrl}/permanent-invite/${data.inviteCode}`;
       setGeneratedLink(permanentLink);

@@ -296,7 +296,7 @@ export function SpecialReferralCard({ referralCode, walletAddress }: SpecialRefe
       // Build the special invite URL
       const baseUrl = typeof window !== 'undefined'
         ? window.location.origin
-        : 'https://cryptogift-dao.com';
+        : 'https://autosmall.com';
 
       const specialLink = `${baseUrl}/special-invite/${data.inviteCode}`;
       setGeneratedLink(specialLink);
@@ -330,7 +330,7 @@ export function SpecialReferralCard({ referralCode, walletAddress }: SpecialRefe
       const fallbackCode = `${referralCode}-${Date.now().toString(36)}`;
       const baseUrl = typeof window !== 'undefined'
         ? window.location.origin
-        : 'https://cryptogift-dao.com';
+        : 'https://autosmall.com';
 
       // Encode parameters in URL
       const params = new URLSearchParams({

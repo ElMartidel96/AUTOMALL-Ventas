@@ -1,8 +1,8 @@
 /**
- * 🤝 REFERRALS PAGE
- * Multi-level referral system for CryptoGift DAO
- * Protected with CGC token-based access control
- * 🌐 i18n: Full translation support for EN/ES
+ * REFERRALS PAGE
+ * Multi-level referral system for AutoMALL
+ * Cash-based referral rewards
+ * i18n: Full translation support for EN/ES
  */
 
 'use client';
@@ -79,7 +79,7 @@ interface Referral {
   level: 1 | 2 | 3;
   joinedAt: Date;
   tasksCompleted: number;
-  cgcEarned: number;
+  usdEarned: number;
   status: 'active' | 'inactive' | 'pending';
 }
 
@@ -92,9 +92,9 @@ interface LeaderboardEntry {
 
 // ===== HELPER FUNCTIONS =====
 const generateReferralCode = (address: string): string => {
-  if (!address) return 'CGDAO';
+  if (!address) return 'AUTOMALL';
   const shortened = address.slice(2, 8).toUpperCase();
-  return `CG-${shortened}`;
+  return `AM-${shortened}`;
 };
 
 // Default stats when API is loading
@@ -142,7 +142,7 @@ export default function ReferralsPage() {
               </div>
               <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
                 <Activity className="h-3 w-3 mr-1" />
-                Active
+                {t('network.status.active')}
               </Badge>
             </div>
           </div>
@@ -183,7 +183,7 @@ function ReferralsDashboard() {
   const referralCode = code.code || generateReferralCode(address || '');
   const referralLink = links.links?.default || (typeof window !== 'undefined'
     ? `${window.location.origin}?ref=${referralCode}`
-    : `https://cryptogift-dao.com?ref=${referralCode}`);
+    : `https://autosmall.com?ref=${referralCode}`);
 
   const handleCopy = useCallback(async (text: string) => {
     await navigator.clipboard.writeText(text);
@@ -217,13 +217,13 @@ function ReferralsDashboard() {
         />
         <StatCard
           title={t('stats.pendingRewards')}
-          value={`${stats.pendingRewards} CGC`}
+          value={`$${stats.pendingRewards} USD`}
           icon={<Coins className="h-5 w-5 text-amber-500" />}
           trend="Claimable"
         />
         <StatCard
           title={t('stats.totalEarned')}
-          value={`${stats.totalEarned} CGC`}
+          value={`$${stats.totalEarned} USD`}
           icon={<TrendingUp className="h-5 w-5 text-purple-500" />}
           trend={t('stats.allTime')}
         />
@@ -247,7 +247,7 @@ function ReferralsDashboard() {
               <div className="flex-1 p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 dark:from-blue-900/30 dark:to-purple-900/30 rounded-xl border border-blue-200 dark:border-blue-800">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Your Referral Code</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('code.title')}</p>
                     <p className="text-2xl font-bold font-mono text-gray-900 dark:text-white">{referralCode}</p>
                   </div>
                   <Button
@@ -265,7 +265,7 @@ function ReferralsDashboard() {
 
             {/* Link Display */}
             <div className="p-3 bg-gray-50 dark:bg-slate-800 rounded-lg">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Your Referral Link</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('code.shareTitle')}</p>
               <div className="flex items-center space-x-2">
                 <code className="flex-1 text-sm text-gray-700 dark:text-gray-300 truncate">
                   {referralLink}
@@ -538,7 +538,7 @@ function NetworkTab({ stats }: { stats: ReferralStats }) {
                     <h3 className="font-semibold text-gray-900 dark:text-white">
                       {t('network.level1')} ({level1Referrals.length})
                     </h3>
-                    <span className="text-sm text-blue-600 dark:text-blue-400">10% commission</span>
+                    <span className="text-sm text-blue-600 dark:text-blue-400">$20 USD</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {level1Referrals.map((ref) => (
@@ -568,7 +568,7 @@ function NetworkTab({ stats }: { stats: ReferralStats }) {
                     <h3 className="font-semibold text-gray-900 dark:text-white">
                       {t('network.level2')} ({level2Referrals.length})
                     </h3>
-                    <span className="text-sm text-purple-600 dark:text-purple-400">5% commission</span>
+                    <span className="text-sm text-purple-600 dark:text-purple-400">$10 USD</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {level2Referrals.map((ref) => (
@@ -598,7 +598,7 @@ function NetworkTab({ stats }: { stats: ReferralStats }) {
                     <h3 className="font-semibold text-gray-900 dark:text-white">
                       {t('network.level3')} ({level3Referrals.length})
                     </h3>
-                    <span className="text-sm text-cyan-600 dark:text-cyan-400">2.5% commission</span>
+                    <span className="text-sm text-cyan-600 dark:text-cyan-400">$5 USD</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {level3Referrals.map((ref) => (
@@ -702,7 +702,7 @@ function ReferralCard({
         </div>
         <div className="flex items-center gap-2">
           <Coins className="w-4 h-4" />
-          <span>{referral.cgcEarned} CGC {t('network.earned')}</span>
+          <span>${referral.cgcEarned} USD {t('network.earned')}</span>
         </div>
       </div>
 
@@ -895,7 +895,7 @@ function DirectReferralsHistoryTab() {
                             ) : (
                               <>
                                 <Zap className="w-4 h-4 mr-1" />
-                                {t('history.checkCGC')}
+                                {t('history.checkStatus')}
                               </>
                             )}
                           </Button>
@@ -937,9 +937,9 @@ function DirectReferralsHistoryTab() {
                             <Coins className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                           </div>
                           <div>
-                            <p className="text-gray-500 dark:text-gray-400">{t('history.cgcEarned')}</p>
+                            <p className="text-gray-500 dark:text-gray-400">{t('history.usdEarned')}</p>
                             <p className="font-medium text-gray-900 dark:text-white">
-                              {referral.cgcEarned} CGC
+                              ${referral.cgcEarned} USD
                             </p>
                           </div>
                         </div>
@@ -1049,7 +1049,7 @@ function RewardsTab() {
                 <p className="text-sm text-gray-600 dark:text-gray-400">{tBonus('newUserBonusDesc')}</p>
               </div>
               <div className="ml-auto text-right">
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">200 CGC</p>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">$200 USD</p>
               </div>
             </div>
 
@@ -1057,7 +1057,7 @@ function RewardsTab() {
             {isLoadingBonus ? (
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Loading status...
+                {tBonus('processingBonus')}
               </div>
             ) : bonusStatus && (
               <div className="mt-3 pt-3 border-t border-green-200 dark:border-green-700">
@@ -1117,7 +1117,7 @@ function RewardsTab() {
                 <p className="text-xs text-gray-600 dark:text-gray-400">{tBonus('level1Desc')}</p>
                 {commissions && (
                   <p className="mt-2 text-lg font-bold text-blue-600 dark:text-blue-400">
-                    {commissions.level1Earnings} CGC
+                    ${commissions.level1Earnings} USD
                   </p>
                 )}
               </div>
@@ -1130,7 +1130,7 @@ function RewardsTab() {
                 <p className="text-xs text-gray-600 dark:text-gray-400">{tBonus('level2Desc')}</p>
                 {commissions && (
                   <p className="mt-2 text-lg font-bold text-purple-600 dark:text-purple-400">
-                    {commissions.level2Earnings} CGC
+                    ${commissions.level2Earnings} USD
                   </p>
                 )}
               </div>
@@ -1143,7 +1143,7 @@ function RewardsTab() {
                 <p className="text-xs text-gray-600 dark:text-gray-400">{tBonus('level3Desc')}</p>
                 {commissions && (
                   <p className="mt-2 text-lg font-bold text-cyan-600 dark:text-cyan-400">
-                    {commissions.level3Earnings} CGC
+                    ${commissions.level3Earnings} USD
                   </p>
                 )}
               </div>
@@ -1158,7 +1158,7 @@ function RewardsTab() {
                     <span className="font-medium text-gray-900 dark:text-white">{tBonus('totalEarned')}</span>
                   </div>
                   <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                    {commissions.totalSignupCommissions} CGC
+                    ${commissions.totalSignupCommissions} USD
                   </p>
                 </div>
               </div>
@@ -1169,7 +1169,7 @@ function RewardsTab() {
           <div className="p-3 rounded-lg bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600 dark:text-gray-400">{tBonus('totalDistribution')}</span>
-              <span className="font-medium text-gray-900 dark:text-white">235 CGC max</span>
+              <span className="font-medium text-gray-900 dark:text-white">$235 USD max</span>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{tBonus('totalDistributionDesc')}</p>
           </div>
@@ -1303,10 +1303,10 @@ function LeaderboardTab({ leaderboard, userPosition }: { leaderboard: Leaderboar
           <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
             <div className="flex items-center justify-between">
               <span className="text-sm text-blue-700 dark:text-blue-300">
-                Your Position: #{userPosition.rank}
+                {t('leaderboard.yourRank')}: #{userPosition.rank}
               </span>
               <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                {userPosition.totalEarnings} CGC earned
+                ${userPosition.totalEarnings} USD earned
               </span>
             </div>
           </div>
@@ -1365,7 +1365,7 @@ function LeaderboardTab({ leaderboard, userPosition }: { leaderboard: Leaderboar
                     </td>
                     <td className="py-3 px-4 text-right">
                       <span className="font-semibold text-gray-900 dark:text-white">
-                        {entry.earned} CGC
+                        ${entry.earned} USD
                       </span>
                     </td>
                   </tr>
@@ -1373,7 +1373,7 @@ function LeaderboardTab({ leaderboard, userPosition }: { leaderboard: Leaderboar
               ) : (
                 <tr>
                   <td colSpan={4} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                    No referrers yet. Be the first to start building your network!
+                    {t('leaderboard.noData')}
                   </td>
                 </tr>
               )}
@@ -1518,7 +1518,7 @@ function MilestoneCard({
         <Star className="h-6 w-6 text-white" />
       </div>
       <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{milestone} Referrals</p>
-      <p className="text-lg font-bold text-amber-600 dark:text-amber-400">+{bonus} CGC</p>
+      <p className="text-lg font-bold text-amber-600 dark:text-amber-400">+${bonus} USD</p>
     </div>
   );
 }

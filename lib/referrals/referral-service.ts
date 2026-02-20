@@ -1,7 +1,7 @@
 /**
  * 🤝 REFERRAL SERVICE - Enterprise-grade Multi-Level Referral System
  *
- * Core service for managing the CryptoGift DAO referral program.
+ * Core service for managing the AutoMALL referral program.
  * Features:
  * - 3-level commission structure (10%, 5%, 2.5%)
  * - Milestone bonuses (5, 10, 25, 50, 100 referrals)
@@ -10,7 +10,7 @@
  * - Influencer network management
  *
  * @version 1.0.0
- * @author CryptoGift DAO
+ * @author AutoMALL
  */
 
 import { getTypedClient, cachedQuery, clearCache } from '@/lib/supabase/client';
@@ -41,15 +41,15 @@ export const COMMISSION_RATES: Record<ReferralLevel, number> = {
 
 /** Milestone bonus structure */
 export const MILESTONE_BONUSES: Record<number, number> = {
-  5: 50,      // 50 CGC for 5 referrals
-  10: 150,    // 150 CGC for 10 referrals
-  25: 500,    // 500 CGC for 25 referrals
-  50: 1500,   // 1500 CGC for 50 referrals
-  100: 5000,  // 5000 CGC for 100 referrals
+  5: 50,      // $50 USD for 5 referrals
+  10: 150,    // $150 USD for 10 referrals
+  25: 500,    // $500 USD for 25 referrals
+  50: 1500,   // $1500 USD for 50 referrals
+  100: 5000,  // $5000 USD for 100 referrals
 };
 
 /** Activation bonus when a referral becomes active */
-export const ACTIVATION_BONUS = 5; // 5 CGC
+export const ACTIVATION_BONUS = 5; // $5 USD
 
 /** Minimum tasks completed to be considered "active" */
 export const ACTIVATION_THRESHOLD = 1;
@@ -60,7 +60,7 @@ export const ACTIVATION_THRESHOLD = 1;
 
 /**
  * Generate a unique referral code from wallet address
- * Format: CG-XXXXXX (6 chars from address)
+ * Format: AM-XXXXXX (6 chars from address)
  */
 export function generateReferralCode(walletAddress: string): string {
   if (!walletAddress || walletAddress.length < 10) {
@@ -68,14 +68,14 @@ export function generateReferralCode(walletAddress: string): string {
   }
   // Use first 6 chars after '0x' and make uppercase
   const shortened = walletAddress.slice(2, 8).toUpperCase();
-  return `CG-${shortened}`;
+  return `AM-${shortened}`;
 }
 
 /**
  * Validate referral code format
  */
 export function isValidReferralCode(code: string): boolean {
-  return /^CG-[A-F0-9]{6}$/i.test(code);
+  return /^(AM|CG)-[A-F0-9]{6}$/i.test(code);
 }
 
 /**
@@ -397,7 +397,7 @@ export async function activateReferral(referredAddress: string): Promise<void> {
 // =====================================================
 
 /**
- * Calculate and distribute commissions when a referral earns CGC
+ * Calculate and distribute commissions when a referral earns USD
  * Called when a task is completed and paid
  */
 export async function distributeCommissions(

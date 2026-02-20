@@ -110,8 +110,8 @@ export function ConnectButtonDAO({
           [base.id]: [
             {
               address: '0x5e3a61b550328f3D8C44f60b3e10a49D3d806175',
-              name: 'CryptoGift Coin',
-              symbol: 'CGC',
+              name: 'AutoMALL Token',
+              symbol: 'AML',
               icon: '/logo-automall.png',
             },
           ],

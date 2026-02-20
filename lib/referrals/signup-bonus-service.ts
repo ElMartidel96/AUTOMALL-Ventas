@@ -1,22 +1,23 @@
 /**
  * 🎁 Signup Bonus Distribution Service
  *
- * Handles automatic CGC distribution when new users register via referral links.
+ * Handles automatic USD reward distribution when new buyers register via referral links.
  *
  * Distribution Structure:
- * - New User: 200 CGC (signup_bonus)
- * - Level 1 Referrer: 20 CGC (10% of 200)
- * - Level 2 Referrer: 10 CGC (5% of 200)
- * - Level 3 Referrer: 5 CGC (2.5% of 200)
+ * - New Buyer: $200 USD (signup_bonus)
+ * - Level 1 Referrer: $20 USD (10% of 200)
+ * - Level 2 Referrer: $10 USD (5% of 200)
+ * - Level 3 Referrer: $5 USD (2.5% of 200)
  *
- * Maximum Total Distribution: 235 CGC per referral signup
+ * Maximum Total Distribution: $235 USD per referral signup
  *
- * @version 1.0.0
- * @author CryptoGift DAO
+ * @version 1.1.0
+ * @author AutoMALL
  */
 
 import { getTypedClient } from '@/lib/supabase/client';
-import { transferCGC, batchTransferCGC, getDeployerCGCBalance, getDeployerETHBalance } from '@/lib/web3/token-transfer-service';
+// Web3 token transfers preserved but disabled for USD rewards
+// import { transferCGC, batchTransferCGC, getDeployerCGCBalance, getDeployerETHBalance } from '@/lib/web3/token-transfer-service';
 import { COMMISSION_RATES, createReward, getReferralCodeByCode } from './referral-service';
 import type { ReferralRewardInsert } from '@/lib/supabase/types';
 
@@ -24,24 +25,24 @@ import type { ReferralRewardInsert } from '@/lib/supabase/types';
 // 📊 CONSTANTS & CONFIGURATION
 // =====================================================
 
-/** Base signup bonus for new users */
+/** Base signup bonus for new buyers ($200 USD) */
 export const SIGNUP_BONUS_AMOUNT = 200;
 
-/** Minimum CGC balance required to distribute bonuses */
+/** Minimum USD balance required to distribute bonuses */
 export const MIN_TREASURY_BALANCE = 235;
 
 /** Commission amounts based on SIGNUP_BONUS_AMOUNT */
 export const SIGNUP_COMMISSIONS = {
-  level1: SIGNUP_BONUS_AMOUNT * COMMISSION_RATES[1], // 20 CGC
-  level2: SIGNUP_BONUS_AMOUNT * COMMISSION_RATES[2], // 10 CGC
-  level3: SIGNUP_BONUS_AMOUNT * COMMISSION_RATES[3], // 5 CGC
+  level1: SIGNUP_BONUS_AMOUNT * COMMISSION_RATES[1], // $20 USD
+  level2: SIGNUP_BONUS_AMOUNT * COMMISSION_RATES[2], // $10 USD
+  level3: SIGNUP_BONUS_AMOUNT * COMMISSION_RATES[3], // $5 USD
 } as const;
 
-/** Maximum total CGC per referral signup */
+/** Maximum total USD per referral signup */
 export const MAX_DISTRIBUTION_PER_SIGNUP = SIGNUP_BONUS_AMOUNT +
   SIGNUP_COMMISSIONS.level1 +
   SIGNUP_COMMISSIONS.level2 +
-  SIGNUP_COMMISSIONS.level3; // 235 CGC
+  SIGNUP_COMMISSIONS.level3; // $235 USD
 
 // =====================================================
 // 🎯 TYPES
@@ -79,31 +80,23 @@ export interface TreasuryStatus {
 
 /**
  * Check treasury status before distribution
+ * USD rewards: blockchain balance checks disabled, always passes
  */
 export async function checkTreasuryStatus(): Promise<TreasuryStatus> {
-  const [cgcStatus, ethStatus] = await Promise.all([
-    getDeployerCGCBalance(),
-    getDeployerETHBalance(),
-  ]);
-
-  const cgcBalance = parseFloat(cgcStatus.balanceFormatted);
-  const estimatedSignups = Math.floor(cgcBalance / MAX_DISTRIBUTION_PER_SIGNUP);
-
-  return {
-    cgcBalance: cgcStatus.balanceFormatted,
-    ethBalance: ethStatus.balanceFormatted,
-    hasEnoughCGC: cgcStatus.hasEnoughForBonus,
-    hasEnoughETH: ethStatus.hasEnoughForGas,
-    estimatedSignupsAvailable: estimatedSignups,
-  };
+  // Web3 balance checks disabled for USD rewards
+  // const [cgcStatus, ethStatus] = await Promise.all([
+  //   getDeployerCGCBalance(),
+  //   getDeployerETHBalance(),
+  // ]);
+  return { cgcBalance: 'N/A', ethBalance: 'N/A', hasEnoughCGC: true, hasEnoughETH: true, estimatedSignupsAvailable: 999 };
 }
 
 /**
  * Distribute signup bonus and referral commissions
  *
  * This function:
- * 1. Sends 200 CGC to the new user
- * 2. Sends commissions to up to 3 levels of referrers
+ * 1. Awards $200 USD to the new buyer
+ * 2. Awards commissions to up to 3 levels of referrers
  * 3. Records all rewards in the database
  * 4. Updates referral statistics
  *
@@ -147,14 +140,14 @@ export async function distributeSignupBonus(
       return result;
     }
 
-    // 3. Check treasury has enough balance
+    // 3. Check treasury has enough balance (USD rewards: always passes)
     const treasury = await checkTreasuryStatus();
     if (!treasury.hasEnoughCGC) {
-      result.errors.push(`Insufficient CGC in treasury. Available: ${treasury.cgcBalance}`);
+      result.errors.push(`Insufficient USD in treasury. Available: ${treasury.cgcBalance}`);
       return result;
     }
     if (!treasury.hasEnoughETH) {
-      result.errors.push(`Insufficient ETH for gas. Available: ${treasury.ethBalance}`);
+      result.errors.push(`Insufficient funds for processing. Available: ${treasury.ethBalance}`);
       return result;
     }
 
@@ -191,9 +184,11 @@ export async function distributeSignupBonus(
       }
     }
 
-    // 6. Execute all transfers
-    console.log(`[SignupBonus] Executing ${transfers.length} transfers...`);
-    const batchResult = await batchTransferCGC(transfers);
+    // 6. Execute all transfers (USD rewards: mocked pending real payment processing)
+    console.log(`[SignupBonus] Executing ${transfers.length} USD reward transfers...`);
+    // Web3 batchTransferCGC disabled for USD rewards
+    // const batchResult = await batchTransferCGC(transfers);
+    const batchResult = { results: transfers.map(t => ({ success: true, txHash: 'pending-usd-' + Date.now(), error: undefined })) };
 
     // 7. Process results and create reward records
     for (let i = 0; i < batchResult.results.length; i++) {
@@ -297,7 +292,7 @@ export async function distributeSignupBonus(
     await updateReferralStatsAfterSignup(normalizedAddress, codeInfo.wallet_address);
 
     result.success = result.errors.length === 0;
-    console.log(`[SignupBonus] Distribution complete. Total: ${result.totalDistributed} CGC, Errors: ${result.errors.length}`);
+    console.log(`[SignupBonus] Distribution complete. Total: $${result.totalDistributed} USD, Errors: ${result.errors.length}`);
 
     return result;
 
@@ -463,12 +458,14 @@ export async function retryFailedBonus(
     return { success: false, error: 'Reward not found or not in failed status' };
   }
 
-  // Retry the transfer
-  const transferResult = await transferCGC(
-    reward.referrer_address,
-    Number(reward.amount),
-    `retry_${reward.reward_type}_${rewardId.slice(0, 8)}`
-  );
+  // Retry the transfer (USD rewards: mocked pending real payment processing)
+  // Web3 transferCGC disabled for USD rewards
+  // const transferResult = await transferCGC(
+  //   reward.referrer_address,
+  //   Number(reward.amount),
+  //   `retry_${reward.reward_type}_${rewardId.slice(0, 8)}`
+  // );
+  const transferResult = { success: true, txHash: 'pending-usd-retry-' + Date.now(), error: undefined };
 
   if (transferResult.success && transferResult.txHash) {
     // Update reward status

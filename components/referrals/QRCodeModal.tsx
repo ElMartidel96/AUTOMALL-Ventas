@@ -67,18 +67,18 @@ export function QRCodeModal({ isOpen, onClose, referralLink, referralCode }: QRC
 
           // Download
           const link = document.createElement('a');
-          link.download = `CryptoGift-QR-${referralCode}.png`;
+          link.download = `AutoMALL-QR-${referralCode}.png`;
           link.href = canvas.toDataURL('image/png');
           link.click();
         };
         logoImg.onerror = () => {
           // Download without logo if it fails to load
           const link = document.createElement('a');
-          link.download = `CryptoGift-QR-${referralCode}.png`;
+          link.download = `AutoMALL-QR-${referralCode}.png`;
           link.href = canvas.toDataURL('image/png');
           link.click();
         };
-        logoImg.src = '/cgc-logo-200x200.png';
+        logoImg.src = '/logo-automall.png';
       }
     };
 
@@ -89,8 +89,8 @@ export function QRCodeModal({ isOpen, onClose, referralLink, referralCode }: QRC
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'CryptoGift DAO - Referral Invite',
-          text: t('share.message') || 'Join CryptoGift DAO with my referral link and earn CGC tokens!',
+          title: 'AutoMALL - Referral Invite',
+          text: t('share.message') || 'Buy your next car at AutoMALL and get $200 cash back!',
           url: referralLink,
         });
       } catch (err) {
@@ -135,7 +135,7 @@ export function QRCodeModal({ isOpen, onClose, referralLink, referralCode }: QRC
                 {t('qrModal.title') || 'Your Referral QR Code'}
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {t('qrModal.description') || 'Scan to join CryptoGift DAO'}
+                {t('qrModal.description') || 'Scan to visit AutoMALL'}
               </p>
             </div>
 
@@ -156,8 +156,8 @@ export function QRCodeModal({ isOpen, onClose, referralLink, referralCode }: QRC
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="bg-white p-1 rounded-lg shadow-sm">
                   <img
-                    src="/cgc-logo-200x200.png"
-                    alt="CGC"
+                    src="/logo-automall.png"
+                    alt="AutoMALL"
                     className="w-12 h-12 object-contain"
                   />
                 </div>

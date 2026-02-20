@@ -9,8 +9,8 @@
  * - Updates permanent invite claim records with bonus info
  * - Maintains compatibility with existing referral system
  *
- * @version 1.0.0
- * @author CryptoGift DAO
+ * @version 1.1.0
+ * @author AutoMALL
  */
 
 import { getTypedClient } from '@/lib/supabase/client';
@@ -45,7 +45,7 @@ export interface PermanentInviteSignupResult {
  *
  * This function:
  * 1. Creates referral relationship (if referrer exists)
- * 2. Distributes signup bonus (200 CGC + commissions)
+ * 2. Distributes signup bonus ($200 USD + commissions)
  * 3. Updates permanent invite claim record with bonus info
  * 4. Tracks source in referrals table
  */

@@ -32,10 +32,10 @@ function formatRewardType(type: ReferralRewardType): string {
     activation_bonus: 'Activation Bonus',
     special_bonus: 'Special Bonus',
     // Signup bonus system rewards
-    signup_bonus: 'Signup Welcome Bonus (200 CGC)',
-    signup_commission_l1: 'Signup Commission L1 (20 CGC)',
-    signup_commission_l2: 'Signup Commission L2 (10 CGC)',
-    signup_commission_l3: 'Signup Commission L3 (5 CGC)',
+    signup_bonus: 'Purchase Bonus ($200 USD)',
+    signup_commission_l1: 'Level 1 Commission ($20 USD)',
+    signup_commission_l2: 'Level 2 Commission ($10 USD)',
+    signup_commission_l3: 'Level 3 Commission ($5 USD)',
   };
   return typeLabels[type] || type;
 }

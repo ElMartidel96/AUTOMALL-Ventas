@@ -1,7 +1,7 @@
 /**
- * 🔐 CGC Access Gate
+ * Access Gate
  *
- * Simple access control component that restricts access based on CGC token balance
+ * Simple access control component that restricts access based on account status
  * Uses Thirdweb v5 hooks for wallet connection and balance checking
  *
  * Features beautiful gradient background with blur effects when blocking access
@@ -56,7 +56,7 @@ function ApexAvatar({ className = "h-16 w-16" }: { className?: string }) {
 
 interface CGCAccessGateProps {
   children: React.ReactNode
-  requiredBalance?: string // Minimum CGC balance required (default: "0.01")
+  requiredBalance?: string // Minimum balance required (default: "0.01")
   title?: string
   description?: string
   // Custom not connected state (optional) - shows BEFORE wallet connection
@@ -68,15 +68,15 @@ interface CGCAccessGateProps {
 }
 
 /**
- * Minimum CGC balance required for access (0.01 CGC)
+ * Minimum balance required for access (0.01 AML)
  */
 const MIN_CGC_BALANCE = 0.01
 
 export function CGCAccessGate({
   children,
   requiredBalance = "0.01",
-  title = "CGC Token Required",
-  description = "This feature is exclusive to CGC token holders. Connect your wallet and hold at least 0.01 CGC tokens to continue.",
+  title = "Account Required",
+  description = "This feature requires an active AutoMALL account. Connect to continue.",
   notConnectedContent,
   insufficientTitle,
   insufficientDescription,
@@ -102,7 +102,7 @@ export function CGCAccessGate({
               <ApexAvatar />
               <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-500 dark:text-blue-400" />
               <p className="text-gray-600 dark:text-gray-400">
-                {isConnecting ? 'Connecting wallet...' : 'Checking CGC balance...'}
+                {isConnecting ? 'Connecting wallet...' : 'Checking account...'}
               </p>
             </div>
           </CardContent>
@@ -166,7 +166,7 @@ export function CGCAccessGate({
             <Alert className="border-orange-200 dark:border-orange-800/50 bg-orange-50/50 dark:bg-orange-900/20">
               <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
               <AlertDescription className="text-orange-800 dark:text-orange-300">
-                Please switch to Base Network to access CGC token features.
+                Please switch to Base Network to access AutoMALL features.
               </AlertDescription>
             </Alert>
             <ConnectButtonDAO fullWidth />
@@ -190,17 +190,17 @@ export function CGCAccessGate({
             </div>
             <CardTitle className="flex items-center justify-center space-x-2 text-gray-900 dark:text-white">
               <Coins className="h-5 w-5 text-amber-500 dark:text-amber-400" />
-              <span>{insufficientTitle || 'Insufficient CGC Balance'}</span>
+              <span>{insufficientTitle || 'Insufficient Balance'}</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-center space-y-3">
               <div className="p-4 bg-amber-50/80 dark:bg-amber-900/20 rounded-lg border border-amber-200/50 dark:border-amber-700/30">
                 <p className="text-sm text-amber-800 dark:text-amber-300 mb-2">
-                  <strong>Current Balance:</strong> {formatted} CGC
+                  <strong>Current Balance:</strong> {formatted} AML
                 </p>
                 <p className="text-sm text-amber-800 dark:text-amber-300">
-                  <strong>Required:</strong> {requiredBalance} CGC
+                  <strong>Required:</strong> {requiredBalance} AML
                 </p>
               </div>
 
@@ -210,7 +210,7 @@ export function CGCAccessGate({
                 </p>
               ) : (
                 <p className="text-gray-600 dark:text-gray-400 text-sm">
-                  You need to hold at least {requiredBalance} CGC tokens to access this feature.
+                  You need to hold at least {requiredBalance} AML tokens to access this feature.
                 </p>
               )}
 
@@ -230,11 +230,11 @@ export function CGCAccessGate({
                     rel="noopener noreferrer"
                     className="inline-flex items-center space-x-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm"
                   >
-                    <span>View CGC Token Contract</span>
+                    <span>View Account Details</span>
                     <ExternalLink className="h-3 w-3" />
                   </a>
                   <p className="text-xs text-gray-500 dark:text-gray-500">
-                    Get CGC tokens through DAO participation or token swaps
+                    Join through a referral link or contact support
                   </p>
                 </div>
               )}

@@ -24,8 +24,8 @@
  */
 
 // Storage keys
-const STORAGE_PREFIX = 'cgdao_invite_progress_';
-const STORAGE_VERSION = 4; // v4: Added selectedPath (role) persistence
+const STORAGE_PREFIX = 'am_invite_progress_';
+const STORAGE_VERSION = 5; // v5: AutoMALL rebrand (v4: Added selectedPath (role) persistence)
 
 // Flow step type (must match SpecialInviteFlow)
 export type FlowStep = 'welcome' | 'password' | 'education' | 'connect' | 'delegate' | 'complete';

@@ -47,13 +47,14 @@ All Web3/blockchain UI is hidden behind feature flags. **NEVER expose crypto con
 ## Key Directories
 ```
 app/                    # Next.js pages (App Router)
-  page.tsx              # Landing page (car sales)
+  page.tsx              # Dealer home (customer-facing welcome)
+  landing/page.tsx      # B2B platform landing (future: landing.autosmall.com)
   dashboard/            # Seller dashboard
   inventory/            # Vehicle inventory (placeholder)
   clients/              # CRM (placeholder)
   referrals/            # Referral network
   profile/              # Seller profile
-  docs/                 # Documentation / About
+  docs/                 # Reserved for future lab collaboration (NOT dealer UI)
   admin/                # Admin panel (hidden)
   agent/                # AI agent (hidden, future)
 components/
@@ -67,7 +68,12 @@ lib/
   web3/                 # Blockchain hooks (hidden)
   supabase/             # Database client
 src/locales/            # en.json, es.json translations
-public/                 # Static assets, logo-automall.png
+public/                 # Static assets
+  logo-automall.png     # Hero logo (optimized 84KB, 1000x552)
+  logo-automall-nav.png # Navbar logo (240x132)
+  logo-automall-footer.png # Footer logo (160x88)
+  brands/               # Car brand logos (200x200 transparent PNGs)
+  og-automall.png       # OpenGraph image (1200x630, am-dark bg)
 ```
 
 ## Common Patterns
@@ -79,7 +85,8 @@ public/                 # Static assets, logo-automall.png
 ## i18n Namespaces
 | Namespace | Usage |
 |-----------|-------|
-| `landing` | Landing page content |
+| `dealer` | Dealer home page (hero, search, brands, why, featured, testimonials, CTA) |
+| `landing` | B2B platform landing page content |
 | `navigation` | Nav links, menus |
 | `dashboard` | Seller dashboard |
 | `footer` | Footer content |
@@ -109,3 +116,72 @@ After any change:
 4. Dark/light mode works
 5. i18n EN/ES works
 6. Mobile responsive
+
+## Branding Assets
+
+### Logo Source
+- **Source file**: `AutoMALL.png` (root, 2784x1536, ~2.7MB) - DO NOT deploy directly
+- **All variants** are generated from this source using `sharp` (Node.js)
+- Variants are stored in `public/` and must be whitelisted in `.vercelignore`
+
+### Logo Variants
+| File | Size | Dimensions | Used In |
+|------|------|------------|---------|
+| `public/logo-automall.png` | 84KB | 1000x552 | Hero (page.tsx), ConnectButtonDAO, landing |
+| `public/logo-automall-nav.png` | 10KB | 240x132 | Navbar |
+| `public/logo-automall-footer.png` | 6KB | 160x88 | Footer |
+| `public/og-automall.png` | 335KB | 1200x630 | OpenGraph / social sharing |
+| `app/favicon.ico` | 2.4KB | 32x32 | Browser tab favicon |
+| `app/icon.png` | 44KB | 192x192 | Next.js app icon |
+| `public/favicon-32x32.png` | 2.4KB | 32x32 | Metadata favicon |
+| `public/icon-192x192.png` | 44KB | 192x192 | PWA icon |
+| `public/icon-512x512.png` | 248KB | 512x512 | PWA icon large |
+| `public/apple-touch-icon.png` | 39KB | 180x180 | iOS home screen |
+
+### Car Brand Logos (`public/brands/`)
+
+**Current brands** (9): Toyota, Ford, Chevrolet, Nissan, GMC, Dodge, Jeep, Mazda, Mercedes
+
+**How to add a new brand logo:**
+1. Obtain the logo image (JPG/PNG, any size, ideally on solid black or white background)
+2. Place the source file in `AutosMall/AutosMall/` folder (or provide directly)
+3. Process with sharp to remove background and normalize to 200x200 transparent PNG:
+```javascript
+// Background removal: pixel-level threshold
+// For BLACK backgrounds: R,G,B all < 30 → make transparent
+// For WHITE backgrounds: R,G,B all > 240 → make transparent
+const sharp = require('sharp');
+const img = sharp('source-logo.jpg')
+  .resize(200, 200, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+  .raw().toBuffer({ resolveWithObject: true });
+// Then iterate pixels: if (r < 30 && g < 30 && b < 30) alpha = 0;
+// Write back with sharp from raw RGBA buffer
+```
+4. Save as `public/brands/{brand-name-lowercase}.png`
+5. Add to `brandLogos` array in `app/page.tsx`
+6. **CRITICAL**: Add `!public/brands/{brand-name}.png` to `.vercelignore`
+7. Verify with `pnpm build`
+
+**Pending brands** (to add when logos are available): Honda, Hyundai, Kia, BMW
+
+### .vercelignore Image Rules (CRITICAL)
+The `.vercelignore` file blocks ALL images by default (`*.png`, `*.ico`, `*.jpg`, etc.).
+Every image that must be deployed needs an explicit `!path/to/file.ext` exception.
+**If you add ANY new image to `public/`, you MUST whitelist it in `.vercelignore`.**
+
+---
+
+## PROBLEMAS CONOCIDOS
+_(Ninguno actualmente)_
+
+---
+
+## PROBLEMAS RESUELTOS
+
+### PROBLEMA: Logos invisibles en produccion (Vercel)
+- **Sintoma**: Logo no aparece en navbar (espacio vacio), hero muestra alt text "Autos MALL" en vez de imagen, favicon muestra triangulo de Vercel
+- **Ubicacion**: `.vercelignore` (lineas 26-31)
+- **Intentos fallidos**: Se regeneraron los logos multiples veces pensando que eran archivos corruptos o mal dimensionados. Se verifico visualmente que los PNGs eran validos. El problema no era el contenido de los archivos.
+- **Causa raiz**: `.vercelignore` tenia reglas globales `*.png` / `*.ico` / `*.jpg` que excluian TODAS las imagenes del deploy. Solo assets legacy de CryptoGift tenian excepciones (`!public/apeX.png`, etc.). Ningun archivo de AutoMALL estaba en la lista blanca. Los `onError` handlers en los componentes Image ocultaban silenciosamente las imagenes rotas.
+- **Solucion**: Agregar 19 excepciones explicitas en `.vercelignore` para todos los assets de AutoMALL (logos, favicons, iconos, OG image, brand logos). Tambien se optimizo `logo-automall.png` de 2.7MB a 84KB.
+- **Leccion**: Siempre verificar `.vercelignore` al agregar nuevas imagenes. El sintoma (imagen no carga) es identico al de un archivo corrupto, lo que desvio el diagnostico.

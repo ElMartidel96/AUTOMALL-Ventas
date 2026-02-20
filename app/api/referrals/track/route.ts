@@ -5,7 +5,7 @@
  * GET - Get referral code info (for landing page)
  *
  * Features:
- * - Code format validation (CG-XXXXXX)
+ * - Code format validation (AM-XXXXXX or CG-XXXXXX legacy)
  * - Rate limiting (10 clicks/minute per IP)
  * - Click deduplication (same IP+code in 5 min = ignore)
  * - Fraud detection integration
@@ -137,7 +137,7 @@ function detectOS(userAgent: string): string {
   return 'Other';
 }
 
-// GET /api/referrals/track?code=CG-XXXXXX
+// GET /api/referrals/track?code=AM-XXXXXX (or CG-XXXXXX legacy)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 🛡️ VALIDATION 1: Check code format (CG-XXXXXX or custom alphanumeric)
+    // 🛡️ VALIDATION 1: Check code format (AM-XXXXXX or CG-XXXXXX legacy, or custom alphanumeric)
     const isValidFormat = isValidReferralCode(code) || /^[A-Za-z0-9]{4,20}$/i.test(code);
     if (!isValidFormat) {
       return NextResponse.json(
@@ -368,7 +368,7 @@ export async function PUT(request: NextRequest) {
       await markClickConverted(ipHash, wallet);
     }
 
-    // 🎁 Automatically distribute signup bonus (200 CGC) and referral commissions
+    // 🎁 Automatically distribute signup bonus ($200 USD) and referral commissions
     let bonusResult = null;
     try {
       console.log(`[TrackAPI] Distributing signup bonus for ${wallet} via ${refCode}`);
@@ -376,7 +376,7 @@ export async function PUT(request: NextRequest) {
       if (!bonusResult.success) {
         console.error('[TrackAPI] Bonus distribution had errors:', bonusResult.errors);
       } else {
-        console.log(`[TrackAPI] Bonus distributed: ${bonusResult.totalDistributed} CGC`);
+        console.log(`[TrackAPI] Bonus distributed: $${bonusResult.totalDistributed} USD`);
       }
     } catch (bonusError) {
       console.error('[TrackAPI] Failed to distribute bonus:', bonusError);

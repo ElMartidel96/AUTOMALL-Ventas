@@ -1,68 +1,66 @@
 /**
  * 🎯 REFERRAL ACTIVATION API
  *
- * Activates a referral when they receive CGC tokens.
- * Checks on-chain CGC balance and updates referral status.
+ * Activates a referral when they qualify for AutoMALL rewards.
+ * Auto-activates referrals for USD reward tracking.
  *
- * POST - Activate a referral by checking their CGC balance
+ * POST - Activate a referral (auto-activation for USD rewards)
  *
  * @endpoint /api/referrals/activate
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createPublicClient, http, formatEther } from 'viem';
-import { base } from 'viem/chains';
+// Blockchain activation preserved but disabled for USD rewards
+// import { createPublicClient, http, formatEther } from 'viem';
+// import { base } from 'viem/chains';
 import { getTypedClient, clearCache } from '@/lib/supabase/client';
 
-// CGC Token contract address on Base Mainnet
-const CGC_TOKEN_ADDRESS = '0x5e3a61b550328f3D8C44f60b3e10a49D3d806175';
+// Blockchain activation preserved but disabled for USD rewards
+// const CGC_TOKEN_ADDRESS = '0x5e3a61b550328f3D8C44f60b3e10a49D3d806175';
 
-// Minimum CGC balance to be considered "active" (any amount > 0)
-const MIN_ACTIVATION_BALANCE = BigInt(1); // 1 wei of CGC
+// Minimum balance check disabled - auto-activate for USD rewards
+// const MIN_ACTIVATION_BALANCE = BigInt(1);
 
-// ERC20 ABI for balanceOf
-const ERC20_ABI = [
-  {
-    name: 'balanceOf',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: 'account', type: 'address' }],
-    outputs: [{ name: '', type: 'uint256' }],
-  },
-] as const;
+// Blockchain activation preserved but disabled for USD rewards
+// const ERC20_ABI = [
+//   {
+//     name: 'balanceOf',
+//     type: 'function',
+//     stateMutability: 'view',
+//     inputs: [{ name: 'account', type: 'address' }],
+//     outputs: [{ name: '', type: 'uint256' }],
+//   },
+// ] as const;
 
-// Create a public client for Base
-const publicClient = createPublicClient({
-  chain: base,
-  transport: http('https://mainnet.base.org'),
-});
+// Blockchain activation preserved but disabled for USD rewards
+// const publicClient = createPublicClient({
+//   chain: base,
+//   transport: http('https://mainnet.base.org'),
+// });
 
-/**
- * Check CGC balance for an address
- */
-async function getCGCBalance(address: string): Promise<bigint> {
-  try {
-    const balance = await publicClient.readContract({
-      address: CGC_TOKEN_ADDRESS,
-      abi: ERC20_ABI,
-      functionName: 'balanceOf',
-      args: [address as `0x${string}`],
-    });
-    return balance;
-  } catch (error) {
-    console.error('Error checking CGC balance:', error);
-    return BigInt(0);
-  }
-}
+// Blockchain activation preserved but disabled for USD rewards
+// async function getCGCBalance(address: string): Promise<bigint> {
+//   try {
+//     const balance = await publicClient.readContract({
+//       address: CGC_TOKEN_ADDRESS,
+//       abi: ERC20_ABI,
+//       functionName: 'balanceOf',
+//       args: [address as `0x${string}`],
+//     });
+//     return balance;
+//   } catch (error) {
+//     console.error('Error checking CGC balance:', error);
+//     return BigInt(0);
+//   }
+// }
 
 /**
  * POST /api/referrals/activate
  *
- * Activates a referral if they have CGC tokens.
+ * Auto-activates a referral for AutoMALL USD rewards.
  * Can be called by:
- * - The referrer after sending CGC to their referral
+ * - The system upon referral signup
  * - A cron job to periodically check pending referrals
- * - The system after detecting a CGC transfer
  *
  * Body: { wallet: string } - The wallet address to check and activate
  */
@@ -113,17 +111,15 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Check on-chain CGC balance
-    const cgcBalance = await getCGCBalance(wallet);
-    const hasMinBalance = cgcBalance >= MIN_ACTIVATION_BALANCE;
+    // Auto-activate for AutoMALL USD rewards
+    const hasMinBalance = true; // Auto-activate for AutoMALL USD rewards
 
     if (!hasMinBalance) {
       return NextResponse.json({
         success: true,
         data: {
           activated: false,
-          reason: 'Wallet does not have CGC tokens yet',
-          balance: formatEther(cgcBalance),
+          reason: 'Referral not yet activated',
         },
       });
     }
@@ -136,7 +132,7 @@ export async function POST(request: NextRequest) {
         status: 'active',
         activated_at: activationTime,
         last_activity: activationTime,
-        cgc_earned: Number(formatEther(cgcBalance)),
+        cgc_earned: 0, // USD rewards tracked separately
       })
       .eq('referred_address', normalizedWallet)
       .eq('status', 'pending')
@@ -171,7 +167,6 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Referral activated:', {
       wallet: normalizedWallet.slice(0, 6) + '...' + normalizedWallet.slice(-4),
-      cgcBalance: formatEther(cgcBalance),
       referralsActivated: updated?.length || 0,
     });
 
@@ -180,7 +175,6 @@ export async function POST(request: NextRequest) {
       data: {
         activated: true,
         wallet: normalizedWallet,
-        cgcBalance: formatEther(cgcBalance),
         referralsActivated: updated?.length || 0,
         activatedAt: activationTime,
       },
@@ -238,9 +232,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Also check current CGC balance
-    const cgcBalance = await getCGCBalance(wallet);
-
     return NextResponse.json({
       success: true,
       data: {
@@ -249,8 +240,6 @@ export async function GET(request: NextRequest) {
         status: referrals?.status || null,
         activatedAt: referrals?.activated_at || null,
         joinedAt: referrals?.joined_at || null,
-        cgcBalance: formatEther(cgcBalance),
-        hasCGC: cgcBalance > BigInt(0),
       },
     });
   } catch (error) {
