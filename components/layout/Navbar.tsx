@@ -25,6 +25,7 @@ import {
   User,
   LayoutDashboard,
   Users,
+  Car,
 } from 'lucide-react';
 import { FEATURE_WEB3_VISIBLE, FEATURE_CGC_TOKEN } from '@/lib/config/features';
 
@@ -63,6 +64,14 @@ export const Navbar: React.FC = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-2">
+            <Link
+              href="/catalog"
+              className="text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors text-sm font-bold flex items-center gap-1 px-2"
+            >
+              <Car className="w-3.5 h-3.5" />
+              {t('catalog')}
+            </Link>
+
             <Link
               href="/dashboard"
               className="text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors text-sm font-bold px-2"
@@ -124,6 +133,17 @@ export const Navbar: React.FC = () => {
         {isMenuOpen && (
           <div className="md:hidden border-t border-gray-200 dark:border-am-blue/30 py-4 bg-white dark:bg-am-dark relative z-[10001] max-h-[calc(100vh-73px)] overflow-y-auto">
             <div className="space-y-4">
+              <Link
+                href="/catalog"
+                className="block text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors px-4 py-3 font-bold text-base flex items-center gap-2"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <Car className="w-4 h-4" />
+                {t('catalog')}
+              </Link>
+
+              <div className="mx-4 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-am-blue/30 to-transparent opacity-30"></div>
+
               <Link
                 href="/dashboard"
                 className="block text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors px-4 py-3 font-bold text-base flex items-center gap-2"

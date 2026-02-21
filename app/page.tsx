@@ -34,9 +34,8 @@ import {
   Phone,
   MessageCircle,
   ArrowRight,
-  Sparkles,
-  Bell,
 } from 'lucide-react';
+import FeaturedCarousel from '@/components/catalog/FeaturedCarousel';
 
 /* ─── Car Brand Logos ─────────────────────────────────────────────────
    Real brand logos as transparent PNGs (200x200) in public/brands/.
@@ -115,6 +114,11 @@ export default function Home() {
       </section>
 
       {/* ════════════════════════════════════════════════════════════
+         FEATURED VEHICLES — Carousel of latest active inventory
+         ════════════════════════════════════════════════════════════ */}
+      <FeaturedCarousel />
+
+      {/* ════════════════════════════════════════════════════════════
          SEARCH BAR — Find your perfect car
          ════════════════════════════════════════════════════════════ */}
       <section className="relative py-10 md:py-14 px-4">
@@ -161,7 +165,17 @@ export default function Home() {
 
                 {/* Search button */}
                 <Link
-                  href="/inventory"
+                  href={`/catalog?${new URLSearchParams({
+                    ...(searchQuery ? { search: searchQuery } : {}),
+                    ...(selectedMake ? { brand: selectedMake } : {}),
+                    ...(selectedPrice ? (() => {
+                      const [min, max] = selectedPrice.split('-');
+                      return {
+                        ...(min ? { minPrice: min.replace('+', '') } : {}),
+                        ...(max ? { maxPrice: max } : {}),
+                      };
+                    })() : {}),
+                  }).toString()}`}
                   className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-am-orange to-am-orange-light hover:from-am-orange-dark hover:to-am-orange text-white px-6 py-3.5 rounded-xl font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 whitespace-nowrap"
                 >
                   <Search className="w-5 h-5" />
@@ -205,7 +219,7 @@ export default function Home() {
             {brandLogos.map((brand) => (
               <Link
                 key={brand.name}
-                href="/inventory"
+                href={`/catalog?brand=${encodeURIComponent(brand.name)}`}
                 className="glass-crystal rounded-xl p-4 flex flex-col items-center justify-center gap-2 hover:scale-105 hover:shadow-lg transition-all duration-300 group cursor-pointer"
               >
                 <div className="w-16 h-16 md:w-20 md:h-20 relative flex items-center justify-center">
@@ -279,40 +293,6 @@ export default function Home() {
                 <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{item.desc}</p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════════════════════════
-         FEATURED VEHICLES — Coming soon placeholder
-         ════════════════════════════════════════════════════════════ */}
-      <section className="py-16 md:py-24 px-4">
-        <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              {t('featured.title')}
-            </h2>
-            <p className="text-gray-500 dark:text-gray-400">
-              {t('featured.subtitle')}
-            </p>
-          </div>
-
-          <div className="glass-crystal-enhanced rounded-3xl p-8 md:p-12 text-center">
-            <div className="w-20 h-20 rounded-full bg-am-orange/10 dark:bg-am-orange/20 flex items-center justify-center mx-auto mb-6">
-              <Sparkles className="w-10 h-10 text-am-orange" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
-              {t('featured.comingSoon')}
-            </h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
-              {t('featured.comingSoonDesc')}
-            </p>
-            <button
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-am-blue to-am-blue-light hover:from-am-blue-dark hover:to-am-blue text-white px-6 py-3 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5"
-            >
-              <Bell className="w-4 h-4" />
-              {t('featured.getNotified')}
-            </button>
           </div>
         </div>
       </section>
@@ -396,7 +376,7 @@ export default function Home() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/inventory"
+                href="/catalog"
                 className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-am-orange to-am-orange-light hover:from-am-orange-dark hover:to-am-orange text-white px-8 py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
               >
                 {t('cta.browse')}

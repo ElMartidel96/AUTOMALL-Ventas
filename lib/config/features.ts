@@ -56,6 +56,9 @@ export const FEATURE_CRM = envBool('NEXT_PUBLIC_FEATURE_CRM', false)
 /** Enable WhatsApp Business integration */
 export const FEATURE_WHATSAPP = envBool('NEXT_PUBLIC_FEATURE_WHATSAPP', false)
 
+/** Enable public vehicle catalog */
+export const FEATURE_CATALOG = envBool('NEXT_PUBLIC_FEATURE_CATALOG', true)
+
 // ---------------------------------------------------------------------------
 // App Identity
 // ---------------------------------------------------------------------------

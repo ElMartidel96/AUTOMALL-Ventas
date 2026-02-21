@@ -131,6 +131,7 @@
     "admin": "Admin",
     "settings": "Ajustes",
     "inventory": "Inventario",
+    "catalog": "Catalogo",
     "clients": "Clientes",
     "reports": "Reportes"
   },
@@ -2555,6 +2556,111 @@
     },
     "messages": {
       "confirmDelete": "¿Estás seguro de que quieres eliminar este vehículo? Esta acción no se puede deshacer."
+    }
+  },
+  "catalog": {
+    "title": "Catalogo de Vehiculos",
+    "subtitle": "Explora nuestra seleccion de vehiculos de calidad",
+    "searchPlaceholder": "Buscar por marca o modelo...",
+    "noResults": "No Se Encontraron Vehiculos",
+    "empty": "Intenta ajustar tus filtros o terminos de busqueda.",
+    "photos": "fotos",
+    "negotiable": "Negociable",
+    "loading": "Cargando vehiculos...",
+    "filters": {
+      "title": "Filtros",
+      "sort": "Ordenar Por",
+      "brand": "Marca",
+      "allBrands": "Todas las Marcas",
+      "priceRange": "Rango de Precio",
+      "yearRange": "Rango de Ano",
+      "bodyType": "Tipo de Carroceria",
+      "allTypes": "Todos los Tipos",
+      "fuelType": "Tipo de Combustible",
+      "allFuels": "Todos",
+      "transmission": "Transmision",
+      "allTransmissions": "Todas",
+      "condition": "Condicion",
+      "allConditions": "Todas las Condiciones",
+      "clearAll": "Limpiar Todos los Filtros",
+      "fuel": {
+        "gasoline": "Gasolina",
+        "diesel": "Diesel",
+        "electric": "Electrico",
+        "hybrid": "Hibrido",
+        "plugin_hybrid": "Hibrido Enchufable"
+      },
+      "trans": {
+        "automatic": "Automatica",
+        "manual": "Manual",
+        "cvt": "CVT"
+      }
+    },
+    "sort": {
+      "newest": "Mas Recientes",
+      "price_asc": "Precio: Menor a Mayor",
+      "price_desc": "Precio: Mayor a Menor",
+      "year_desc": "Ano: Mas Reciente",
+      "mileage_asc": "Kilometraje: Menor"
+    },
+    "condition": {
+      "new": "Nuevo",
+      "like_new": "Como Nuevo",
+      "excellent": "Excelente",
+      "good": "Bueno",
+      "fair": "Regular"
+    },
+    "detail": {
+      "specifications": "Especificaciones",
+      "features": "Caracteristicas",
+      "description": "Descripcion",
+      "notFound": "Vehiculo No Encontrado",
+      "notFoundDesc": "Este vehiculo ya no esta disponible o no existe.",
+      "backToCatalog": "Volver al Catalogo",
+      "views": "vistas",
+      "listedOn": "Publicado el"
+    },
+    "specs": {
+      "vehicleInfo": "Info del Vehiculo",
+      "performance": "Rendimiento",
+      "exterior": "Exterior",
+      "interior": "Interior",
+      "year": "Ano",
+      "brand": "Marca",
+      "model": "Modelo",
+      "trim": "Version",
+      "bodyType": "Carroceria",
+      "doors": "Puertas",
+      "condition": "Condicion",
+      "vin": "VIN",
+      "engine": "Motor",
+      "transmission": "Transmision",
+      "fuelType": "Combustible",
+      "drivetrain": "Traccion",
+      "mileage": "Kilometraje",
+      "exteriorColor": "Color Exterior",
+      "interiorColor": "Color Interior"
+    },
+    "contact": {
+      "title": "¿Interesado en este vehiculo?",
+      "call": "Llamar Ahora",
+      "whatsapp": "WhatsApp",
+      "email": "Email",
+      "schedule": "Agendar Visita"
+    },
+    "related": {
+      "title": "Vehiculos Similares",
+      "viewAll": "Ver Todos"
+    },
+    "featured": {
+      "title": "Vehiculos Destacados",
+      "subtitle": "Las ultimas llegadas a nuestro inventario",
+      "viewAll": "Ver Todos los Vehiculos"
+    },
+    "pagination": {
+      "results": "vehiculos encontrados",
+      "prev": "Anterior",
+      "next": "Siguiente"
     }
   }
 }

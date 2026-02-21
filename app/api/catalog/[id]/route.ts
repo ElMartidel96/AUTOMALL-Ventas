@@ -1,0 +1,91 @@
+/**
+ * Public Catalog API — Vehicle detail
+ *
+ * GET /api/catalog/[id]
+ *
+ * Returns full vehicle detail with images and related vehicles.
+ * Only active vehicles are visible. Increments views_count.
+ * seller_address is excluded from response.
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { getTypedClient } from '@/lib/supabase/client';
+
+function sanitizeVehicle(v: Record<string, unknown>) {
+  const { seller_address: _, ...safe } = v;
+  return safe;
+}
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    if (!id || typeof id !== 'string') {
+      return NextResponse.json(
+        { error: 'Vehicle ID is required', success: false },
+        { status: 400 }
+      );
+    }
+
+    const supabase = getTypedClient();
+
+    // Fetch vehicle — only active
+    const { data: vehicle, error } = await supabase
+      .from('vehicles')
+      .select('*')
+      .eq('id', id)
+      .eq('status', 'active')
+      .single();
+
+    if (error || !vehicle) {
+      return NextResponse.json(
+        { error: 'Vehicle not found', success: false },
+        { status: 404 }
+      );
+    }
+
+    // Fetch images
+    const { data: images } = await supabase
+      .from('vehicle_images')
+      .select('*')
+      .eq('vehicle_id', id)
+      .order('display_order', { ascending: true });
+
+    // Fetch related vehicles (same brand, active, not this one)
+    const { data: related } = await supabase
+      .from('vehicles')
+      .select('*')
+      .eq('brand', vehicle.brand)
+      .eq('status', 'active')
+      .neq('id', id)
+      .limit(4);
+
+    // Increment views_count
+    supabase
+      .from('vehicles')
+      .update({ views_count: (vehicle.views_count || 0) + 1 })
+      .eq('id', id)
+      .then(() => {});
+
+    const response = NextResponse.json({
+      success: true,
+      data: {
+        ...sanitizeVehicle(vehicle),
+        images: images || [],
+        related: (related || []).map(sanitizeVehicle),
+      },
+    });
+
+    response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+    return response;
+  } catch (error) {
+    console.error('[Catalog] Detail error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error', success: false },
+      { status: 500 }
+    );
+  }
+}

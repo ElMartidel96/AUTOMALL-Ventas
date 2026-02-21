@@ -131,6 +131,7 @@
     "admin": "Admin",
     "settings": "Settings",
     "inventory": "Inventory",
+    "catalog": "Catalog",
     "clients": "Clients",
     "reports": "Reports"
   },
@@ -2555,6 +2556,111 @@
     },
     "messages": {
       "confirmDelete": "Are you sure you want to delete this vehicle? This action cannot be undone."
+    }
+  },
+  "catalog": {
+    "title": "Vehicle Catalog",
+    "subtitle": "Browse our selection of quality vehicles",
+    "searchPlaceholder": "Search by brand or model...",
+    "noResults": "No Vehicles Found",
+    "empty": "Try adjusting your filters or search terms.",
+    "photos": "photos",
+    "negotiable": "Negotiable",
+    "loading": "Loading vehicles...",
+    "filters": {
+      "title": "Filters",
+      "sort": "Sort By",
+      "brand": "Brand",
+      "allBrands": "All Brands",
+      "priceRange": "Price Range",
+      "yearRange": "Year Range",
+      "bodyType": "Body Type",
+      "allTypes": "All Types",
+      "fuelType": "Fuel Type",
+      "allFuels": "All Fuels",
+      "transmission": "Transmission",
+      "allTransmissions": "All",
+      "condition": "Condition",
+      "allConditions": "All Conditions",
+      "clearAll": "Clear All Filters",
+      "fuel": {
+        "gasoline": "Gasoline",
+        "diesel": "Diesel",
+        "electric": "Electric",
+        "hybrid": "Hybrid",
+        "plugin_hybrid": "Plug-in Hybrid"
+      },
+      "trans": {
+        "automatic": "Automatic",
+        "manual": "Manual",
+        "cvt": "CVT"
+      }
+    },
+    "sort": {
+      "newest": "Newest First",
+      "price_asc": "Price: Low to High",
+      "price_desc": "Price: High to Low",
+      "year_desc": "Year: Newest",
+      "mileage_asc": "Mileage: Lowest"
+    },
+    "condition": {
+      "new": "New",
+      "like_new": "Like New",
+      "excellent": "Excellent",
+      "good": "Good",
+      "fair": "Fair"
+    },
+    "detail": {
+      "specifications": "Specifications",
+      "features": "Features",
+      "description": "Description",
+      "notFound": "Vehicle Not Found",
+      "notFoundDesc": "This vehicle is no longer available or does not exist.",
+      "backToCatalog": "Back to Catalog",
+      "views": "views",
+      "listedOn": "Listed on"
+    },
+    "specs": {
+      "vehicleInfo": "Vehicle Info",
+      "performance": "Performance",
+      "exterior": "Exterior",
+      "interior": "Interior",
+      "year": "Year",
+      "brand": "Brand",
+      "model": "Model",
+      "trim": "Trim",
+      "bodyType": "Body Type",
+      "doors": "Doors",
+      "condition": "Condition",
+      "vin": "VIN",
+      "engine": "Engine",
+      "transmission": "Transmission",
+      "fuelType": "Fuel Type",
+      "drivetrain": "Drivetrain",
+      "mileage": "Mileage",
+      "exteriorColor": "Exterior Color",
+      "interiorColor": "Interior Color"
+    },
+    "contact": {
+      "title": "Interested in this vehicle?",
+      "call": "Call Now",
+      "whatsapp": "WhatsApp",
+      "email": "Email",
+      "schedule": "Schedule Visit"
+    },
+    "related": {
+      "title": "Similar Vehicles",
+      "viewAll": "View All"
+    },
+    "featured": {
+      "title": "Featured Vehicles",
+      "subtitle": "Latest arrivals in our inventory",
+      "viewAll": "View All Vehicles"
+    },
+    "pagination": {
+      "results": "vehicles found",
+      "prev": "Previous",
+      "next": "Next"
     }
   }
 }
