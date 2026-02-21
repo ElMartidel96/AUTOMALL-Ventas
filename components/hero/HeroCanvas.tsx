@@ -16,17 +16,19 @@ import Image from 'next/image';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const NUM_STRIPS = 50;
-const STRIP_GAP = 0.5; // px between strips
+const NUM_STRIPS = 100;
+const STRIP_GAP = 0.3; // px between strips
 const STRIP_PERIOD = 5; // seconds for full sine cycle
 const STRIP_AMPLITUDE = 3; // max px offset
 
-const SPOTLIGHT_RADIUS = 130;
-const SPOTLIGHT_RINGS = 8;
+const SPOTLIGHT_RADIUS = 140;
 const SPOTLIGHT_FADE_DELAY = 1000; // ms before fade starts
 const SPOTLIGHT_FADE_DURATION = 500; // ms to fully fade
 
-const DOT_SPACING = 40;
+const TRAIL_DURATION = 1000; // ms trail points live
+const TRAIL_SAMPLE_INTERVAL = 30; // ms between trail samples
+
+const DOT_SPACING = 20;
 const DOT_RADIUS = 1.5;
 const DOT_INFLUENCE = 150; // px range for cursor illumination
 
@@ -61,12 +63,20 @@ interface Dot {
   colorIndex: number; // 0 = highlight1, 1 = highlight2
 }
 
+interface TrailPoint {
+  x: number;
+  y: number;
+  time: number;
+}
+
 interface MouseState {
   x: number;
   y: number;
   active: boolean;
   lastMoveTime: number;
   spotlightOpacity: number;
+  trail: TrailPoint[];
+  lastTrailSample: number;
 }
 
 interface HeroCanvasProps {
@@ -153,10 +163,13 @@ export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
   const animFrameRef = useRef<number>(0);
   const mouseRef = useRef<MouseState>({
     x: 0, y: 0, active: false, lastMoveTime: 0, spotlightOpacity: 0,
+    trail: [], lastTrailSample: 0,
   });
+  const spotlightCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const stripPhasesRef = useRef<number[]>(
     Array.from({ length: NUM_STRIPS }, () => Math.random() * Math.PI * 2),
   );
+  const spotlightSizeRef = useRef({ width: 0, height: 0 });
   const dotsRef = useRef<Dot[]>([]);
   const sizeRef = useRef({ width: 0, height: 0 });
   const visibleRef = useRef(false);
@@ -262,13 +275,25 @@ export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    function addTrailPoint(x: number, y: number) {
+      const now = performance.now();
+      const m = mouseRef.current;
+      if (now - m.lastTrailSample >= TRAIL_SAMPLE_INTERVAL) {
+        m.trail.push({ x, y, time: now });
+        m.lastTrailSample = now;
+      }
+    }
+
     function onMouseMove(e: MouseEvent) {
       const rect = canvas!.getBoundingClientRect();
-      mouseRef.current.x = e.clientX - rect.left;
-      mouseRef.current.y = e.clientY - rect.top;
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      mouseRef.current.x = mx;
+      mouseRef.current.y = my;
       mouseRef.current.active = true;
       mouseRef.current.lastMoveTime = performance.now();
       mouseRef.current.spotlightOpacity = 1;
+      addTrailPoint(mx, my);
     }
     function onMouseLeave() {
       mouseRef.current.active = false;
@@ -276,18 +301,24 @@ export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
     function onTouchStart(e: TouchEvent) {
       const rect = canvas!.getBoundingClientRect();
       const t = e.touches[0];
-      mouseRef.current.x = t.clientX - rect.left;
-      mouseRef.current.y = t.clientY - rect.top;
+      const mx = t.clientX - rect.left;
+      const my = t.clientY - rect.top;
+      mouseRef.current.x = mx;
+      mouseRef.current.y = my;
       mouseRef.current.active = true;
       mouseRef.current.lastMoveTime = performance.now();
       mouseRef.current.spotlightOpacity = 1;
+      addTrailPoint(mx, my);
     }
     function onTouchMove(e: TouchEvent) {
       const rect = canvas!.getBoundingClientRect();
       const t = e.touches[0];
-      mouseRef.current.x = t.clientX - rect.left;
-      mouseRef.current.y = t.clientY - rect.top;
+      const mx = t.clientX - rect.left;
+      const my = t.clientY - rect.top;
+      mouseRef.current.x = mx;
+      mouseRef.current.y = my;
       mouseRef.current.lastMoveTime = performance.now();
+      addTrailPoint(mx, my);
     }
     function onTouchEnd() {
       mouseRef.current.active = false;
@@ -352,9 +383,14 @@ export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
       // Layer 2: Image strips (desaturated)
       renderStrips(ctx, time, w, h);
 
-      // Layer 3: Spotlight reveal
-      if (m.spotlightOpacity > 0.01) {
-        renderSpotlight(ctx, time, w, h, m, palette);
+      // Prune old trail points
+      const now = performance.now();
+      m.trail = m.trail.filter(p => now - p.time < TRAIL_DURATION);
+
+      // Layer 3: Spotlight reveal (current position + trail)
+      const hasTrail = m.trail.length > 0;
+      if (m.spotlightOpacity > 0.01 || hasTrail) {
+        renderSpotlight(ctx, time, w, h, m);
       }
     }
 
@@ -479,14 +515,25 @@ export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
     }
   }
 
-  // ── Layer 3: Spotlight reveal ────────────────────────────────────────────
+  // ── Layer 3: Spotlight reveal with smooth gradient + trail ───────────────
 
-  function renderSpotlight(
+  function ensureSpotlightCanvas(w: number, h: number): CanvasRenderingContext2D | null {
+    if (!spotlightCanvasRef.current ||
+        spotlightSizeRef.current.width !== w ||
+        spotlightSizeRef.current.height !== h) {
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      spotlightCanvasRef.current = c;
+      spotlightSizeRef.current = { width: w, height: h };
+    }
+    return spotlightCanvasRef.current.getContext('2d');
+  }
+
+  function drawColorStripsOnCtx(
     ctx: CanvasRenderingContext2D,
     time: number,
     w: number, h: number,
-    m: MouseState,
-    palette: typeof COLORS.light,
   ) {
     const img = imageRef.current;
     if (!img) return;
@@ -499,42 +546,84 @@ export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
     const srcStripW = img.naturalWidth / NUM_STRIPS;
     const reduced = reducedMotionRef.current;
 
-    // Draw full-color strips in concentric rings (soft edge)
-    for (let ring = SPOTLIGHT_RINGS - 1; ring >= 0; ring--) {
-      const ringRadius = SPOTLIGHT_RADIUS * ((ring + 1) / SPOTLIGHT_RINGS);
-      const ringAlpha = m.spotlightOpacity * (1 - ring / SPOTLIGHT_RINGS);
+    for (let i = 0; i < NUM_STRIPS; i++) {
+      const phase = stripPhasesRef.current[i];
+      const yOff = reduced
+        ? 0
+        : Math.sin(time * (2 * Math.PI / STRIP_PERIOD) + phase) * STRIP_AMPLITUDE;
 
-      if (ringAlpha < 0.01) continue;
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(m.x, m.y, ringRadius, 0, Math.PI * 2);
-      ctx.clip();
-      ctx.globalAlpha = ringAlpha;
-
-      // Draw full-color strips at same positions as Layer 2
-      for (let i = 0; i < NUM_STRIPS; i++) {
-        const phase = stripPhasesRef.current[i];
-        const yOff = reduced
-          ? 0
-          : Math.sin(time * (2 * Math.PI / STRIP_PERIOD) + phase) * STRIP_AMPLITUDE;
-
-        const destX = drawX + i * (stripW + STRIP_GAP);
-
-        // Only draw strips that could intersect the ring
-        if (destX + stripW < m.x - ringRadius || destX > m.x + ringRadius) continue;
-
-        ctx.drawImage(
-          img,
-          Math.round(i * srcStripW), 0,
-          Math.round(srcStripW), img.naturalHeight,
-          destX, drawY + yOff,
-          stripW, drawH,
-        );
-      }
-
-      ctx.restore();
+      ctx.drawImage(
+        img,
+        Math.round(i * srcStripW), 0,
+        Math.round(srcStripW), img.naturalHeight,
+        drawX + i * (stripW + STRIP_GAP), drawY + yOff,
+        stripW, drawH,
+      );
     }
+  }
+
+  function renderSpotlight(
+    ctx: CanvasRenderingContext2D,
+    time: number,
+    w: number, h: number,
+    m: MouseState,
+  ) {
+    const img = imageRef.current;
+    if (!img) return;
+
+    // Get or create temp canvas for compositing
+    const tmpCtx = ensureSpotlightCanvas(w, h);
+    if (!tmpCtx) return;
+    const tmpCanvas = spotlightCanvasRef.current!;
+
+    // Clear temp canvas
+    tmpCtx.clearRect(0, 0, w, h);
+
+    // Draw full-color strips onto temp canvas
+    drawColorStripsOnCtx(tmpCtx, time, w, h);
+
+    // Build gradient mask: use 'destination-in' to mask strips with radial gradients
+    tmpCtx.globalCompositeOperation = 'destination-in';
+
+    const now = performance.now();
+
+    // Draw trail point gradients (older = more transparent)
+    for (let i = 0; i < m.trail.length; i++) {
+      const p = m.trail[i];
+      const age = now - p.time;
+      const life = 1 - age / TRAIL_DURATION; // 1 = fresh, 0 = about to expire
+      if (life <= 0) continue;
+
+      const alpha = life * life * 0.7; // ease-out fade, max 0.7 for trail
+      const radius = SPOTLIGHT_RADIUS * (0.6 + 0.4 * life); // slightly shrink as it ages
+
+      const grad = tmpCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, radius);
+      grad.addColorStop(0, `rgba(255,255,255,${alpha})`);
+      grad.addColorStop(0.6, `rgba(255,255,255,${alpha * 0.4})`);
+      grad.addColorStop(1, 'rgba(255,255,255,0)');
+
+      tmpCtx.fillStyle = grad;
+      tmpCtx.fillRect(p.x - radius, p.y - radius, radius * 2, radius * 2);
+    }
+
+    // Draw current cursor spotlight (brightest, on top)
+    if (m.spotlightOpacity > 0.01) {
+      const grad = tmpCtx.createRadialGradient(m.x, m.y, 0, m.x, m.y, SPOTLIGHT_RADIUS);
+      grad.addColorStop(0, `rgba(255,255,255,${m.spotlightOpacity})`);
+      grad.addColorStop(0.5, `rgba(255,255,255,${m.spotlightOpacity * 0.5})`);
+      grad.addColorStop(0.8, `rgba(255,255,255,${m.spotlightOpacity * 0.15})`);
+      grad.addColorStop(1, 'rgba(255,255,255,0)');
+
+      tmpCtx.fillStyle = grad;
+      tmpCtx.fillRect(m.x - SPOTLIGHT_RADIUS, m.y - SPOTLIGHT_RADIUS,
+        SPOTLIGHT_RADIUS * 2, SPOTLIGHT_RADIUS * 2);
+    }
+
+    // Reset composite mode
+    tmpCtx.globalCompositeOperation = 'source-over';
+
+    // Draw the masked result onto the main canvas
+    ctx.drawImage(tmpCanvas, 0, 0);
   }
 
   // ── Render ───────────────────────────────────────────────────────────────
