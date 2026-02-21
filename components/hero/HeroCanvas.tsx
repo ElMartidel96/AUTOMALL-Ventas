@@ -82,6 +82,8 @@ interface MouseState {
 interface HeroCanvasProps {
   imageSrc: string;
   className?: string;
+  /** Render as a fixed full-viewport background (events tracked on window) */
+  fixed?: boolean;
 }
 
 // ── Helper: Create desaturated image on offscreen canvas ───────────────────────
@@ -147,7 +149,7 @@ function createDotGrid(w: number, h: number): Dot[] {
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
+export default function HeroCanvas({ imageSrc, className, fixed }: HeroCanvasProps) {
   const [mounted, setMounted] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -176,6 +178,7 @@ export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
   const visibleRef = useRef(false);
   const resizeTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const reducedMotionRef = useRef(false);
+  const fixedRef = useRef(!!fixed);
   const isDarkRef = useRef(isDark);
 
   // Keep isDarkRef in sync
@@ -261,6 +264,10 @@ export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
 
   useEffect(() => {
     if (!mounted || !containerRef.current) return;
+    if (fixedRef.current) {
+      visibleRef.current = true;
+      return;
+    }
     const observer = new IntersectionObserver(
       ([entry]) => { visibleRef.current = entry.isIntersecting; },
       { threshold: 0.05 },
@@ -275,6 +282,7 @@ export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
     if (!mounted) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const isFixed = fixedRef.current;
 
     function addTrailPoint(x: number, y: number) {
       const now = performance.now();
@@ -285,10 +293,16 @@ export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
       }
     }
 
-    function onMouseMove(e: MouseEvent) {
+    // In fixed mode clientX/Y map directly to canvas coords (fills viewport).
+    // In normal mode we subtract the canvas bounding rect offset.
+    function coords(clientX: number, clientY: number): [number, number] {
+      if (isFixed) return [clientX, clientY];
       const rect = canvas!.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
+      return [clientX - rect.left, clientY - rect.top];
+    }
+
+    function onMouseMove(e: MouseEvent) {
+      const [mx, my] = coords(e.clientX, e.clientY);
       mouseRef.current.x = mx;
       mouseRef.current.y = my;
       mouseRef.current.active = true;
@@ -298,16 +312,13 @@ export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
     }
     function onMouseLeave() {
       const m = mouseRef.current;
-      // Final trail point so this position stays illuminated for TRAIL_DURATION
       m.trail.push({ x: m.x, y: m.y, time: performance.now() });
       m.active = false;
-      m.lastMoveTime = performance.now(); // Start fade from moment of leave
+      m.lastMoveTime = performance.now();
     }
     function onTouchStart(e: TouchEvent) {
-      const rect = canvas!.getBoundingClientRect();
       const t = e.touches[0];
-      const mx = t.clientX - rect.left;
-      const my = t.clientY - rect.top;
+      const [mx, my] = coords(t.clientX, t.clientY);
       mouseRef.current.x = mx;
       mouseRef.current.y = my;
       mouseRef.current.active = true;
@@ -316,10 +327,8 @@ export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
       addTrailPoint(mx, my);
     }
     function onTouchMove(e: TouchEvent) {
-      const rect = canvas!.getBoundingClientRect();
       const t = e.touches[0];
-      const mx = t.clientX - rect.left;
-      const my = t.clientY - rect.top;
+      const [mx, my] = coords(t.clientX, t.clientY);
       mouseRef.current.x = mx;
       mouseRef.current.y = my;
       mouseRef.current.lastMoveTime = performance.now();
@@ -327,25 +336,28 @@ export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
     }
     function onTouchEnd() {
       const m = mouseRef.current;
-      // Final trail point so this position stays illuminated for TRAIL_DURATION
       m.trail.push({ x: m.x, y: m.y, time: performance.now() });
       m.active = false;
-      // Faster fade on touch (200ms before delay triggers)
       m.lastMoveTime = performance.now() - SPOTLIGHT_FADE_DELAY + 200;
     }
 
-    canvas.addEventListener('mousemove', onMouseMove);
-    canvas.addEventListener('mouseleave', onMouseLeave);
-    canvas.addEventListener('touchstart', onTouchStart, { passive: true });
-    canvas.addEventListener('touchmove', onTouchMove, { passive: true });
-    canvas.addEventListener('touchend', onTouchEnd, { passive: true });
+    // Fixed: listen on window so spotlight works even over page content.
+    // Normal: listen directly on the canvas element.
+    const moveTarget: EventTarget = isFixed ? window : canvas;
+    const leaveTarget: EventTarget = isFixed ? document.documentElement : canvas;
+
+    moveTarget.addEventListener('mousemove', onMouseMove as EventListener);
+    leaveTarget.addEventListener('mouseleave', onMouseLeave as EventListener);
+    moveTarget.addEventListener('touchstart', onTouchStart as EventListener, { passive: true });
+    moveTarget.addEventListener('touchmove', onTouchMove as EventListener, { passive: true });
+    moveTarget.addEventListener('touchend', onTouchEnd as EventListener, { passive: true });
 
     return () => {
-      canvas.removeEventListener('mousemove', onMouseMove);
-      canvas.removeEventListener('mouseleave', onMouseLeave);
-      canvas.removeEventListener('touchstart', onTouchStart);
-      canvas.removeEventListener('touchmove', onTouchMove);
-      canvas.removeEventListener('touchend', onTouchEnd);
+      moveTarget.removeEventListener('mousemove', onMouseMove as EventListener);
+      leaveTarget.removeEventListener('mouseleave', onMouseLeave as EventListener);
+      moveTarget.removeEventListener('touchstart', onTouchStart as EventListener);
+      moveTarget.removeEventListener('touchmove', onTouchMove as EventListener);
+      moveTarget.removeEventListener('touchend', onTouchEnd as EventListener);
     };
   }, [mounted]);
 
@@ -654,18 +666,36 @@ export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
 
   // ── Render ───────────────────────────────────────────────────────────────
 
+  const isFixed = fixedRef.current;
+
   if (!mounted) {
-    return <div className={`w-full h-full ${className || ''}`} />;
+    return (
+      <div
+        className={
+          isFixed
+            ? `fixed inset-0 w-screen h-screen pointer-events-none ${className || ''}`
+            : `w-full h-full ${className || ''}`
+        }
+      />
+    );
   }
 
   return (
-    <div ref={containerRef} className={`relative w-full h-full ${className || ''}`}>
+    <div
+      ref={containerRef}
+      className={
+        isFixed
+          ? `fixed inset-0 w-screen h-screen pointer-events-none ${className || ''}`
+          : `relative w-full h-full ${className || ''}`
+      }
+      style={isFixed ? { zIndex: 0 } : undefined}
+    >
       <canvas
         ref={canvasRef}
         className="w-full h-full"
         style={{ display: isLoaded ? 'block' : 'none' }}
       />
-      {hasError && (
+      {hasError && !isFixed && (
         <div className="w-full h-full flex items-center justify-center opacity-20">
           <Image
             src={imageSrc}

@@ -68,50 +68,43 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen theme-gradient-bg">
-      <Navbar />
-      <NavbarSpacer />
+    <>
+      {/* Fixed canvas background — covers entire viewport, spotlight follows cursor */}
+      <HeroCanvas imageSrc="/logo-automall.png" fixed />
 
-      {/* ════════════════════════════════════════════════════════════
-         INTERACTIVE HERO — Canvas-based logo reveal with spotlight
-         ════════════════════════════════════════════════════════════ */}
-      <section className="relative min-h-screen flex items-center overflow-hidden px-4 py-8 md:py-0">
-        {/* Ambient background blobs */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-10 w-64 h-64 bg-am-blue/5 dark:bg-am-blue/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-20 right-20 w-80 h-80 bg-am-orange/5 dark:bg-am-orange/10 rounded-full blur-3xl" />
-        </div>
+      <div className="min-h-screen relative z-10">
+        <Navbar />
+        <NavbarSpacer />
 
-        <div className="container mx-auto max-w-7xl flex flex-col md:flex-row items-center gap-8 md:gap-4 relative z-10">
-          {/* Left side: Text (~30%) */}
-          <div className={`w-full md:w-[30%] text-center md:text-left transition-all duration-1000 ${
-            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-          }`}>
-            <p className="text-lg md:text-xl text-gray-500 dark:text-gray-400 mb-2 font-light">
-              {t('hero.welcome')}
-            </p>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
-              <span className="text-holographic">Autos MALL</span>
-            </h1>
-            <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-md mx-auto md:mx-0 leading-relaxed">
-              {t('interactiveHero.tagline')}
-            </p>
-            <p className="mt-6 text-sm text-gray-400 dark:text-gray-500 hidden md:block">
-              {t('interactiveHero.explore')}
-            </p>
-            <p className="mt-4 text-sm text-gray-400 dark:text-gray-500 md:hidden">
-              {t('interactiveHero.exploreMobile')}
-            </p>
+        {/* ════════════════════════════════════════════════════════════
+           HERO TEXT — Overlays the fixed canvas background
+           ════════════════════════════════════════════════════════════ */}
+        <section className="relative min-h-screen flex items-center px-4 py-8 md:py-0">
+          <div className="container mx-auto max-w-7xl">
+            <div className={`w-full md:w-[40%] text-center md:text-left transition-all duration-1000 ${
+              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`}>
+              <p className="text-lg md:text-xl text-gray-500 dark:text-gray-400 mb-2 font-light">
+                {t('hero.welcome')}
+              </p>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
+                <span className="text-holographic">Autos MALL</span>
+              </h1>
+              <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-md mx-auto md:mx-0 leading-relaxed">
+                {t('interactiveHero.tagline')}
+              </p>
+              <p className="mt-6 text-sm text-gray-400 dark:text-gray-500 hidden md:block">
+                {t('interactiveHero.explore')}
+              </p>
+              <p className="mt-4 text-sm text-gray-400 dark:text-gray-500 md:hidden">
+                {t('interactiveHero.exploreMobile')}
+              </p>
+            </div>
           </div>
+        </section>
 
-          {/* Right side: Canvas (~70%) */}
-          <div className={`w-[90%] md:w-[70%] aspect-[16/9] transition-all duration-1000 delay-300 ${
-            isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
-          }`}>
-            <HeroCanvas imageSrc="/logo-automall.png" />
-          </div>
-        </div>
-      </section>
+      {/* ══ Scrolling content — solid background covers canvas as user scrolls ══ */}
+      <div className="theme-gradient-bg">
 
       {/* ════════════════════════════════════════════════════════════
          FEATURED VEHICLES — Carousel of latest active inventory
@@ -404,6 +397,8 @@ export default function Home() {
       </section>
 
       <Footer />
+      </div>
     </div>
+    </>
   );
 }
