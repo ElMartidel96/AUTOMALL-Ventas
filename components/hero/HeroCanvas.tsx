@@ -21,7 +21,7 @@ const STRIP_GAP = 0.3; // px between strips
 const STRIP_PERIOD = 5; // seconds for full sine cycle
 const STRIP_AMPLITUDE = 3; // max px offset
 
-const SPOTLIGHT_RADIUS = 140;
+const SPOTLIGHT_RADIUS = 70;
 const SPOTLIGHT_FADE_DELAY = 1000; // ms before fade starts
 const SPOTLIGHT_FADE_DURATION = 500; // ms to fully fade
 
@@ -297,7 +297,11 @@ export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
       addTrailPoint(mx, my);
     }
     function onMouseLeave() {
-      mouseRef.current.active = false;
+      const m = mouseRef.current;
+      // Final trail point so this position stays illuminated for TRAIL_DURATION
+      m.trail.push({ x: m.x, y: m.y, time: performance.now() });
+      m.active = false;
+      m.lastMoveTime = performance.now(); // Start fade from moment of leave
     }
     function onTouchStart(e: TouchEvent) {
       const rect = canvas!.getBoundingClientRect();
@@ -322,9 +326,12 @@ export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
       addTrailPoint(mx, my);
     }
     function onTouchEnd() {
-      mouseRef.current.active = false;
-      // Trigger faster fade on touch release
-      mouseRef.current.lastMoveTime = performance.now() - SPOTLIGHT_FADE_DELAY + 200;
+      const m = mouseRef.current;
+      // Final trail point so this position stays illuminated for TRAIL_DURATION
+      m.trail.push({ x: m.x, y: m.y, time: performance.now() });
+      m.active = false;
+      // Faster fade on touch (200ms before delay triggers)
+      m.lastMoveTime = performance.now() - SPOTLIGHT_FADE_DELAY + 200;
     }
 
     canvas.addEventListener('mousemove', onMouseMove);
@@ -363,15 +370,19 @@ export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
 
       // Update spotlight opacity
       const m = mouseRef.current;
-      const elapsed = performance.now() - m.lastMoveTime;
-      if (elapsed > SPOTLIGHT_FADE_DELAY) {
-        const fadeProgress = Math.min(
-          (elapsed - SPOTLIGHT_FADE_DELAY) / SPOTLIGHT_FADE_DURATION,
-          1,
-        );
-        m.spotlightOpacity = Math.max(0, 1 - fadeProgress);
-      } else if (m.active) {
+      if (m.active) {
+        // Cursor is over canvas — always full brightness, even when stationary
         m.spotlightOpacity = 1;
+      } else {
+        // Cursor has left — fade after delay
+        const elapsed = performance.now() - m.lastMoveTime;
+        if (elapsed > SPOTLIGHT_FADE_DELAY) {
+          const fadeProgress = Math.min(
+            (elapsed - SPOTLIGHT_FADE_DELAY) / SPOTLIGHT_FADE_DURATION,
+            1,
+          );
+          m.spotlightOpacity = Math.max(0, 1 - fadeProgress);
+        }
       }
 
       const time = timestamp / 1000;
