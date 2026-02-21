@@ -498,8 +498,19 @@ export default function HeroCanvas({ imageSrc, className, fixed }: HeroCanvasPro
       drawW = drawH * imgAspect;
     }
 
-    const drawX = (areaW - drawW) / 2;
-    const drawY = (areaH - drawH) / 2;
+    let drawX = (areaW - drawW) / 2;
+    let drawY = (areaH - drawH) / 2;
+
+    // In fixed (full-viewport) mode, nudge the image per breakpoint:
+    // Desktop: push down to clear the navbar area
+    // Mobile: push left to eliminate right-side crop / left-side gap
+    if (fixedRef.current) {
+      if (w < 768) {
+        drawX -= 120;
+      } else {
+        drawY += 180;
+      }
+    }
 
     return { drawX, drawY, drawW, drawH };
   }
