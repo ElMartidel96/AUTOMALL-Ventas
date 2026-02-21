@@ -63,6 +63,54 @@ const DEFAULT_DATA: VehicleFormData = {
 };
 
 // =====================================================
+// Extracted field components (must be OUTSIDE VehicleForm to avoid remount on every render)
+// =====================================================
+
+function SelectField({ label, field, options, placeholder, value, onChange, error, t }: {
+  label: string; field: string; options: readonly string[] | string[];
+  placeholder?: string; value: string; onChange: (v: string) => void; error?: string;
+  t: { has: (key: never) => boolean; (key: never): string };
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{label}</label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-3 py-2 bg-white/50 dark:bg-am-dark/50 border border-gray-200 dark:border-am-blue/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-am-orange/50"
+      >
+        <option value="">{placeholder || t('form.select' as never)}</option>
+        {options.map(opt => (
+          <option key={opt} value={opt}>{typeof opt === 'string' && t.has(`specs.${field}.${opt}` as never) ? t(`specs.${field}.${opt}` as never) : opt}</option>
+        ))}
+      </select>
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+    </div>
+  );
+}
+
+function InputField({ label, field, type = 'text', placeholder, value, onChange, error, ...props }: {
+  label: string; field: string; type?: string; placeholder?: string;
+  value: string | number; onChange: (v: string | number) => void; error?: string;
+  min?: number; max?: number; step?: number;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{label}</label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(type === 'number' ? Number(e.target.value) : e.target.value)}
+        placeholder={placeholder}
+        className="w-full px-3 py-2 bg-white/50 dark:bg-am-dark/50 border border-gray-200 dark:border-am-blue/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-am-orange/50"
+        {...props}
+      />
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+    </div>
+  );
+}
+
+// =====================================================
 // Component
 // =====================================================
 
@@ -210,10 +258,14 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
   const goNext = async () => {
     if (!validateStep()) return;
 
-    // Auto-save on step 1 (creates vehicle) and step 2
+    // Try auto-save but don't block navigation if it fails (e.g. Supabase not configured)
     if (currentStep <= 1) {
-      const saved = await saveDraft();
-      if (!saved && currentStep === 0) return; // Must save on step 1
+      try {
+        await saveDraft();
+      } catch {
+        // Save failed — allow advancing anyway so user can fill the full form
+        console.warn('[VehicleForm] Auto-save failed, continuing to next step');
+      }
     }
 
     setCurrentStep(prev => Math.min(prev + 1, STEPS.length - 1));
@@ -259,11 +311,16 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
       }
 
       // Change status to active
-      await fetch(`/api/inventory/${id}/status`, {
+      const statusRes = await fetch(`/api/inventory/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ seller: address, status: 'active' }),
       });
+
+      if (!statusRes.ok) {
+        const errBody = await statusRes.json().catch(() => ({}));
+        console.error('[VehicleForm] Status change failed:', errBody);
+      }
 
       onSuccess(id);
     } catch (err) {
@@ -289,46 +346,23 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
 
   const isSaving = createVehicle.isPending || updateVehicle.isPending || isPublishing;
 
-  // ===================================================
-  // Select helper
-  // ===================================================
-  const SelectField = ({ label, field, options, placeholder }: {
-    label: string; field: keyof VehicleFormData; options: readonly string[] | string[];
-    placeholder?: string;
-  }) => (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{label}</label>
-      <select
-        value={data[field] as string}
-        onChange={(e) => setField(field, e.target.value as never)}
-        className="w-full px-3 py-2 bg-white/50 dark:bg-am-dark/50 border border-gray-200 dark:border-am-blue/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-am-orange/50"
-      >
-        <option value="">{placeholder || t('form.select')}</option>
-        {options.map(opt => (
-          <option key={opt} value={opt}>{typeof opt === 'string' && t.has(`specs.${field}.${opt}` as never) ? t(`specs.${field}.${opt}` as never) : opt}</option>
-        ))}
-      </select>
-      {errors[field] && <p className="text-xs text-red-500 mt-1">{errors[field]}</p>}
-    </div>
-  );
+  // Helper to create props for SelectField
+  const selectProps = (field: keyof VehicleFormData) => ({
+    field,
+    value: data[field] as string,
+    onChange: (v: string) => setField(field, v as never),
+    error: errors[field],
+    t: t as unknown as { has: (key: never) => boolean; (key: never): string },
+  });
 
-  const InputField = ({ label, field, type = 'text', placeholder, ...props }: {
-    label: string; field: keyof VehicleFormData; type?: string; placeholder?: string;
-    min?: number; max?: number; step?: number;
-  }) => (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{label}</label>
-      <input
-        type={type}
-        value={data[field] as string | number}
-        onChange={(e) => setField(field, type === 'number' ? Number(e.target.value) : e.target.value as never)}
-        placeholder={placeholder}
-        className="w-full px-3 py-2 bg-white/50 dark:bg-am-dark/50 border border-gray-200 dark:border-am-blue/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-am-orange/50"
-        {...props}
-      />
-      {errors[field] && <p className="text-xs text-red-500 mt-1">{errors[field]}</p>}
-    </div>
-  );
+  // Helper to create props for InputField
+  const inputProps = (field: keyof VehicleFormData, type: string = 'text') => ({
+    field,
+    type,
+    value: data[field] as string | number,
+    onChange: (v: string | number) => setField(field, v as never),
+    error: errors[field],
+  });
 
   // ===================================================
   // Render steps
@@ -375,10 +409,10 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{t('steps.manualEntry')}</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <SelectField label={t('form.brand')} field="brand" options={POPULAR_BRANDS} />
-                <InputField label={t('form.model')} field="model" placeholder="Camry, F-150, Civic..." />
-                <SelectField label={t('form.year')} field="year" options={getYearOptions().map(String)} />
-                <InputField label={t('form.trim')} field="trim" placeholder="SE, XLE, Limited..." />
+                <SelectField label={t('form.brand')} {...selectProps('brand')} options={POPULAR_BRANDS} />
+                <InputField label={t('form.model')} {...inputProps('model')} placeholder="Camry, F-150, Civic..." />
+                <SelectField label={t('form.year')} {...selectProps('year')} options={getYearOptions().map(String)} />
+                <InputField label={t('form.trim')} {...inputProps('trim')} placeholder="SE, XLE, Limited..." />
               </div>
             </div>
           </div>
@@ -389,16 +423,16 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('steps.specsTitle')}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <InputField label={t('form.mileage')} field="mileage" type="number" min={0} placeholder="45000" />
-              <SelectField label={t('form.condition')} field="condition" options={['new', 'like_new', 'excellent', 'good', 'fair']} />
-              <SelectField label={t('form.transmission')} field="transmission" options={['automatic', 'manual', 'cvt']} />
-              <SelectField label={t('form.fuelType')} field="fuel_type" options={['gasoline', 'diesel', 'electric', 'hybrid', 'plugin_hybrid']} />
-              <SelectField label={t('form.drivetrain')} field="drivetrain" options={['fwd', 'rwd', 'awd', '4wd']} />
-              <SelectField label={t('form.bodyType')} field="body_type" options={BODY_TYPES} />
-              <SelectField label={t('form.exteriorColor')} field="exterior_color" options={EXTERIOR_COLORS} />
-              <SelectField label={t('form.interiorColor')} field="interior_color" options={INTERIOR_COLORS} />
-              <InputField label={t('form.engine')} field="engine" placeholder="2.5L 4-Cylinder" />
-              <InputField label={t('form.doors')} field="doors" type="number" min={1} max={6} />
+              <InputField label={t('form.mileage')} {...inputProps('mileage', 'number')} min={0} placeholder="45000" />
+              <SelectField label={t('form.condition')} {...selectProps('condition')} options={['new', 'like_new', 'excellent', 'good', 'fair']} />
+              <SelectField label={t('form.transmission')} {...selectProps('transmission')} options={['automatic', 'manual', 'cvt']} />
+              <SelectField label={t('form.fuelType')} {...selectProps('fuel_type')} options={['gasoline', 'diesel', 'electric', 'hybrid', 'plugin_hybrid']} />
+              <SelectField label={t('form.drivetrain')} {...selectProps('drivetrain')} options={['fwd', 'rwd', 'awd', '4wd']} />
+              <SelectField label={t('form.bodyType')} {...selectProps('body_type')} options={BODY_TYPES} />
+              <SelectField label={t('form.exteriorColor')} {...selectProps('exterior_color')} options={EXTERIOR_COLORS} />
+              <SelectField label={t('form.interiorColor')} {...selectProps('interior_color')} options={INTERIOR_COLORS} />
+              <InputField label={t('form.engine')} {...inputProps('engine')} placeholder="2.5L 4-Cylinder" />
+              <InputField label={t('form.doors')} {...inputProps('doors', 'number')} min={1} max={6} />
             </div>
             {/* Features checkboxes */}
             <div>
