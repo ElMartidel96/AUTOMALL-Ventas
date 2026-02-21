@@ -579,11 +579,9 @@ export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
     // Clear temp canvas
     tmpCtx.clearRect(0, 0, w, h);
 
-    // Draw full-color strips onto temp canvas
-    drawColorStripsOnCtx(tmpCtx, time, w, h);
-
-    // Build gradient mask: use 'destination-in' to mask strips with radial gradients
-    tmpCtx.globalCompositeOperation = 'destination-in';
+    // ── Step 1: Build gradient mask (source-over = accumulative) ──────
+    // All gradients blend additively so overlapping areas get BRIGHTER,
+    // not reduced. This is the key fix: gradients FIRST, strips SECOND.
 
     const now = performance.now();
 
@@ -594,24 +592,26 @@ export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
       const life = 1 - age / TRAIL_DURATION; // 1 = fresh, 0 = about to expire
       if (life <= 0) continue;
 
-      const alpha = life * life * 0.7; // ease-out fade, max 0.7 for trail
-      const radius = SPOTLIGHT_RADIUS * (0.6 + 0.4 * life); // slightly shrink as it ages
+      const alpha = life * life * 0.7; // quadratic ease-out, max 0.7 for trail
+      const radius = SPOTLIGHT_RADIUS * (0.6 + 0.4 * life); // shrinks as it ages
 
       const grad = tmpCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, radius);
       grad.addColorStop(0, `rgba(255,255,255,${alpha})`);
-      grad.addColorStop(0.6, `rgba(255,255,255,${alpha * 0.4})`);
+      grad.addColorStop(0.5, `rgba(255,255,255,${alpha * 0.4})`);
+      grad.addColorStop(0.85, `rgba(255,255,255,${alpha * 0.08})`);
       grad.addColorStop(1, 'rgba(255,255,255,0)');
 
       tmpCtx.fillStyle = grad;
       tmpCtx.fillRect(p.x - radius, p.y - radius, radius * 2, radius * 2);
     }
 
-    // Draw current cursor spotlight (brightest, on top)
+    // Draw current cursor spotlight (brightest, on top of trail)
     if (m.spotlightOpacity > 0.01) {
       const grad = tmpCtx.createRadialGradient(m.x, m.y, 0, m.x, m.y, SPOTLIGHT_RADIUS);
       grad.addColorStop(0, `rgba(255,255,255,${m.spotlightOpacity})`);
-      grad.addColorStop(0.5, `rgba(255,255,255,${m.spotlightOpacity * 0.5})`);
-      grad.addColorStop(0.8, `rgba(255,255,255,${m.spotlightOpacity * 0.15})`);
+      grad.addColorStop(0.4, `rgba(255,255,255,${m.spotlightOpacity * 0.55})`);
+      grad.addColorStop(0.7, `rgba(255,255,255,${m.spotlightOpacity * 0.15})`);
+      grad.addColorStop(0.9, `rgba(255,255,255,${m.spotlightOpacity * 0.03})`);
       grad.addColorStop(1, 'rgba(255,255,255,0)');
 
       tmpCtx.fillStyle = grad;
@@ -619,10 +619,14 @@ export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
         SPOTLIGHT_RADIUS * 2, SPOTLIGHT_RADIUS * 2);
     }
 
-    // Reset composite mode
-    tmpCtx.globalCompositeOperation = 'source-over';
+    // ── Step 2: Draw strips masked by gradients (source-in) ──────────
+    // source-in: keep new pixels (strips) only where existing pixels
+    // (gradient mask) have opacity. Single pass = correct accumulation.
+    tmpCtx.globalCompositeOperation = 'source-in';
+    drawColorStripsOnCtx(tmpCtx, time, w, h);
 
-    // Draw the masked result onto the main canvas
+    // ── Step 3: Composite result onto main canvas ────────────────────
+    tmpCtx.globalCompositeOperation = 'source-over';
     ctx.drawImage(tmpCanvas, 0, 0);
   }
 

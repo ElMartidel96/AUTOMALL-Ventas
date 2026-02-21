@@ -23,10 +23,13 @@ import { Footer } from '@/components/layout/Footer';
 import HeroCanvas from '@/components/hero/HeroCanvas';
 import { useAccount } from '@/lib/thirdweb';
 import {
+  Search,
   Shield,
   DollarSign,
   Heart,
   Star,
+  MapPin,
+  BadgeCheck,
   CreditCard,
   Phone,
   MessageCircle,
@@ -54,6 +57,9 @@ const brandLogos = [
 
 export default function Home() {
   const [isVisible, setIsVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedMake, setSelectedMake] = useState('');
+  const [selectedPrice, setSelectedPrice] = useState('');
   const { isConnected } = useAccount();
   const t = useTranslations('dealer');
 
@@ -104,6 +110,79 @@ export default function Home() {
             isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
           }`}>
             <HeroCanvas imageSrc="/logo-automall.png" />
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════
+         SEARCH BAR — Find your perfect car
+         ════════════════════════════════════════════════════════════ */}
+      <section className="relative py-10 md:py-14 px-4">
+        <div className="container mx-auto max-w-3xl">
+          <div className={`transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
+            <div className="glass-crystal-enhanced rounded-2xl p-4 md:p-6">
+              <div className="flex flex-col md:flex-row gap-3">
+                {/* Text search */}
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={t('hero.searchPlaceholder')}
+                    className="w-full pl-10 pr-4 py-3.5 rounded-xl bg-white dark:bg-am-dark/80 border border-gray-200 dark:border-am-blue/30 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-am-orange/50 focus:border-am-orange transition-all text-base"
+                  />
+                </div>
+
+                {/* Make dropdown */}
+                <select
+                  value={selectedMake}
+                  onChange={(e) => setSelectedMake(e.target.value)}
+                  className="px-4 py-3.5 rounded-xl bg-white dark:bg-am-dark/80 border border-gray-200 dark:border-am-blue/30 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-am-orange/50 focus:border-am-orange transition-all text-sm md:w-40"
+                >
+                  <option value="">{t('search.allMakes')}</option>
+                  {brandLogos.map((b) => (
+                    <option key={b.name} value={b.name}>{b.name}</option>
+                  ))}
+                </select>
+
+                {/* Price dropdown */}
+                <select
+                  value={selectedPrice}
+                  onChange={(e) => setSelectedPrice(e.target.value)}
+                  className="px-4 py-3.5 rounded-xl bg-white dark:bg-am-dark/80 border border-gray-200 dark:border-am-blue/30 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-am-orange/50 focus:border-am-orange transition-all text-sm md:w-40"
+                >
+                  <option value="">{t('search.anyPrice')}</option>
+                  <option value="0-15000">{t('search.under15k')}</option>
+                  <option value="15000-25000">{t('search.15to25k')}</option>
+                  <option value="25000-40000">{t('search.25to40k')}</option>
+                  <option value="40000+">{t('search.over40k')}</option>
+                </select>
+
+                {/* Search button */}
+                <Link
+                  href="/inventory"
+                  className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-am-orange to-am-orange-light hover:from-am-orange-dark hover:to-am-orange text-white px-6 py-3.5 rounded-xl font-bold text-base shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 whitespace-nowrap"
+                >
+                  <Search className="w-5 h-5" />
+                  {t('hero.searchButton')}
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Trust indicators */}
+          <div className={`flex flex-wrap justify-center gap-6 mt-6 transition-all duration-1000 delay-200 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+            {[
+              { icon: BadgeCheck, text: t('hero.trust1'), color: 'text-am-green' },
+              { icon: CreditCard, text: t('hero.trust2'), color: 'text-am-blue dark:text-am-blue-light' },
+              { icon: MapPin, text: t('hero.trust3'), color: 'text-am-orange' },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                <item.icon className={`w-4 h-4 ${item.color}`} />
+                <span>{item.text}</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>
