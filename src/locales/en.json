@@ -2336,6 +2336,11 @@
       "trust2": "Financing Available",
       "trust3": "Houston, TX"
     },
+    "interactiveHero": {
+      "tagline": "Your Perfect Car. No Pressure. No Hassle.",
+      "explore": "Explore with your cursor",
+      "exploreMobile": "Touch to reveal"
+    },
     "search": {
       "allMakes": "All Makes",
       "allModels": "All Models",
