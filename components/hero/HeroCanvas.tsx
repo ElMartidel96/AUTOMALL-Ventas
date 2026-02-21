@@ -166,6 +166,7 @@ export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
     trail: [], lastTrailSample: 0,
   });
   const spotlightCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const maskCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const stripPhasesRef = useRef<number[]>(
     Array.from({ length: NUM_STRIPS }, () => Math.random() * Math.PI * 2),
   );
@@ -517,17 +518,24 @@ export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
 
   // ── Layer 3: Spotlight reveal with smooth gradient + trail ───────────────
 
-  function ensureSpotlightCanvas(w: number, h: number): CanvasRenderingContext2D | null {
+  function ensureTempCanvases(w: number, h: number) {
     if (!spotlightCanvasRef.current ||
         spotlightSizeRef.current.width !== w ||
         spotlightSizeRef.current.height !== h) {
-      const c = document.createElement('canvas');
-      c.width = w;
-      c.height = h;
-      spotlightCanvasRef.current = c;
+      const c1 = document.createElement('canvas');
+      c1.width = w;
+      c1.height = h;
+      spotlightCanvasRef.current = c1;
+      const c2 = document.createElement('canvas');
+      c2.width = w;
+      c2.height = h;
+      maskCanvasRef.current = c2;
       spotlightSizeRef.current = { width: w, height: h };
     }
-    return spotlightCanvasRef.current.getContext('2d');
+    return {
+      stripCtx: spotlightCanvasRef.current.getContext('2d'),
+      maskCtx: maskCanvasRef.current!.getContext('2d'),
+    };
   }
 
   function drawColorStripsOnCtx(
@@ -571,63 +579,66 @@ export default function HeroCanvas({ imageSrc, className }: HeroCanvasProps) {
     const img = imageRef.current;
     if (!img) return;
 
-    // Get or create temp canvas for compositing
-    const tmpCtx = ensureSpotlightCanvas(w, h);
-    if (!tmpCtx) return;
-    const tmpCanvas = spotlightCanvasRef.current!;
+    const { stripCtx, maskCtx } = ensureTempCanvases(w, h);
+    if (!stripCtx || !maskCtx) return;
+    const stripCanvas = spotlightCanvasRef.current!;
+    const maskCanvas = maskCanvasRef.current!;
 
-    // Clear temp canvas
-    tmpCtx.clearRect(0, 0, w, h);
+    // ── Step 1: Draw ALL color strips on strip canvas (source-over) ──
+    stripCtx.globalCompositeOperation = 'source-over';
+    stripCtx.clearRect(0, 0, w, h);
+    drawColorStripsOnCtx(stripCtx, time, w, h);
 
-    // ── Step 1: Build gradient mask (source-over = accumulative) ──────
-    // All gradients blend additively so overlapping areas get BRIGHTER,
-    // not reduced. This is the key fix: gradients FIRST, strips SECOND.
+    // ── Step 2: Build gradient mask on mask canvas (source-over) ─────
+    // All gradients accumulate additively on a separate canvas.
+    maskCtx.globalCompositeOperation = 'source-over';
+    maskCtx.clearRect(0, 0, w, h);
 
     const now = performance.now();
 
-    // Draw trail point gradients (older = more transparent)
+    // Trail point gradients (older = more transparent)
     for (let i = 0; i < m.trail.length; i++) {
       const p = m.trail[i];
       const age = now - p.time;
-      const life = 1 - age / TRAIL_DURATION; // 1 = fresh, 0 = about to expire
+      const life = 1 - age / TRAIL_DURATION;
       if (life <= 0) continue;
 
-      const alpha = life * life * 0.7; // quadratic ease-out, max 0.7 for trail
-      const radius = SPOTLIGHT_RADIUS * (0.6 + 0.4 * life); // shrinks as it ages
+      const alpha = life * life * 0.7;
+      const radius = SPOTLIGHT_RADIUS * (0.6 + 0.4 * life);
 
-      const grad = tmpCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, radius);
+      const grad = maskCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, radius);
       grad.addColorStop(0, `rgba(255,255,255,${alpha})`);
       grad.addColorStop(0.5, `rgba(255,255,255,${alpha * 0.4})`);
       grad.addColorStop(0.85, `rgba(255,255,255,${alpha * 0.08})`);
       grad.addColorStop(1, 'rgba(255,255,255,0)');
 
-      tmpCtx.fillStyle = grad;
-      tmpCtx.fillRect(p.x - radius, p.y - radius, radius * 2, radius * 2);
+      maskCtx.fillStyle = grad;
+      maskCtx.fillRect(p.x - radius, p.y - radius, radius * 2, radius * 2);
     }
 
-    // Draw current cursor spotlight (brightest, on top of trail)
+    // Current cursor spotlight (brightest)
     if (m.spotlightOpacity > 0.01) {
-      const grad = tmpCtx.createRadialGradient(m.x, m.y, 0, m.x, m.y, SPOTLIGHT_RADIUS);
+      const grad = maskCtx.createRadialGradient(m.x, m.y, 0, m.x, m.y, SPOTLIGHT_RADIUS);
       grad.addColorStop(0, `rgba(255,255,255,${m.spotlightOpacity})`);
       grad.addColorStop(0.4, `rgba(255,255,255,${m.spotlightOpacity * 0.55})`);
       grad.addColorStop(0.7, `rgba(255,255,255,${m.spotlightOpacity * 0.15})`);
       grad.addColorStop(0.9, `rgba(255,255,255,${m.spotlightOpacity * 0.03})`);
       grad.addColorStop(1, 'rgba(255,255,255,0)');
 
-      tmpCtx.fillStyle = grad;
-      tmpCtx.fillRect(m.x - SPOTLIGHT_RADIUS, m.y - SPOTLIGHT_RADIUS,
+      maskCtx.fillStyle = grad;
+      maskCtx.fillRect(m.x - SPOTLIGHT_RADIUS, m.y - SPOTLIGHT_RADIUS,
         SPOTLIGHT_RADIUS * 2, SPOTLIGHT_RADIUS * 2);
     }
 
-    // ── Step 2: Draw strips masked by gradients (source-in) ──────────
-    // source-in: keep new pixels (strips) only where existing pixels
-    // (gradient mask) have opacity. Single pass = correct accumulation.
-    tmpCtx.globalCompositeOperation = 'source-in';
-    drawColorStripsOnCtx(tmpCtx, time, w, h);
+    // ── Step 3: Apply mask to strips (single destination-in operation) ─
+    // destination-in: keep existing strips only where mask has opacity.
+    // This is ONE drawImage call, so all strips are masked at once.
+    stripCtx.globalCompositeOperation = 'destination-in';
+    stripCtx.drawImage(maskCanvas, 0, 0);
 
-    // ── Step 3: Composite result onto main canvas ────────────────────
-    tmpCtx.globalCompositeOperation = 'source-over';
-    ctx.drawImage(tmpCanvas, 0, 0);
+    // ── Step 4: Composite result onto main canvas ────────────────────
+    stripCtx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(stripCanvas, 0, 0);
   }
 
   // ── Render ───────────────────────────────────────────────────────────────
