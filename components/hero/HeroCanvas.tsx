@@ -483,7 +483,6 @@ export default function HeroCanvas({ imageSrc, className, fixed }: HeroCanvasPro
     const img = imageRef.current;
     if (!img) return null;
 
-    // Image occupies right portion of canvas
     const areaW = w;
     const areaH = h;
     const imgAspect = img.naturalWidth / img.naturalHeight;
@@ -498,21 +497,31 @@ export default function HeroCanvas({ imageSrc, className, fixed }: HeroCanvasPro
       drawW = drawH * imgAspect;
     }
 
-    let drawX = (areaW - drawW) / 2;
+    const drawX = (areaW - drawW) / 2;
     let drawY = (areaH - drawH) / 2;
 
-    // In fixed (full-viewport) mode, nudge the image per breakpoint:
-    // Desktop: push down to clear the navbar area
-    // Mobile: push left to eliminate right-side crop / left-side gap
-    if (fixedRef.current) {
-      if (w < 768) {
-        drawX -= 120;
-      } else {
-        drawY += 180;
-      }
+    // Desktop: nudge down to clear the navbar area
+    if (fixedRef.current && w >= 768) {
+      drawY += 70;
     }
 
     return { drawX, drawY, drawW, drawH };
+  }
+
+  // Mobile fixed mode: 3 image copies at staggered positions
+  function getImagePositions(w: number, h: number) {
+    const base = getImageGeometry(w, h);
+    if (!base) return [];
+
+    if (fixedRef.current && w < 768) {
+      return [
+        base,
+        { ...base, drawX: base.drawX + 25, drawY: base.drawY - base.drawH - 20 },
+        { ...base, drawX: base.drawX + 25, drawY: base.drawY + 200 },
+      ];
+    }
+
+    return [base];
   }
 
   // ── Layer 2: Desaturated image strips ────────────────────────────────────
@@ -526,27 +535,27 @@ export default function HeroCanvas({ imageSrc, className, fixed }: HeroCanvasPro
     const img = imageRef.current;
     if (!desat || !img) return;
 
-    const geo = getImageGeometry(w, h);
-    if (!geo) return;
-
-    const { drawX, drawY, drawW, drawH } = geo;
-    const stripW = drawW / NUM_STRIPS;
-    const srcStripW = img.naturalWidth / NUM_STRIPS;
+    const positions = getImagePositions(w, h);
     const reduced = reducedMotionRef.current;
 
-    for (let i = 0; i < NUM_STRIPS; i++) {
-      const phase = stripPhasesRef.current[i];
-      const yOff = reduced
-        ? 0
-        : Math.sin(time * (2 * Math.PI / STRIP_PERIOD) + phase) * STRIP_AMPLITUDE;
+    for (const { drawX, drawY, drawW, drawH } of positions) {
+      const stripW = drawW / NUM_STRIPS;
+      const srcStripW = img.naturalWidth / NUM_STRIPS;
 
-      ctx.drawImage(
-        desat,
-        Math.round(i * srcStripW), 0,
-        Math.round(srcStripW), img.naturalHeight,
-        drawX + i * (stripW + STRIP_GAP), drawY + yOff,
-        stripW, drawH,
-      );
+      for (let i = 0; i < NUM_STRIPS; i++) {
+        const phase = stripPhasesRef.current[i];
+        const yOff = reduced
+          ? 0
+          : Math.sin(time * (2 * Math.PI / STRIP_PERIOD) + phase) * STRIP_AMPLITUDE;
+
+        ctx.drawImage(
+          desat,
+          Math.round(i * srcStripW), 0,
+          Math.round(srcStripW), img.naturalHeight,
+          drawX + i * (stripW + STRIP_GAP), drawY + yOff,
+          stripW, drawH,
+        );
+      }
     }
   }
 
@@ -580,27 +589,27 @@ export default function HeroCanvas({ imageSrc, className, fixed }: HeroCanvasPro
     const img = imageRef.current;
     if (!img) return;
 
-    const geo = getImageGeometry(w, h);
-    if (!geo) return;
-
-    const { drawX, drawY, drawW, drawH } = geo;
-    const stripW = drawW / NUM_STRIPS;
-    const srcStripW = img.naturalWidth / NUM_STRIPS;
+    const positions = getImagePositions(w, h);
     const reduced = reducedMotionRef.current;
 
-    for (let i = 0; i < NUM_STRIPS; i++) {
-      const phase = stripPhasesRef.current[i];
-      const yOff = reduced
-        ? 0
-        : Math.sin(time * (2 * Math.PI / STRIP_PERIOD) + phase) * STRIP_AMPLITUDE;
+    for (const { drawX, drawY, drawW, drawH } of positions) {
+      const stripW = drawW / NUM_STRIPS;
+      const srcStripW = img.naturalWidth / NUM_STRIPS;
 
-      ctx.drawImage(
-        img,
-        Math.round(i * srcStripW), 0,
-        Math.round(srcStripW), img.naturalHeight,
-        drawX + i * (stripW + STRIP_GAP), drawY + yOff,
-        stripW, drawH,
-      );
+      for (let i = 0; i < NUM_STRIPS; i++) {
+        const phase = stripPhasesRef.current[i];
+        const yOff = reduced
+          ? 0
+          : Math.sin(time * (2 * Math.PI / STRIP_PERIOD) + phase) * STRIP_AMPLITUDE;
+
+        ctx.drawImage(
+          img,
+          Math.round(i * srcStripW), 0,
+          Math.round(srcStripW), img.naturalHeight,
+          drawX + i * (stripW + STRIP_GAP), drawY + yOff,
+          stripW, drawH,
+        );
+      }
     }
   }
 
