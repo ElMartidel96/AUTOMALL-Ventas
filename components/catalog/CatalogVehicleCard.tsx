@@ -19,7 +19,9 @@ export default function CatalogVehicleCard({ vehicle }: Props) {
   const t = useTranslations('catalog');
 
   const title = `${vehicle.year} ${vehicle.brand} ${vehicle.model}`;
-  const conditionLabel = vehicle.condition ? t(`condition.${vehicle.condition}`) : null;
+  const conditionLabel = typeof vehicle.condition === 'string' && vehicle.condition
+    ? t(`condition.${vehicle.condition}`)
+    : null;
 
   return (
     <Link
@@ -76,10 +78,10 @@ export default function CatalogVehicleCard({ vehicle }: Props) {
             <Gauge className="w-3.5 h-3.5" />
             {Number(vehicle.mileage).toLocaleString()} mi
           </span>
-          {vehicle.transmission && (
+          {typeof vehicle.transmission === 'string' && vehicle.transmission && (
             <span className="capitalize">{vehicle.transmission}</span>
           )}
-          {vehicle.fuel_type && (
+          {typeof vehicle.fuel_type === 'string' && vehicle.fuel_type && (
             <span className="capitalize">{vehicle.fuel_type.replace('_', ' ')}</span>
           )}
         </div>

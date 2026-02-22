@@ -140,7 +140,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                 <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
                   {title}
                 </h1>
-                {vehicle.trim && (
+                {typeof vehicle.trim === 'string' && vehicle.trim && (
                   <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{vehicle.trim}</p>
                 )}
                 <p className="text-3xl font-bold text-am-orange mt-3">
@@ -155,8 +155,8 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                   {[
                     { icon: Gauge, label: `${Number(vehicle.mileage).toLocaleString()} mi` },
                     { icon: Calendar, label: String(vehicle.year) },
-                    { icon: Fuel, label: vehicle.fuel_type?.replace('_', ' ') || '-' },
-                    { icon: Cog, label: vehicle.transmission || '-' },
+                    { icon: Fuel, label: typeof vehicle.fuel_type === 'string' ? vehicle.fuel_type.replace('_', ' ') : '-' },
+                    { icon: Cog, label: typeof vehicle.transmission === 'string' ? vehicle.transmission : '-' },
                   ].map((item, i) => (
                     <div key={i} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 capitalize">
                       <item.icon className="w-4 h-4 text-gray-400" />
@@ -212,14 +212,14 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
       </section>
 
       {/* Features */}
-      {vehicle.features && vehicle.features.length > 0 && (
+      {Array.isArray(vehicle.features) && vehicle.features.length > 0 && (
         <section className="py-6 px-4">
           <div className="container mx-auto max-w-7xl">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
               {t('detail.features')}
             </h2>
             <div className="flex flex-wrap gap-2">
-              {vehicle.features.map((f) => (
+              {vehicle.features.filter((f): f is string => typeof f === 'string').map((f) => (
                 <span
                   key={f}
                   className="px-3 py-1.5 rounded-lg text-xs font-medium bg-am-blue/10 dark:bg-am-blue/20 text-am-blue dark:text-am-blue-light"
@@ -233,7 +233,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
       )}
 
       {/* Description */}
-      {vehicle.description && (
+      {typeof vehicle.description === 'string' && vehicle.description && (
         <section className="py-6 px-4">
           <div className="container mx-auto max-w-7xl">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">

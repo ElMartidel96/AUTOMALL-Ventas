@@ -26,15 +26,15 @@ export default function VehicleSpecs({ vehicle }: Props) {
     { label: t('specs.trim'), value: vehicle.trim },
     { label: t('specs.bodyType'), value: vehicle.body_type },
     { label: t('specs.doors'), value: vehicle.doors },
-    { label: t('specs.condition'), value: vehicle.condition ? t(`condition.${vehicle.condition}`) : null },
+    { label: t('specs.condition'), value: typeof vehicle.condition === 'string' && vehicle.condition ? t(`condition.${vehicle.condition}`) : null },
     { label: t('specs.vin'), value: vehicle.vin },
   ];
 
   const performance: SpecRow[] = [
     { label: t('specs.engine'), value: vehicle.engine },
     { label: t('specs.transmission'), value: vehicle.transmission },
-    { label: t('specs.fuelType'), value: vehicle.fuel_type?.replace('_', ' ') },
-    { label: t('specs.drivetrain'), value: vehicle.drivetrain?.toUpperCase() },
+    { label: t('specs.fuelType'), value: typeof vehicle.fuel_type === 'string' ? vehicle.fuel_type.replace('_', ' ') : null },
+    { label: t('specs.drivetrain'), value: typeof vehicle.drivetrain === 'string' ? vehicle.drivetrain.toUpperCase() : null },
     { label: t('specs.mileage'), value: vehicle.mileage ? `${Number(vehicle.mileage).toLocaleString()} mi` : null },
   ];
 
