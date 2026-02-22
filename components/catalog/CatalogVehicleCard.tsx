@@ -65,7 +65,7 @@ export default function CatalogVehicleCard({ vehicle }: Props) {
         </h3>
 
         <p className="text-xl font-bold text-am-orange mt-1">
-          ${vehicle.price.toLocaleString()}
+          ${Number(vehicle.price).toLocaleString()}
           {vehicle.price_negotiable && (
             <span className="text-xs font-normal text-gray-400 ml-1">{t('negotiable')}</span>
           )}
@@ -74,7 +74,7 @@ export default function CatalogVehicleCard({ vehicle }: Props) {
         <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 dark:text-gray-400">
           <span className="flex items-center gap-1">
             <Gauge className="w-3.5 h-3.5" />
-            {vehicle.mileage.toLocaleString()} mi
+            {Number(vehicle.mileage).toLocaleString()} mi
           </span>
           {vehicle.transmission && (
             <span className="capitalize">{vehicle.transmission}</span>

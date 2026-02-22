@@ -207,7 +207,12 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
         await updateVehicle.mutateAsync({
           id: vehicleId,
           seller_address: address,
-          ...data,
+          brand: data.brand,
+          model: data.model,
+          year: data.year,
+          price: data.price || 1,
+          mileage: data.mileage,
+          price_negotiable: data.price_negotiable,
           condition: (data.condition || 'good') as 'new' | 'like_new' | 'excellent' | 'good' | 'fair',
           vin: data.vin || null,
           trim: data.trim || null,
@@ -220,6 +225,7 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
           drivetrain: (data.drivetrain || null) as 'fwd' | 'rwd' | 'awd' | '4wd' | null,
           engine: data.engine || null,
           description: data.description || null,
+          features: data.features,
         });
         return vehicleId;
       } else {

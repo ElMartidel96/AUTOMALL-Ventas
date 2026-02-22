@@ -35,7 +35,7 @@ export default function VehicleSpecs({ vehicle }: Props) {
     { label: t('specs.transmission'), value: vehicle.transmission },
     { label: t('specs.fuelType'), value: vehicle.fuel_type?.replace('_', ' ') },
     { label: t('specs.drivetrain'), value: vehicle.drivetrain?.toUpperCase() },
-    { label: t('specs.mileage'), value: vehicle.mileage ? `${vehicle.mileage.toLocaleString()} mi` : null },
+    { label: t('specs.mileage'), value: vehicle.mileage ? `${Number(vehicle.mileage).toLocaleString()} mi` : null },
   ];
 
   const exterior: SpecRow[] = [
@@ -76,7 +76,7 @@ export default function VehicleSpecs({ vehicle }: Props) {
                         {row.label}
                       </td>
                       <td className="px-4 py-2.5 text-gray-900 dark:text-white capitalize">
-                        {row.value}
+                        {typeof row.value === 'object' ? JSON.stringify(row.value) : String(row.value)}
                       </td>
                     </tr>
                   ))}
