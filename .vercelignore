@@ -47,6 +47,8 @@ build
 !public/apple-touch-icon.png
 # OpenGraph / Social sharing
 !public/og-automall.png
+# Profile default avatar
+!public/default-avatar.png
 # Car brand logos (dealer home page grid)
 !public/brands/toyota.png
 !public/brands/ford.png

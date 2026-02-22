@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 // Avatar constraints
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB (under Vercel's 4.5MB body limit)
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const AVATAR_BUCKET = 'avatars';
 

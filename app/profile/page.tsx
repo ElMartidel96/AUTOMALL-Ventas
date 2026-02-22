@@ -15,6 +15,7 @@ import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Navbar, NavbarSpacer } from '@/components/layout/Navbar';
 import { useAccount } from '@/lib/thirdweb';
+import { getClient } from '@/lib/thirdweb/client';
 import { useProfileManager, useUsernameCheck } from '@/hooks/useProfile';
 import { SocialEngagementModal } from '@/components/social/SocialEngagementModal';
 import { SocialEngagementPlatform } from '@/lib/supabase/types';
@@ -96,6 +97,32 @@ export default function ProfilePage() {
     setMounted(true);
   }, []);
 
+  // Auto-capture email from Thirdweb social login (Google/Apple)
+  useEffect(() => {
+    if (!mounted || !address || !profile || profile.email) return;
+
+    const captureEmail = async () => {
+      try {
+        const client = getClient();
+        if (!client) return;
+        const { getUserEmail } = await import('thirdweb/wallets');
+        const email = await getUserEmail({ client });
+        if (email) {
+          await fetch('/api/profile', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ wallet: address, email }),
+          });
+          refetch();
+        }
+      } catch {
+        // getUserEmail only works for in-app wallets — silently ignore for other wallet types
+      }
+    };
+
+    captureEmail();
+  }, [mounted, address, profile, refetch]);
+
   // Handle social engagement modal trigger from OAuth callback
   useEffect(() => {
     if (!mounted || !address) return;
@@ -124,6 +151,34 @@ export default function ProfilePage() {
     }
   }, [mounted, address, searchParams]);
 
+  // Compress image client-side to avoid Vercel 413 body size limit
+  const compressImage = (file: File, maxSize = 800, quality = 0.8): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+        if (width > maxSize || height > maxSize) {
+          const ratio = Math.min(maxSize / width, maxSize / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return reject(new Error('Canvas context failed'));
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => blob ? resolve(blob) : reject(new Error('Compression failed')),
+          'image/jpeg',
+          quality,
+        );
+      };
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
   // Handle avatar upload
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -134,14 +189,23 @@ export default function ProfilePage() {
     setAvatarSuccess(false);
 
     try {
+      // Compress image client-side (max 800x800, JPEG 80% quality)
+      const compressed = await compressImage(file);
+
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', new File([compressed], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }));
       formData.append('wallet', address);
 
       const response = await fetch('/api/profile/avatar', {
         method: 'POST',
         body: formData,
       });
+
+      // Handle 413 (Vercel body size limit) — response may be HTML, not JSON
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        throw new Error(response.status === 413 ? 'File too large' : `Server error (${response.status})`);
+      }
 
       const data = await response.json();
 
@@ -206,7 +270,7 @@ export default function ProfilePage() {
             </span>
           </h2>
           <p className="text-slate-600 dark:text-slate-400">
-            Connect your wallet to view and manage your profile
+            {t('connectPrompt')}
           </p>
         </div>
       </div>
@@ -335,7 +399,7 @@ export default function ProfilePage() {
               {avatarSuccess && (
                 <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 whitespace-nowrap glass-crystal rounded-lg px-3 py-2 text-xs text-green-500 border border-green-500/30 flex items-center gap-2">
                   <CheckCircle className="w-3 h-3" />
-                  Avatar updated!
+                  {t('avatarSuccess')}
                 </div>
               )}
             </div>
@@ -375,7 +439,7 @@ export default function ProfilePage() {
                 <p className="text-2xl font-bold bg-gradient-to-b from-amber-400 to-orange-500 bg-clip-text text-transparent">
                   {profile?.total_cgc_earned?.toLocaleString() || 0}
                 </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">CGC</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t('overview.points')}</p>
               </div>
               <div className="text-center glass-crystal rounded-xl px-4 py-3 hover:scale-105 transition-transform">
                 <p className="text-2xl font-bold bg-gradient-to-b from-purple-400 to-purple-600 bg-clip-text text-transparent">
@@ -449,7 +513,7 @@ export default function ProfilePage() {
 function OverviewTab({ profile, t, address, onProfileUpdate }: { profile: any; t: any; address: string; onProfileUpdate?: () => void }) {
   const stats = [
     { label: t('overview.tasksCompleted'), value: profile?.total_tasks_completed || 0, icon: CheckCircle, gradient: 'from-green-400 to-emerald-500' },
-    { label: t('overview.cgcEarned'), value: `${(profile?.total_cgc_earned || 0).toLocaleString()} CGC`, icon: Award, gradient: 'from-amber-400 to-orange-500' },
+    { label: t('overview.cgcEarned'), value: (profile?.total_cgc_earned || 0).toLocaleString(), icon: Award, gradient: 'from-amber-400 to-orange-500' },
     { label: t('overview.referrals'), value: profile?.total_referrals || 0, icon: Users, gradient: 'from-blue-400 to-cyan-500' },
     { label: t('overview.reputation'), value: profile?.reputation_score || 0, icon: TrendingUp, gradient: 'from-purple-400 to-pink-500' },
   ];
@@ -627,7 +691,7 @@ function SettingsTab({ profile, settings, updateSettings, updateProfile, isUpdat
         <div>
           <h3 className="text-lg font-bold mb-4">
             <span className="bg-gradient-to-r from-cyan-500 to-blue-500 bg-clip-text text-transparent">
-              Profile Information
+              {t('form.title')}
             </span>
           </h3>
 
@@ -1062,7 +1126,7 @@ function RecoveryTab({ profile, hasRecoverySetup, setupRecovery, isSettingUp, er
             <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
               <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
                 <CheckCircle className="w-5 h-5" />
-                <span className="font-medium">Recovery credentials configured</span>
+                <span className="font-medium">{t('recovery.status.configuredMessage')}</span>
               </div>
               <p className="text-sm text-green-600 dark:text-green-500 mt-1">
                 Email: {profile?.email}

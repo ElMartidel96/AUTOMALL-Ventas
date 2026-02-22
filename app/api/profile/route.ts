@@ -60,7 +60,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Return full profile for owner
-    const profile = await getProfileByWallet(wallet);
+    let profile;
+    try {
+      profile = await getProfileByWallet(wallet);
+    } catch (dbError) {
+      console.warn('Supabase unavailable for GET:', dbError instanceof Error ? dbError.message : dbError);
+      return NextResponse.json(
+        { error: 'Profile not found', dbUnavailable: true },
+        { status: 404 }
+      );
+    }
 
     if (!profile) {
       return NextResponse.json(
@@ -113,7 +122,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const profile = await getOrCreateProfile(wallet);
+    let profile;
+    try {
+      profile = await getOrCreateProfile(wallet);
+    } catch (dbError) {
+      console.warn('Supabase unavailable, returning mock profile:', dbError instanceof Error ? dbError.message : dbError);
+      // Return mock profile when Supabase is not configured
+      const mockProfile = {
+        wallet_address: wallet.toLowerCase(),
+        username: null,
+        display_name: null,
+        bio: null,
+        email: null,
+        email_verified: false,
+        avatar_url: null,
+        reputation_score: 0,
+        total_tasks_completed: 0,
+        total_cgc_earned: 0,
+        total_referrals: 0,
+        login_count: 1,
+        last_login_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        twitter_handle: null,
+        discord_handle: null,
+        telegram_handle: null,
+        website_url: null,
+        twitter_verified: false,
+        discord_verified: false,
+        telegram_verified: false,
+      };
+      return NextResponse.json({
+        success: true,
+        mock: true,
+        data: {
+          ...mockProfile,
+          tier: 'Starter' as const,
+          tier_color: '#94a3b8',
+        },
+      });
+    }
+
     const tier = calculateTier(profile.reputation_score);
 
     return NextResponse.json({
