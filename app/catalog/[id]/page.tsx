@@ -9,7 +9,6 @@
  * vehicle data via generateVehicleJsonLd() — no raw user HTML is injected.
  */
 
-import { use } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
@@ -44,8 +43,8 @@ function JsonLdScript({ data }: { data: Record<string, unknown> }) {
   );
 }
 
-export default function VehicleDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function VehicleDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const t = useTranslations('catalog');
   const { data: vehicle, isLoading, error } = useCatalogVehicle(id);
   const { seller, isSubdomain } = useTenant();
