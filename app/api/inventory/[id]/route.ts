@@ -15,13 +15,13 @@ const updateVehicleSchema = z.object({
   vin: z.string().max(17).optional().nullable(),
   brand: z.string().min(1).max(50).optional(),
   model: z.string().min(1).max(100).optional(),
-  year: z.number().int().min(1900).max(2030).optional(),
+  year: z.coerce.number().int().min(1900).max(2030).optional(),
   trim: z.string().max(100).optional().nullable(),
   body_type: z.string().max(50).optional().nullable(),
-  doors: z.number().int().min(1).max(6).optional().nullable(),
-  price: z.number().positive().max(99999999).optional(),
+  doors: z.coerce.number().int().min(1).max(6).optional().nullable(),
+  price: z.coerce.number().positive().max(99999999).optional(),
   price_negotiable: z.boolean().optional(),
-  mileage: z.number().int().min(0).max(9999999).optional(),
+  mileage: z.coerce.number().int().min(0).max(9999999).optional(),
   condition: z.enum(['new', 'like_new', 'excellent', 'good', 'fair']).optional(),
   exterior_color: z.string().max(50).optional().nullable(),
   interior_color: z.string().max(50).optional().nullable(),
@@ -79,8 +79,10 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     const parsed = updateVehicleSchema.safeParse(body);
 
     if (!parsed.success) {
+      const details = parsed.error.flatten();
+      console.error('[Inventory] Update validation failed:', JSON.stringify(details));
       return NextResponse.json(
-        { error: 'Validation failed', details: parsed.error.flatten(), success: false },
+        { error: 'Validation failed', details, success: false },
         { status: 400 }
       );
     }

@@ -14,13 +14,13 @@ const createVehicleSchema = z.object({
   vin: z.string().max(17).optional().nullable(),
   brand: z.string().min(1).max(50),
   model: z.string().min(1).max(100),
-  year: z.number().int().min(1900).max(2030),
+  year: z.coerce.number().int().min(1900).max(2030),
   trim: z.string().max(100).optional().nullable(),
   body_type: z.string().max(50).optional().nullable(),
-  doors: z.number().int().min(1).max(6).optional().nullable(),
-  price: z.number().positive().max(99999999),
+  doors: z.coerce.number().int().min(1).max(6).optional().nullable(),
+  price: z.coerce.number().positive().max(99999999),
   price_negotiable: z.boolean().optional(),
-  mileage: z.number().int().min(0).max(9999999),
+  mileage: z.coerce.number().int().min(0).max(9999999),
   condition: z.enum(['new', 'like_new', 'excellent', 'good', 'fair']).optional(),
   exterior_color: z.string().max(50).optional().nullable(),
   interior_color: z.string().max(50).optional().nullable(),
@@ -103,8 +103,10 @@ export async function POST(request: NextRequest) {
     const parsed = createVehicleSchema.safeParse(body);
 
     if (!parsed.success) {
+      const details = parsed.error.flatten();
+      console.error('[Inventory] Validation failed:', JSON.stringify(details));
       return NextResponse.json(
-        { error: 'Validation failed', details: parsed.error.flatten(), success: false },
+        { error: 'Validation failed', details, success: false },
         { status: 400 }
       );
     }

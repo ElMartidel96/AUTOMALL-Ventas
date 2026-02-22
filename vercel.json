@@ -3,16 +3,7 @@
   "framework": "nextjs",
   "installCommand": "pnpm install",
   "devCommand": "pnpm run dev",
-  "crons": [
-    {
-      "path": "/api/analytics/sync",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/analytics/refresh-views",
-      "schedule": "0 * * * *"
-    }
-  ],
+  "crons": [],
   "functions": {
     "app/api/**/*.ts": {
       "maxDuration": 60

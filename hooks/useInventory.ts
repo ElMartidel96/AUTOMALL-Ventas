@@ -57,7 +57,11 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, options);
   const json = await res.json();
   if (!res.ok || !json.success) {
-    throw new Error(json.error || `API error: ${res.status}`);
+    const msg = json.error || `API error: ${res.status}`;
+    if (json.details) {
+      console.error('[API] Validation details:', JSON.stringify(json.details));
+    }
+    throw new Error(msg);
   }
   return json as T;
 }

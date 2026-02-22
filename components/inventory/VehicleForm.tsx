@@ -349,8 +349,13 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
   // Helper to create props for SelectField
   const selectProps = (field: keyof VehicleFormData) => ({
     field,
-    value: data[field] as string,
-    onChange: (v: string) => setField(field, v as never),
+    value: String(data[field] ?? ''),
+    onChange: (v: string) => {
+      // Convert to number for numeric fields
+      const numericFields: (keyof VehicleFormData)[] = ['year', 'doors'];
+      const val = numericFields.includes(field) && v !== '' ? Number(v) : v;
+      setField(field, val as never);
+    },
     error: errors[field],
     t: t as unknown as { has: (key: never) => boolean; (key: never): string },
   });
