@@ -2338,7 +2338,9 @@
       "trust3": "Houston, TX"
     },
     "interactiveHero": {
-      "tagline": "Tu Auto Perfecto. Sin Presión. Sin Complicaciones."
+      "tagline": "Tu Auto Perfecto. Sin Presión. Sin Complicaciones.",
+      "explore": "Explora con tu cursor",
+      "exploreMobile": "Toca para revelar"
     },
     "search": {
       "allMakes": "Todas las Marcas",
