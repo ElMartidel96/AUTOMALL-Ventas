@@ -93,18 +93,12 @@ export default function Home() {
               <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-md mx-auto md:mx-0 leading-relaxed">
                 {t('interactiveHero.tagline')}
               </p>
-              <p className="mt-6 text-sm text-gray-400 dark:text-gray-500 hidden md:block">
-                {t('interactiveHero.explore')}
-              </p>
-              <p className="mt-4 text-sm text-gray-400 dark:text-gray-500 md:hidden">
-                {t('interactiveHero.exploreMobile')}
-              </p>
             </div>
           </div>
         </section>
 
-      {/* ══ Scrolling content — solid background covers canvas as user scrolls ══ */}
-      <div className="theme-gradient-bg">
+      {/* ══ Scrolling content — transparent so fixed canvas shows through ══ */}
+      <div>
 
       {/* ════════════════════════════════════════════════════════════
          FEATURED VEHICLES — Carousel of latest active inventory
