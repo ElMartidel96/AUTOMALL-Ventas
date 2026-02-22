@@ -41,7 +41,7 @@ export const FEATURE_CGC_TOKEN = envBool('NEXT_PUBLIC_FEATURE_CGC_TOKEN', false)
 // AutosMall Features (enable as developed)
 // ---------------------------------------------------------------------------
 
-/** Enable seller subdomain routing (vendedor.autosmall.com) */
+/** Enable seller subdomain routing (vendedor.autosmall.org) */
 export const FEATURE_SELLER_SUBDOMAINS = envBool('NEXT_PUBLIC_FEATURE_SELLER_SUBDOMAINS', false)
 
 /** Enable AI Sales Agent (Alfred) */
@@ -64,7 +64,7 @@ export const FEATURE_CATALOG = envBool('NEXT_PUBLIC_FEATURE_CATALOG', true)
 // ---------------------------------------------------------------------------
 
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'Autos MALL'
-export const APP_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || 'autosmall.com'
+export const APP_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || 'autosmall.org'
 export const APP_DESCRIPTION = 'Tu Plataforma de Venta de Autos con IA'
 export const APP_TAGLINE = 'Tu negocio de autos, potenciado por IA'
 export const APP_LOCATION = 'Houston, Texas'

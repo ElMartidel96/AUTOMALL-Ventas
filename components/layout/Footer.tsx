@@ -21,9 +21,17 @@ import {
   Users,
   Heart,
 } from 'lucide-react';
+import { useTenant } from '@/lib/tenant/TenantProvider';
 
 export const Footer: React.FC = () => {
   const t = useTranslations('footer');
+  const { seller, isSubdomain } = useTenant();
+
+  // Seller-specific or default contact info
+  const contactEmail = (isSubdomain && seller?.email) || 'info@autosmall.com';
+  const contactPhone = (isSubdomain && seller?.phone) || '+1-832-000-0000';
+  const instagramUrl = (isSubdomain && seller?.social_instagram) || 'https://instagram.com/autosmall';
+  const facebookUrl = (isSubdomain && seller?.social_facebook) || 'https://facebook.com/autosmall';
 
   return (
     <footer className="bg-am-dark text-white">
@@ -32,25 +40,39 @@ export const Footer: React.FC = () => {
           {/* Brand */}
           <div className="col-span-1">
             <div className="mb-4">
-              <Image
-                src="/logo-automall-footer.png"
-                alt="Autos MALL"
-                width={220}
-                height={120}
-                className="h-20 w-auto drop-shadow-md"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                }}
-              />
+              {isSubdomain && seller?.logo_url ? (
+                <Image
+                  src={seller.logo_url}
+                  alt={seller.business_name}
+                  width={220}
+                  height={120}
+                  className="h-20 w-auto drop-shadow-md"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                  }}
+                />
+              ) : (
+                <Image
+                  src="/logo-automall-footer.png"
+                  alt="Autos MALL"
+                  width={220}
+                  height={120}
+                  className="h-20 w-auto drop-shadow-md"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                  }}
+                />
+              )}
             </div>
             <p className="text-gray-400 text-sm mb-4">
-              {t('brand.description')}
+              {isSubdomain && seller ? seller.tagline || seller.business_name : t('brand.description')}
             </p>
             <div className="flex space-x-4">
               {/* Instagram */}
               <a
-                href="https://instagram.com/autosmall"
+                href={instagramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-am-orange transition-colors"
@@ -60,7 +82,7 @@ export const Footer: React.FC = () => {
               </a>
               {/* Facebook */}
               <a
-                href="https://facebook.com/autosmall"
+                href={facebookUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-am-orange transition-colors"
@@ -70,7 +92,7 @@ export const Footer: React.FC = () => {
               </a>
               {/* Email */}
               <a
-                href="mailto:info@autosmall.com"
+                href={`mailto:${contactEmail}`}
                 className="text-gray-400 hover:text-am-orange transition-colors"
                 aria-label="Email"
               >
@@ -78,7 +100,7 @@ export const Footer: React.FC = () => {
               </a>
               {/* Phone */}
               <a
-                href="tel:+1-832-000-0000"
+                href={`tel:${contactPhone}`}
                 className="text-gray-400 hover:text-am-orange transition-colors"
                 aria-label="Phone"
               >
@@ -120,7 +142,7 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2 text-sm text-gray-400">
               <li>
                 <a
-                  href="mailto:soporte@autosmall.com"
+                  href={`mailto:${isSubdomain && seller?.email ? seller.email : 'soporte@autosmall.com'}`}
                   className="hover:text-am-orange transition-colors"
                 >
                   {t('resources.support')}
@@ -128,7 +150,7 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <a
-                  href="mailto:soporte@autosmall.com"
+                  href={`mailto:${isSubdomain && seller?.email ? seller.email : 'soporte@autosmall.com'}`}
                   className="hover:text-am-orange transition-colors"
                 >
                   {t('resources.faq')}
@@ -143,7 +165,7 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2 text-sm text-gray-400">
               <li>
                 <a
-                  href="mailto:info@autosmall.com"
+                  href={`mailto:${contactEmail}`}
                   className="hover:text-am-orange transition-colors"
                 >
                   {t('company.about')}
@@ -151,7 +173,7 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <a
-                  href="mailto:info@autosmall.com"
+                  href={`mailto:${contactEmail}`}
                   className="hover:text-am-orange transition-colors"
                 >
                   {t('company.contact')}
@@ -194,8 +216,19 @@ export const Footer: React.FC = () => {
             &copy; {new Date().getFullYear()} {t('brand.copyright')}
           </div>
           <div className="flex items-center space-x-2 text-sm text-gray-400">
-            <Heart className="w-3.5 h-3.5 text-am-orange" />
-            <span>{t('bottom.madeIn')}</span>
+            {isSubdomain ? (
+              <>
+                <span>Powered by</span>
+                <a href="https://autosmall.org" className="text-am-orange hover:text-am-orange-light transition-colors font-medium">
+                  Autos MALL
+                </a>
+              </>
+            ) : (
+              <>
+                <Heart className="w-3.5 h-3.5 text-am-orange" />
+                <span>{t('bottom.madeIn')}</span>
+              </>
+            )}
           </div>
         </div>
       </div>

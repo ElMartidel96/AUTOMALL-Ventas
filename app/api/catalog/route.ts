@@ -12,6 +12,7 @@ import { z } from 'zod';
 import { getTypedClient } from '@/lib/supabase/client';
 
 const querySchema = z.object({
+  seller: z.string().max(30).optional(),
   brand: z.string().max(50).optional(),
   minPrice: z.coerce.number().min(0).optional(),
   maxPrice: z.coerce.number().max(99999999).optional(),
@@ -50,6 +51,7 @@ export async function GET(request: NextRequest) {
     }
 
     const {
+      seller: sellerHandle,
       brand, minPrice, maxPrice, minYear, maxYear,
       body_type, fuel_type, transmission, drivetrain,
       minMileage, maxMileage, condition, search,
@@ -57,6 +59,10 @@ export async function GET(request: NextRequest) {
       page = 1,
       limit = 24,
     } = parsed.data;
+
+    // Also check x-seller-handle header (set by middleware for subdomain requests)
+    const headerHandle = request.headers.get('x-seller-handle');
+    const effectiveSellerHandle = sellerHandle || headerHandle;
 
     const offset = (page - 1) * limit;
     const supabase = getTypedClient();
@@ -66,6 +72,9 @@ export async function GET(request: NextRequest) {
       .from('vehicles')
       .select('*', { count: 'exact' })
       .eq('status', 'active');
+
+    // Filter by seller handle (subdomain or query param)
+    if (effectiveSellerHandle) query = query.eq('seller_handle', effectiveSellerHandle);
 
     // Filters
     if (brand) query = query.ilike('brand', brand);
@@ -104,10 +113,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Get filter aggregates for sidebar
-    const { data: filterData } = await supabase
+    let filterQuery = supabase
       .from('vehicles')
       .select('brand, body_type, price')
-      .eq('status', 'active') as { data: { brand: string; body_type: string | null; price: number }[] | null };
+      .eq('status', 'active');
+    if (effectiveSellerHandle) filterQuery = filterQuery.eq('seller_handle', effectiveSellerHandle);
+    const { data: filterData } = await filterQuery as { data: { brand: string; body_type: string | null; price: number }[] | null };
 
     const filterRows = filterData || [];
     const brands = [...new Set(filterRows.map(v => v.brand))].sort();

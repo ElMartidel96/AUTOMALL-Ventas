@@ -2756,5 +2756,70 @@
       "prev": "Previous",
       "next": "Next"
     }
+  },
+  "onboarding": {
+    "title": "Set Up Your Dealership",
+    "subtitle": "Create your professional online presence in minutes",
+    "step": "Step {current} of {total}",
+    "next": "Continue",
+    "back": "Back",
+    "finish": "Launch My Site",
+    "steps": {
+      "handle": {
+        "title": "Choose Your URL",
+        "description": "Pick a unique web address for your dealership",
+        "label": "Your URL",
+        "placeholder": "juanperez",
+        "preview": "Your site will be at:",
+        "checking": "Checking availability...",
+        "available": "This URL is available!",
+        "taken": "This URL is already taken",
+        "invalid": "Use 3-30 lowercase letters, numbers, or hyphens",
+        "reserved": "This URL is reserved"
+      },
+      "business": {
+        "title": "Business Information",
+        "description": "Tell customers about your dealership",
+        "name": "Business Name",
+        "namePlaceholder": "Juan's Auto Sales",
+        "tagline": "Tagline",
+        "taglinePlaceholder": "Quality pre-owned vehicles in Houston",
+        "phone": "Phone",
+        "phonePlaceholder": "+1 832 555 0000",
+        "whatsapp": "WhatsApp",
+        "whatsappPlaceholder": "18325550000",
+        "email": "Email",
+        "emailPlaceholder": "juan@example.com",
+        "address": "Address",
+        "addressPlaceholder": "1234 Main St, Houston, TX"
+      },
+      "branding": {
+        "title": "Your Brand",
+        "description": "Upload your logo and cover image",
+        "logo": "Logo",
+        "logoHelp": "Square image recommended (min 200x200)",
+        "heroImage": "Cover Image",
+        "heroImageHelp": "Wide image for your homepage hero (1200x600 recommended)",
+        "upload": "Upload Image",
+        "change": "Change",
+        "socialTitle": "Social Media (optional)",
+        "instagram": "Instagram URL",
+        "facebook": "Facebook URL",
+        "tiktok": "TikTok URL"
+      },
+      "preview": {
+        "title": "Preview Your Site",
+        "description": "Here's how your dealership will look",
+        "looksGood": "Looks good! Launch it.",
+        "goBack": "Go back and edit"
+      }
+    },
+    "success": {
+      "title": "Your site is live!",
+      "description": "Your professional dealership page is ready at:",
+      "visitSite": "Visit My Site",
+      "addVehicles": "Add Your First Vehicle"
+    },
+    "requiresLogin": "Please sign in to create your dealership"
   }
 }

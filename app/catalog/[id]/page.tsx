@@ -31,6 +31,7 @@ import VehicleSpecs from '@/components/catalog/VehicleSpecs';
 import CatalogVehicleCard from '@/components/catalog/CatalogVehicleCard';
 import { useCatalogVehicle } from '@/hooks/useCatalog';
 import { generateVehicleJsonLd } from '@/lib/catalog/json-ld';
+import { useTenant } from '@/lib/tenant/TenantProvider';
 
 function JsonLdScript({ data }: { data: Record<string, unknown> }) {
   // Safe: data is generated internally by generateVehicleJsonLd,
@@ -47,6 +48,11 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
   const { id } = use(params);
   const t = useTranslations('catalog');
   const { data: vehicle, isLoading, error } = useCatalogVehicle(id);
+  const { seller, isSubdomain } = useTenant();
+
+  // Use seller contact info on subdomains, fallback to defaults
+  const contactPhone = (isSubdomain && seller?.phone) || '+18320000000';
+  const contactWhatsApp = (isSubdomain && seller?.whatsapp) || '18320000000';
 
   if (isLoading) {
     return (
@@ -138,7 +144,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                   <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{vehicle.trim}</p>
                 )}
                 <p className="text-3xl font-bold text-am-orange mt-3">
-                  ${vehicle.price.toLocaleString()}
+                  ${Number(vehicle.price).toLocaleString()}
                   {vehicle.price_negotiable && (
                     <span className="text-sm font-normal text-gray-400 ml-2">{t('negotiable')}</span>
                   )}
@@ -147,7 +153,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                 {/* Quick specs 2x2 */}
                 <div className="grid grid-cols-2 gap-3 mt-4">
                   {[
-                    { icon: Gauge, label: `${vehicle.mileage.toLocaleString()} mi` },
+                    { icon: Gauge, label: `${Number(vehicle.mileage).toLocaleString()} mi` },
                     { icon: Calendar, label: String(vehicle.year) },
                     { icon: Fuel, label: vehicle.fuel_type?.replace('_', ' ') || '-' },
                     { icon: Cog, label: vehicle.transmission || '-' },
@@ -167,14 +173,14 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
                 </h3>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <a
-                    href="tel:+18320000000"
+                    href={`tel:${contactPhone}`}
                     className="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-am-orange to-am-orange-light text-white px-5 py-3 rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"
                   >
                     <Phone className="w-4 h-4" />
                     {t('contact.call')}
                   </a>
                   <a
-                    href={`https://wa.me/18320000000?text=${encodeURIComponent(`Hi! I'm interested in the ${title}`)}`}
+                    href={`https://wa.me/${contactWhatsApp}?text=${encodeURIComponent(`Hi! I'm interested in the ${title}`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-am-green to-emerald-500 text-white px-5 py-3 rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"

@@ -28,11 +28,13 @@ import {
   Car,
 } from 'lucide-react';
 import { FEATURE_WEB3_VISIBLE, FEATURE_CGC_TOKEN } from '@/lib/config/features';
+import { useTenant } from '@/lib/tenant/TenantProvider';
 
 export const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { address, isConnected } = useAccount();
+  const { seller, isSubdomain } = useTenant();
 
   const t = useTranslations('navigation');
 
@@ -46,10 +48,10 @@ export const Navbar: React.FC = () => {
         <div className="flex justify-between items-center py-3">
           {/* Logo and Brand */}
           <div className="flex items-center space-x-2">
-            <Link href="/" className="flex items-center">
+            <Link href="/" className="flex items-center gap-2">
               <Image
-                src="/logo-automall-nav.png"
-                alt="Autos MALL"
+                src={isSubdomain && seller?.logo_url ? seller.logo_url : '/logo-automall-nav.png'}
+                alt={isSubdomain && seller ? seller.business_name : 'Autos MALL'}
                 width={180}
                 height={100}
                 className="h-16 w-auto drop-shadow-md"
@@ -59,6 +61,11 @@ export const Navbar: React.FC = () => {
                   target.style.display = 'none';
                 }}
               />
+              {isSubdomain && seller && !seller.logo_url && (
+                <span className="text-lg font-bold text-gray-900 dark:text-white">
+                  {seller.business_name}
+                </span>
+              )}
             </Link>
           </div>
 
@@ -72,22 +79,24 @@ export const Navbar: React.FC = () => {
               {t('catalog')}
             </Link>
 
-            <Link
-              href="/dashboard"
-              className="text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors text-sm font-bold px-2"
-            >
-              {t('dashboard')}
-            </Link>
+            {!isSubdomain && (
+              <>
+                <Link
+                  href="/dashboard"
+                  className="text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors text-sm font-bold px-2"
+                >
+                  {t('dashboard')}
+                </Link>
 
-            <Link
-              href="/referrals"
-              className="text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors text-sm font-bold flex items-center gap-1 px-2"
-            >
-              {t('referrals')}
-              <Users className="w-3 h-3" />
-            </Link>
-
-            {/* /docs route reserved for future lab collaboration - not part of dealer UI */}
+                <Link
+                  href="/referrals"
+                  className="text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors text-sm font-bold flex items-center gap-1 px-2"
+                >
+                  {t('referrals')}
+                  <Users className="w-3 h-3" />
+                </Link>
+              </>
+            )}
 
             {/* Separator */}
             <div className="w-px h-6 bg-gradient-to-b from-transparent via-gray-300 dark:via-am-blue-light/30 to-transparent opacity-40 mx-2"></div>
@@ -142,31 +151,33 @@ export const Navbar: React.FC = () => {
                 {t('catalog')}
               </Link>
 
+              {!isSubdomain && (
+                <>
+                  <div className="mx-4 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-am-blue/30 to-transparent opacity-30"></div>
+
+                  <Link
+                    href="/dashboard"
+                    className="block text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors px-4 py-3 font-bold text-base flex items-center gap-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    {t('dashboard')}
+                  </Link>
+
+                  <div className="mx-4 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-am-blue/30 to-transparent opacity-30"></div>
+
+                  <Link
+                    href="/referrals"
+                    className="block text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors px-4 py-3 font-bold text-base flex items-center gap-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <Users className="w-4 h-4" />
+                    {t('referrals')}
+                  </Link>
+                </>
+              )}
+
               <div className="mx-4 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-am-blue/30 to-transparent opacity-30"></div>
-
-              <Link
-                href="/dashboard"
-                className="block text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors px-4 py-3 font-bold text-base flex items-center gap-2"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <LayoutDashboard className="w-4 h-4" />
-                {t('dashboard')}
-              </Link>
-
-              <div className="mx-4 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-am-blue/30 to-transparent opacity-30"></div>
-
-              <Link
-                href="/referrals"
-                className="block text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors px-4 py-3 font-bold text-base flex items-center gap-2"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <Users className="w-4 h-4" />
-                {t('referrals')}
-              </Link>
-
-              <div className="mx-4 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-am-blue/30 to-transparent opacity-30"></div>
-
-              {/* /docs route reserved for future lab collaboration - not part of dealer UI */}
 
               {/* Mobile Language and Theme Toggles */}
               <div className="px-4 py-3 flex items-center justify-between">

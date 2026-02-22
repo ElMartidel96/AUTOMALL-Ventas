@@ -36,6 +36,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import FeaturedCarousel from '@/components/catalog/FeaturedCarousel';
+import { useTenant } from '@/lib/tenant/TenantProvider';
 
 /* ─── Car Brand Logos ─────────────────────────────────────────────────
    Real brand logos as transparent PNGs (200x200) in public/brands/.
@@ -61,6 +62,7 @@ export default function Home() {
   const [selectedPrice, setSelectedPrice] = useState('');
   const { isConnected } = useAccount();
   const t = useTranslations('dealer');
+  const { seller, isSubdomain } = useTenant();
 
   useEffect(() => {
     const timer = setTimeout(() => setIsVisible(true), 100);
@@ -88,10 +90,12 @@ export default function Home() {
                 {t('hero.welcome')}
               </p>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
-                <span className="text-holographic">Autos MALL</span>
+                <span className="text-holographic">
+                  {isSubdomain && seller ? seller.business_name : 'Autos MALL'}
+                </span>
               </h1>
               <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-md mx-auto md:mx-0 leading-relaxed">
-                {t('interactiveHero.tagline')}
+                {isSubdomain && seller?.tagline ? seller.tagline : t('interactiveHero.tagline')}
               </p>
             </div>
           </div>
@@ -189,8 +193,9 @@ export default function Home() {
       </section>
 
       {/* ════════════════════════════════════════════════════════════
-         SHOP BY BRAND — Official logos, uniform sizing
+         SHOP BY BRAND — Official logos, uniform sizing (main site only)
          ════════════════════════════════════════════════════════════ */}
+      {!isSubdomain && (
       <section className="py-12 md:py-16 px-4">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-10">
@@ -226,6 +231,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ════════════════════════════════════════════════════════════
          WHY AUTOS MALL — Trust building, anxiety reduction
@@ -371,7 +377,7 @@ export default function Home() {
               </Link>
 
               <a
-                href="mailto:info@autosmall.com"
+                href={`mailto:${isSubdomain && seller?.email ? seller.email : 'info@autosmall.com'}`}
                 className="inline-flex items-center justify-center gap-2 glass-button px-8 py-4 rounded-xl font-bold text-lg"
               >
                 <MessageCircle className="w-5 h-5" />
@@ -379,7 +385,7 @@ export default function Home() {
               </a>
 
               <a
-                href="tel:+1-832-000-0000"
+                href={`tel:${isSubdomain && seller?.phone ? seller.phone : '+1-832-000-0000'}`}
                 className="inline-flex items-center justify-center gap-2 glass-button px-8 py-4 rounded-xl font-bold text-lg"
               >
                 <Phone className="w-5 h-5" />

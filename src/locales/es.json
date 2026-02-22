@@ -2756,5 +2756,70 @@
       "prev": "Anterior",
       "next": "Siguiente"
     }
+  },
+  "onboarding": {
+    "title": "Configura Tu Concesionaria",
+    "subtitle": "Crea tu presencia profesional en linea en minutos",
+    "step": "Paso {current} de {total}",
+    "next": "Continuar",
+    "back": "Atras",
+    "finish": "Lanzar Mi Sitio",
+    "steps": {
+      "handle": {
+        "title": "Elige Tu URL",
+        "description": "Escoge una direccion web unica para tu concesionaria",
+        "label": "Tu URL",
+        "placeholder": "juanperez",
+        "preview": "Tu sitio estara en:",
+        "checking": "Verificando disponibilidad...",
+        "available": "Esta URL esta disponible!",
+        "taken": "Esta URL ya esta en uso",
+        "invalid": "Usa 3-30 letras minusculas, numeros o guiones",
+        "reserved": "Esta URL esta reservada"
+      },
+      "business": {
+        "title": "Informacion del Negocio",
+        "description": "Cuentale a tus clientes sobre tu concesionaria",
+        "name": "Nombre del Negocio",
+        "namePlaceholder": "Autos de Juan",
+        "tagline": "Eslogan",
+        "taglinePlaceholder": "Vehiculos seminuevos de calidad en Houston",
+        "phone": "Telefono",
+        "phonePlaceholder": "+1 832 555 0000",
+        "whatsapp": "WhatsApp",
+        "whatsappPlaceholder": "18325550000",
+        "email": "Correo electronico",
+        "emailPlaceholder": "juan@ejemplo.com",
+        "address": "Direccion",
+        "addressPlaceholder": "1234 Main St, Houston, TX"
+      },
+      "branding": {
+        "title": "Tu Marca",
+        "description": "Sube tu logo e imagen de portada",
+        "logo": "Logo",
+        "logoHelp": "Imagen cuadrada recomendada (min 200x200)",
+        "heroImage": "Imagen de Portada",
+        "heroImageHelp": "Imagen panoramica para tu pagina principal (1200x600 recomendado)",
+        "upload": "Subir Imagen",
+        "change": "Cambiar",
+        "socialTitle": "Redes Sociales (opcional)",
+        "instagram": "URL de Instagram",
+        "facebook": "URL de Facebook",
+        "tiktok": "URL de TikTok"
+      },
+      "preview": {
+        "title": "Vista Previa de Tu Sitio",
+        "description": "Asi se vera tu concesionaria",
+        "looksGood": "Se ve bien! Lanzar.",
+        "goBack": "Regresar a editar"
+      }
+    },
+    "success": {
+      "title": "Tu sitio esta en linea!",
+      "description": "Tu pagina profesional de concesionaria esta lista en:",
+      "visitSite": "Visitar Mi Sitio",
+      "addVehicles": "Agregar Mi Primer Vehiculo"
+    },
+    "requiresLogin": "Inicia sesion para crear tu concesionaria"
   }
 }

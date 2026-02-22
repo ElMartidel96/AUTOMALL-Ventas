@@ -20,10 +20,14 @@ export function getAllowedOrigins(): string[] {
         'http://127.0.0.1:3000',
       ];
     }
-    // Production fallback - allow Vercel domains
+    // Production fallback - allow Vercel domains and AutosMall subdomains
     return [
       'https://crypto-gift-wallets-dao.vercel.app',
-      '*.vercel.app'
+      '*.vercel.app',
+      'https://autosmall.org',
+      '*.autosmall.org',
+      'https://autosmall.com',
+      '*.autosmall.com',
     ];
   }
   
