@@ -43,7 +43,7 @@ export const Navbar: React.FC = () => {
   }, []);
 
   return (
-    <nav className="bg-white/80 dark:bg-am-dark/80 backdrop-blur-md shadow-lg fixed top-0 left-0 right-0 z-[10000] transition-colors duration-300 border-b border-gray-200/50 dark:border-am-blue/30">
+    <nav className="bg-gray-100/70 dark:bg-am-dark/80 backdrop-blur-xl shadow-lg fixed top-0 left-0 right-0 z-[10000] transition-colors duration-300 border-b border-gray-300/40 dark:border-am-blue/30">
       <div className="container mx-auto px-2">
         <div className="flex justify-between items-center py-3">
           {/* Logo and Brand */}
@@ -140,7 +140,7 @@ export const Navbar: React.FC = () => {
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 dark:border-am-blue/30 py-4 bg-white dark:bg-am-dark relative z-[10001] max-h-[calc(100vh-73px)] overflow-y-auto">
+          <div className="md:hidden border-t border-gray-300/40 dark:border-am-blue/30 py-4 bg-gray-100/95 dark:bg-am-dark relative z-[10001] max-h-[calc(100vh-73px)] overflow-y-auto">
             <div className="space-y-4">
               <Link
                 href="/catalog"
