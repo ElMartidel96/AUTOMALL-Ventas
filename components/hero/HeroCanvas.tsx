@@ -502,7 +502,7 @@ export default function HeroCanvas({ imageSrc, className, fixed }: HeroCanvasPro
 
     // Desktop: nudge down to clear the navbar area
     if (fixedRef.current && w >= 768) {
-      drawY += 70;
+      drawY += 108;
     }
 
     return { drawX, drawY, drawW, drawH };
@@ -515,8 +515,8 @@ export default function HeroCanvas({ imageSrc, className, fixed }: HeroCanvasPro
 
     if (fixedRef.current && w < 768) {
       return [
-        base,
-        { ...base, drawX: base.drawX + 25, drawY: base.drawY - base.drawH - 20 },
+        { ...base, drawX: base.drawX - 90 },
+        { ...base, drawX: base.drawX + 25 - 90, drawY: base.drawY - base.drawH - 20 },
         { ...base, drawX: base.drawX + 25, drawY: base.drawY + 200 },
       ];
     }
