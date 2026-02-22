@@ -79,11 +79,6 @@ interface MouseState {
   lastTrailSample: number;
 }
 
-interface StripSegment {
-  startFrac: number;  // 0-1 vertical start position within strip
-  heightFrac: number; // 0-1 height of this segment
-}
-
 interface HeroCanvasProps {
   imageSrc: string;
   className?: string;
@@ -152,27 +147,6 @@ function createDotGrid(w: number, h: number): Dot[] {
   return dots;
 }
 
-// ── Helper: Generate random segment cuts for each strip ──────────────────────
-
-function generateStripSegments(): StripSegment[][] {
-  const allSegments: StripSegment[][] = [];
-  for (let i = 0; i < NUM_STRIPS; i++) {
-    const segments: StripSegment[] = [];
-    let pos = 0;
-    while (pos < 1) {
-      const segH = 0.08 + Math.random() * 0.27; // 8-35% height
-      const actualH = Math.min(segH, 1 - pos);
-      if (actualH > 0.03) {
-        segments.push({ startFrac: pos, heightFrac: actualH });
-      }
-      pos += actualH;
-      pos += 0.03 + Math.random() * 0.05; // 3-8% gap
-    }
-    allSegments.push(segments);
-  }
-  return allSegments;
-}
-
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export default function HeroCanvas({ imageSrc, className, fixed }: HeroCanvasProps) {
@@ -198,7 +172,6 @@ export default function HeroCanvas({ imageSrc, className, fixed }: HeroCanvasPro
   const stripPhasesRef = useRef<number[]>(
     Array.from({ length: NUM_STRIPS }, () => Math.random() * Math.PI * 2),
   );
-  const stripSegmentsRef = useRef<StripSegment[][]>(generateStripSegments());
   const spotlightSizeRef = useRef({ width: 0, height: 0 });
   const dotsRef = useRef<Dot[]>([]);
   const sizeRef = useRef({ width: 0, height: 0 });
@@ -564,7 +537,6 @@ export default function HeroCanvas({ imageSrc, className, fixed }: HeroCanvasPro
 
     const positions = getImagePositions(w, h);
     const reduced = reducedMotionRef.current;
-    const allSegs = stripSegmentsRef.current;
 
     for (const { drawX, drawY, drawW, drawH } of positions) {
       const stripW = drawW / NUM_STRIPS;
@@ -576,17 +548,13 @@ export default function HeroCanvas({ imageSrc, className, fixed }: HeroCanvasPro
           ? 0
           : Math.sin(time * (2 * Math.PI / STRIP_PERIOD) + phase) * STRIP_AMPLITUDE;
 
-        const segs = allSegs[i];
-        for (let s = 0; s < segs.length; s++) {
-          const seg = segs[s];
-          ctx.drawImage(
-            desat,
-            Math.round(i * srcStripW), Math.round(seg.startFrac * img.naturalHeight),
-            Math.round(srcStripW), Math.round(seg.heightFrac * img.naturalHeight),
-            drawX + i * (stripW + STRIP_GAP), drawY + yOff + seg.startFrac * drawH,
-            stripW, seg.heightFrac * drawH,
-          );
-        }
+        ctx.drawImage(
+          desat,
+          Math.round(i * srcStripW), 0,
+          Math.round(srcStripW), img.naturalHeight,
+          drawX + i * (stripW + STRIP_GAP), drawY + yOff,
+          stripW, drawH,
+        );
       }
     }
   }
@@ -623,7 +591,6 @@ export default function HeroCanvas({ imageSrc, className, fixed }: HeroCanvasPro
 
     const positions = getImagePositions(w, h);
     const reduced = reducedMotionRef.current;
-    const allSegs = stripSegmentsRef.current;
 
     for (const { drawX, drawY, drawW, drawH } of positions) {
       const stripW = drawW / NUM_STRIPS;
@@ -635,17 +602,13 @@ export default function HeroCanvas({ imageSrc, className, fixed }: HeroCanvasPro
           ? 0
           : Math.sin(time * (2 * Math.PI / STRIP_PERIOD) + phase) * STRIP_AMPLITUDE;
 
-        const segs = allSegs[i];
-        for (let s = 0; s < segs.length; s++) {
-          const seg = segs[s];
-          ctx.drawImage(
-            img,
-            Math.round(i * srcStripW), Math.round(seg.startFrac * img.naturalHeight),
-            Math.round(srcStripW), Math.round(seg.heightFrac * img.naturalHeight),
-            drawX + i * (stripW + STRIP_GAP), drawY + yOff + seg.startFrac * drawH,
-            stripW, seg.heightFrac * drawH,
-          );
-        }
+        ctx.drawImage(
+          img,
+          Math.round(i * srcStripW), 0,
+          Math.round(srcStripW), img.naturalHeight,
+          drawX + i * (stripW + STRIP_GAP), drawY + yOff,
+          stripW, drawH,
+        );
       }
     }
   }
