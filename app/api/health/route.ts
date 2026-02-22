@@ -18,11 +18,25 @@ export async function GET() {
     env_check: {},
   }
 
-  // Check Supabase configuration
+  // Check Supabase configuration + service key role
+  let serviceKeyRole = 'unknown'
+  try {
+    const sk = process.env.SUPABASE_DAO_SERVICE_KEY
+    if (sk) {
+      const parts = sk.split('.')
+      if (parts.length === 3) {
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString())
+        serviceKeyRole = payload.role || 'missing_role'
+      }
+    }
+  } catch { serviceKeyRole = 'parse_error' }
+
   diagnostics.env_check.supabase = {
     has_url: Boolean(process.env.NEXT_PUBLIC_SUPABASE_DAO_URL || process.env.SUPABASE_DAO_URL),
     has_anon_key: Boolean(process.env.NEXT_PUBLIC_SUPABASE_DAO_ANON_KEY || process.env.SUPABASE_DAO_ANON_KEY),
     has_service_key: Boolean(process.env.SUPABASE_DAO_SERVICE_KEY),
+    service_key_role: serviceKeyRole,
+    service_key_ok: serviceKeyRole === 'service_role',
     public_client_initialized: Boolean(supabase),
     admin_client_initialized: Boolean(supabaseAdmin),
   }
@@ -33,29 +47,58 @@ export async function GET() {
     has_token: Boolean(process.env.UPSTASH_REDIS_REST_TOKEN),
   }
 
-  // Test Supabase connection
+  // Test Supabase connection — read + write on vehicles table
   if (supabaseAdmin) {
     try {
-      const { data, error } = await supabaseAdmin
-        .from('tasks')
-        .select('count')
-        .limit(1)
+      // Test 1: Read (SELECT)
+      const { count, error: readError } = await supabaseAdmin
+        .from('vehicles')
+        .select('*', { count: 'exact', head: true })
 
-      if (error) {
+      if (readError) {
         diagnostics.services.supabase = {
           status: 'error',
-          error: error.message,
-          code: error.code,
+          test: 'read_failed',
+          error: readError.message,
+          code: readError.code,
         }
       } else {
-        // Get actual count
-        const { count, error: countError } = await supabaseAdmin
-          .from('tasks')
-          .select('*', { count: 'exact', head: true })
-
         diagnostics.services.supabase = {
           status: 'connected',
-          tasks_count: countError ? 'unknown' : count,
+          vehicles_count: count,
+          read: 'ok',
+          write: 'untested',
+        }
+
+        // Test 2: Write (INSERT + DELETE) — only if service_role key
+        if (serviceKeyRole === 'service_role') {
+          const { data: testRow, error: writeError } = await supabaseAdmin
+            .from('vehicles')
+            .insert({
+              seller_address: '0x0000000000000000000000000000000000000000',
+              brand: '__health_check__',
+              model: '__test__',
+              year: 2000,
+              price: 1,
+              mileage: 0,
+              status: 'archived',
+            })
+            .select('id')
+            .single()
+
+          if (writeError) {
+            diagnostics.services.supabase.write = 'failed'
+            diagnostics.services.supabase.write_error = writeError.message
+            diagnostics.services.supabase.write_code = writeError.code
+            if (writeError.code === '42501') {
+              diagnostics.services.supabase.write_hint =
+                'RLS blocking writes — SUPABASE_DAO_SERVICE_KEY is NOT the service_role key. Check Supabase Dashboard → Settings → API → Service Role Key.'
+            }
+          } else {
+            // Clean up test row
+            await supabaseAdmin.from('vehicles').delete().eq('id', testRow.id)
+            diagnostics.services.supabase.write = 'ok'
+          }
         }
       }
     } catch (err) {

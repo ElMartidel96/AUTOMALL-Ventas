@@ -57,6 +57,27 @@ export async function getServerClient(): Promise<TypedSupabaseClient> {
   return supabaseAdmin
 }
 
+// Validate service key role at startup
+function validateServiceKey(): void {
+  if (!supabaseServiceKey) return
+  try {
+    const parts = supabaseServiceKey.split('.')
+    if (parts.length === 3) {
+      const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString())
+      if (payload.role !== 'service_role') {
+        console.error(
+          `[Supabase] CRITICAL: SUPABASE_DAO_SERVICE_KEY has role "${payload.role}" — expected "service_role". ` +
+          `You likely set the anon key instead of the service_role key. ` +
+          `Go to Supabase Dashboard → Settings → API → Service Role Key (secret).`
+        )
+      }
+    }
+  } catch {
+    // Not a JWT or malformed — will fail on first query
+  }
+}
+validateServiceKey()
+
 // Type-safe client getter for task operations
 export function getTypedClient(): TypedSupabaseClient {
   if (!supabaseAdmin) {
