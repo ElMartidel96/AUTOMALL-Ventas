@@ -515,8 +515,8 @@ export default function HeroCanvas({ imageSrc, className, fixed }: HeroCanvasPro
 
     if (fixedRef.current && w < 768) {
       return [
-        { ...base, drawX: base.drawX - 90 },
-        { ...base, drawX: base.drawX + 25 - 90, drawY: base.drawY - base.drawH - 20 },
+        { ...base, drawX: base.drawX - 45 },
+        { ...base, drawX: base.drawX + 25 - 45, drawY: base.drawY - base.drawH - 20 },
         { ...base, drawX: base.drawX + 25, drawY: base.drawY + 200 },
       ];
     }
