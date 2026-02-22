@@ -1,7 +1,9 @@
 -- ============================================================================
--- Vehicle Inventory System for Autos MALL
--- Creates vehicles and vehicle_images tables with indexes and triggers
+-- Autos MALL — Complete Vehicle Inventory System
+-- Tables, RLS, Indexes, Triggers — Single migration file
 -- ============================================================================
+
+-- ── Tables ────────────────────────────────────────────────────────────────────
 
 -- Vehicles table
 CREATE TABLE IF NOT EXISTS vehicles (
@@ -52,11 +54,54 @@ CREATE TABLE IF NOT EXISTS vehicle_images (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Indexes for common queries
+-- ── Enable RLS ────────────────────────────────────────────────────────────────
+
+ALTER TABLE vehicles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vehicle_images ENABLE ROW LEVEL SECURITY;
+
+-- ── RLS Policies for vehicles ─────────────────────────────────────────────────
+
+-- Public can read active vehicles (catalog)
+CREATE POLICY "vehicles_public_read" ON vehicles
+  FOR SELECT USING (status = 'active');
+
+-- Service role (admin) can do everything (API routes use service key)
+CREATE POLICY "vehicles_service_all" ON vehicles
+  FOR ALL USING (auth.role() = 'service_role');
+
+-- ── RLS Policies for vehicle_images ───────────────────────────────────────────
+
+-- Public can read images of active vehicles
+CREATE POLICY "vehicle_images_public_read" ON vehicle_images
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM vehicles WHERE vehicles.id = vehicle_images.vehicle_id AND vehicles.status = 'active'
+    )
+  );
+
+-- Service role (admin) can do everything
+CREATE POLICY "vehicle_images_service_all" ON vehicle_images
+  FOR ALL USING (auth.role() = 'service_role');
+
+-- ── Indexes ───────────────────────────────────────────────────────────────────
+
+-- Basic query indexes
 CREATE INDEX IF NOT EXISTS idx_vehicles_seller ON vehicles(seller_address);
 CREATE INDEX IF NOT EXISTS idx_vehicles_status ON vehicles(status);
 CREATE INDEX IF NOT EXISTS idx_vehicles_brand_year ON vehicles(brand, year);
 CREATE INDEX IF NOT EXISTS idx_vehicle_images_vehicle ON vehicle_images(vehicle_id);
+
+-- Catalog performance indexes (partial, only active vehicles)
+CREATE INDEX IF NOT EXISTS idx_vehicles_status_published ON vehicles(status, published_at DESC)
+  WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_vehicles_price ON vehicles(price)
+  WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_vehicles_year ON vehicles(year DESC)
+  WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_vehicles_mileage ON vehicles(mileage)
+  WHERE status = 'active';
+
+-- ── Triggers ──────────────────────────────────────────────────────────────────
 
 -- Auto-update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_vehicle_timestamp()
@@ -71,3 +116,22 @@ DROP TRIGGER IF EXISTS vehicles_updated_at ON vehicles;
 CREATE TRIGGER vehicles_updated_at
   BEFORE UPDATE ON vehicles
   FOR EACH ROW EXECUTE FUNCTION update_vehicle_timestamp();
+
+-- Auto-set published_at when status changes to 'active', sold_at when 'sold'
+CREATE OR REPLACE FUNCTION set_vehicle_published_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.status = 'active' AND (OLD.status IS DISTINCT FROM 'active') THEN
+    NEW.published_at = now();
+  END IF;
+  IF NEW.status = 'sold' AND (OLD.status IS DISTINCT FROM 'sold') THEN
+    NEW.sold_at = now();
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS vehicles_set_published_at ON vehicles;
+CREATE TRIGGER vehicles_set_published_at
+  BEFORE UPDATE ON vehicles
+  FOR EACH ROW EXECUTE FUNCTION set_vehicle_published_at();
