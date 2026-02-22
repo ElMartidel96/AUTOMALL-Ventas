@@ -25,7 +25,7 @@ const SPOTLIGHT_RADIUS = 70;
 const SPOTLIGHT_FADE_DELAY = 1000; // ms before fade starts
 const SPOTLIGHT_FADE_DURATION = 500; // ms to fully fade
 
-const TRAIL_DURATION = 1000; // ms trail points live
+const TRAIL_DURATION = 3000; // ms trail points live
 const TRAIL_SAMPLE_INTERVAL = 30; // ms between trail samples
 
 const DOT_SPACING = 20;
