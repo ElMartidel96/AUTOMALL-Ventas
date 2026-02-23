@@ -30,12 +30,14 @@ import {
 } from 'lucide-react';
 import { FEATURE_WEB3_VISIBLE, FEATURE_CGC_TOKEN } from '@/lib/config/features';
 import { useTenant } from '@/lib/tenant/TenantProvider';
+import { useUser } from '@/hooks/useUser';
 
 export const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { address, isConnected } = useAccount();
   const { seller, isSubdomain } = useTenant();
+  const { isDealer } = useUser();
 
   const t = useTranslations('navigation');
 
@@ -86,7 +88,7 @@ export const Navbar: React.FC = () => {
               {t('catalog')}
             </Link>
 
-            {!isSubdomain && (
+            {!isSubdomain && isDealer && (
               <>
                 <Link
                   href="/dashboard"
@@ -158,7 +160,7 @@ export const Navbar: React.FC = () => {
                 {t('catalog')}
               </Link>
 
-              {!isSubdomain && (
+              {!isSubdomain && isDealer && (
                 <>
                   <div className="mx-4 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-am-blue/30 to-transparent opacity-30"></div>
 
@@ -263,9 +265,11 @@ function UserDropdown({ fullWidth = false }: { fullWidth?: boolean }) {
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const wallet = useActiveWallet();
+  const { role } = useUser();
 
   const tCommon = useTranslations('common');
   const tWallet = useTranslations('wallet');
+  const tRoles = useTranslations('roles');
 
   if (!isConnected || !address) return null;
 
@@ -307,7 +311,7 @@ function UserDropdown({ fullWidth = false }: { fullWidth?: boolean }) {
               )}
             </button>
             <div className="text-xs text-gray-500 dark:text-gray-400">
-              Vendedor
+              {role ? tRoles(`${role}.label`) : ''}
             </div>
           </div>
 
@@ -338,7 +342,7 @@ function UserDropdown({ fullWidth = false }: { fullWidth?: boolean }) {
                   </div>
                   <div>
                     <div className="font-medium text-gray-900 dark:text-white">{displayAddress}</div>
-                    <div className="text-xs text-am-green font-medium">Conectado</div>
+                    <div className="text-xs text-am-green font-medium">{tCommon('connected')}</div>
                   </div>
                 </div>
               </div>
@@ -352,7 +356,7 @@ function UserDropdown({ fullWidth = false }: { fullWidth?: boolean }) {
                   <div className="w-4 h-4 rounded-full bg-gradient-to-br from-am-blue to-am-orange flex items-center justify-center flex-shrink-0">
                     <User className="w-2.5 h-2.5 text-white" />
                   </div>
-                  <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">Mi Perfil</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">{tCommon('myProfile')}</span>
                 </Link>
 
                 <button
@@ -379,7 +383,7 @@ function UserDropdown({ fullWidth = false }: { fullWidth?: boolean }) {
                   className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left text-red-600 dark:text-red-400"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span className="text-sm font-medium">Cerrar Sesion</span>
+                  <span className="text-sm font-medium">{tCommon('signOut')}</span>
                 </button>
               </div>
             </div>

@@ -159,6 +159,9 @@
     "level": "Nivel",
     "rank": "Posición",
     "pleaseConnectWallet": "Por favor conecta tu wallet",
+    "myProfile": "Mi Perfil",
+    "connected": "Conectado",
+    "signOut": "Cerrar Sesion",
     "transactionCancelled": "La transacción fue cancelada por el usuario.",
     "insufficientFunds": "Fondos insuficientes para las comisiones de gas.",
     "pleaseRetry": "Por favor intenta de nuevo."
@@ -2775,5 +2778,27 @@
       },
       "dismiss": "Recordar despues"
     }
+  },
+  "roles": {
+    "title": "Bienvenido a Autos MALL",
+    "subtitle": "Elige tu tipo de cuenta para comenzar",
+    "buyer": {
+      "label": "Comprador",
+      "description": "Explora vehiculos y contacta vendedores"
+    },
+    "seller": {
+      "label": "Vendedor",
+      "description": "Publica vehiculos, gestiona clientes, tu pagina profesional"
+    },
+    "birddog": {
+      "label": "BirdDog",
+      "description": "Encuentra ofertas, conecta compradores y vendedores, gana comisiones"
+    },
+    "continue": "Continuar",
+    "changeRole": "Cambiar Rol",
+    "currentRole": "Rol Actual",
+    "changeSuccess": "Rol actualizado!",
+    "buyerToDealer": "Necesitaras configurar tu perfil profesional",
+    "roleNote": "Puedes cambiar tu rol en cualquier momento desde tu perfil"
   }
 }

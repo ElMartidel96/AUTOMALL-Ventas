@@ -8,10 +8,12 @@
 
 import { ApexAgent } from '@/components/agent/ApexAgent';
 import { SellerSetupBanner } from '@/components/seller/SellerSetupBanner';
+import { RoleSelectorModal } from '@/components/user/RoleSelectorModal';
 
 export function GlobalWidgets() {
   return (
     <>
+      <RoleSelectorModal />
       <SellerSetupBanner />
       <ApexAgent />
     </>

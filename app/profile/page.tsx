@@ -16,7 +16,10 @@ import { Navbar, NavbarSpacer } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { useAccount } from '@/lib/thirdweb';
 import { useSellerProfile } from '@/hooks/useSellerProfile';
+import { useUser } from '@/hooks/useUser';
 import type { Seller } from '@/lib/types/seller';
+import type { UserRole } from '@/lib/types/user';
+import { isDealerRole } from '@/lib/types/user';
 import {
   Store,
   Phone,
@@ -30,6 +33,8 @@ import {
   Loader2,
   ExternalLink,
   Image as ImageIcon,
+  ShoppingCart,
+  Search,
 } from 'lucide-react';
 
 // Social icons
@@ -54,14 +59,16 @@ const TikTokIcon = ({ className }: { className?: string }) => (
 export default function ProfilePage() {
   const t = useTranslations('profile');
   const tCommon = useTranslations('common');
+  const tRoles = useTranslations('roles');
   const router = useRouter();
   const { address, isConnected } = useAccount();
   const { seller, isLoading, isOnboarded, completionPercentage, missingFields, refetch } = useSellerProfile();
+  const { user, role, isDealer, isLoading: userLoading, updateRole } = useUser();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
-  if (!mounted || isLoading) {
+  if (!mounted || isLoading || userLoading) {
     return <ProfileSkeleton />;
   }
 
@@ -88,8 +95,8 @@ export default function ProfilePage() {
     );
   }
 
-  // No seller profile yet → redirect to onboarding
-  if (!seller) {
+  // Dealer without seller profile → redirect to onboarding
+  if (isDealer && !seller) {
     return (
       <>
         <Navbar />
@@ -129,57 +136,155 @@ export default function ProfilePage() {
             <p className="text-gray-500 dark:text-gray-400 mt-1">{t('subtitle')}</p>
           </div>
 
-          {/* Top bar: URL + completion */}
-          <div className="glass-crystal-enhanced rounded-2xl p-5 mb-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              {/* Subdomain URL */}
-              <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{t('yourUrl')}</p>
-                <a
-                  href={`https://${seller.handle}.autosmall.org`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-am-blue dark:text-am-blue-light font-semibold hover:underline"
-                >
-                  {seller.handle}.autosmall.org
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              </div>
+          {/* Role Selector */}
+          <RoleChanger
+            currentRole={role}
+            onChangeRole={async (newRole) => {
+              const { needs_onboarding } = await updateRole(newRole);
+              if (isDealerRole(newRole) && needs_onboarding) {
+                router.push('/onboarding');
+              }
+            }}
+            tRoles={tRoles}
+          />
 
-              {/* Completion */}
-              <div className="sm:text-right min-w-[180px]">
-                <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-                  {t('completion')}
-                </p>
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-2.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-am-orange to-am-orange-light transition-all duration-500"
-                      style={{ width: `${completionPercentage}%` }}
-                    />
+          {/* Dealer-specific: URL + completion + seller form */}
+          {isDealer && seller && (
+            <>
+              {/* Top bar: URL + completion */}
+              <div className="glass-crystal-enhanced rounded-2xl p-5 mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  {/* Subdomain URL */}
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{t('yourUrl')}</p>
+                    <a
+                      href={`https://${seller.handle}.autosmall.org`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-am-blue dark:text-am-blue-light font-semibold hover:underline"
+                    >
+                      {seller.handle}.autosmall.org
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
                   </div>
-                  <span className="text-sm font-bold text-gray-900 dark:text-white">{completionPercentage}%</span>
+
+                  {/* Completion */}
+                  <div className="sm:text-right min-w-[180px]">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                      {t('completion')}
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-2.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-am-orange to-am-orange-light transition-all duration-500"
+                          style={{ width: `${completionPercentage}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">{completionPercentage}%</span>
+                    </div>
+                    {completionPercentage < 100 && (
+                      <p className="text-xs text-gray-400 mt-1">{t('completionHint')}</p>
+                    )}
+                  </div>
                 </div>
-                {completionPercentage < 100 && (
-                  <p className="text-xs text-gray-400 mt-1">{t('completionHint')}</p>
+
+                {/* Member since */}
+                {seller.created_at && (
+                  <p className="text-xs text-gray-400 mt-3">
+                    {t('memberSince')} {new Date(seller.created_at).toLocaleDateString()}
+                  </p>
                 )}
               </div>
-            </div>
 
-            {/* Member since */}
-            {seller.created_at && (
-              <p className="text-xs text-gray-400 mt-3">
-                {t('memberSince')} {new Date(seller.created_at).toLocaleDateString()}
-              </p>
-            )}
-          </div>
-
-          {/* Profile edit form */}
-          <SellerForm seller={seller} address={address} refetch={refetch} t={t} />
+              {/* Profile edit form */}
+              <SellerForm seller={seller} address={address} refetch={refetch} t={t} />
+            </>
+          )}
         </div>
       </div>
       <Footer />
     </>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   Role Changer
+   ───────────────────────────────────────────── */
+
+const ROLE_CONFIG: { role: UserRole; icon: typeof ShoppingCart }[] = [
+  { role: 'buyer', icon: ShoppingCart },
+  { role: 'seller', icon: Store },
+  { role: 'birddog', icon: Search },
+];
+
+function RoleChanger({
+  currentRole,
+  onChangeRole,
+  tRoles,
+}: {
+  currentRole: UserRole | null;
+  onChangeRole: (role: UserRole) => Promise<void>;
+  tRoles: ReturnType<typeof useTranslations<'roles'>>;
+}) {
+  const [isChanging, setIsChanging] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  if (!currentRole) return null;
+
+  const handleChange = async (newRole: UserRole) => {
+    if (newRole === currentRole || isChanging) return;
+    setIsChanging(true);
+    setSuccess(false);
+    try {
+      await onChangeRole(newRole);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch {
+      // Error handled upstream
+    } finally {
+      setIsChanging(false);
+    }
+  };
+
+  return (
+    <div className="glass-crystal-enhanced rounded-2xl p-5 mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          {tRoles('currentRole')}
+        </h3>
+        {success && (
+          <span className="text-sm text-am-green flex items-center gap-1">
+            <CheckCircle className="w-4 h-4" />
+            {tRoles('changeSuccess')}
+          </span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        {ROLE_CONFIG.map(({ role, icon: Icon }) => {
+          const isActive = role === currentRole;
+          return (
+            <button
+              key={role}
+              onClick={() => handleChange(role)}
+              disabled={isChanging}
+              className={`p-3 rounded-xl border-2 transition-all text-center ${
+                isActive
+                  ? 'border-am-orange bg-am-orange/10 dark:bg-am-orange/15'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-am-orange/50 bg-white/50 dark:bg-white/5'
+              } disabled:opacity-50`}
+            >
+              <Icon className={`w-5 h-5 mx-auto mb-1 ${isActive ? 'text-am-orange' : 'text-gray-400'}`} />
+              <p className={`text-xs font-bold ${isActive ? 'text-am-orange' : 'text-gray-600 dark:text-gray-300'}`}>
+                {tRoles(`${role}.label`)}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="text-xs text-gray-400 mt-3 text-center">{tRoles('roleNote')}</p>
+    </div>
   );
 }
 

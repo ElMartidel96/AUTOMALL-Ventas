@@ -20,6 +20,7 @@ import { Footer } from '@/components/layout/Footer';
 import { useAccount } from '@/lib/thirdweb';
 import { ConnectButtonDAO } from '@/components/thirdweb/ConnectButtonDAO';
 import { useSellerProfile } from '@/hooks/useSellerProfile';
+import { useUser } from '@/hooks/useUser';
 import { APP_DOMAIN, FEATURE_SELLER_SUBDOMAINS } from '@/lib/config/features';
 import {
   Globe,
@@ -85,6 +86,7 @@ export default function OnboardingPage() {
 
   // Detect if user already has a seller profile → redirect
   const { seller: existingSeller, isLoading: profileLoading } = useSellerProfile();
+  const { user, isLoading: userLoading } = useUser();
 
   useEffect(() => {
     setMounted(true);
@@ -95,6 +97,13 @@ export default function OnboardingPage() {
       router.push('/dashboard');
     }
   }, [mounted, existingSeller, router]);
+
+  // Buyers shouldn't be on onboarding — redirect to home
+  useEffect(() => {
+    if (mounted && !userLoading && user?.role === 'buyer') {
+      router.push('/');
+    }
+  }, [mounted, userLoading, user, router]);
 
   // Check handle availability with debounce
   const checkHandle = useCallback(async (handle: string) => {
@@ -213,8 +222,11 @@ export default function OnboardingPage() {
     setCurrentStep(prev => Math.max(prev - 1, 0));
   };
 
-  // Not mounted yet or checking existing profile
-  if (!mounted || profileLoading) return null;
+  // Not mounted yet or checking existing profile / user role
+  if (!mounted || profileLoading || userLoading) return null;
+
+  // Buyer shouldn't be here (useEffect handles redirect)
+  if (user?.role === 'buyer') return null;
 
   // Already onboarded — redirecting (useEffect handles it)
   if (existingSeller?.onboarding_completed) return null;

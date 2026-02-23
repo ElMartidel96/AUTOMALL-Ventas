@@ -159,6 +159,9 @@
     "level": "Level",
     "rank": "Rank",
     "pleaseConnectWallet": "Please connect your wallet",
+    "myProfile": "My Profile",
+    "connected": "Connected",
+    "signOut": "Sign Out",
     "transactionCancelled": "Transaction was cancelled by user.",
     "insufficientFunds": "Insufficient funds for gas fees.",
     "pleaseRetry": "Please try again."
@@ -2775,5 +2778,27 @@
       },
       "dismiss": "Remind me later"
     }
+  },
+  "roles": {
+    "title": "Welcome to Autos MALL",
+    "subtitle": "Choose your account type to get started",
+    "buyer": {
+      "label": "Buyer",
+      "description": "Browse vehicles and contact sellers"
+    },
+    "seller": {
+      "label": "Seller",
+      "description": "List vehicles, manage clients, get your professional page"
+    },
+    "birddog": {
+      "label": "BirdDog",
+      "description": "Find deals, connect buyers with sellers, earn commissions"
+    },
+    "continue": "Continue",
+    "changeRole": "Change Role",
+    "currentRole": "Current Role",
+    "changeSuccess": "Role updated!",
+    "buyerToDealer": "You'll need to set up your professional profile",
+    "roleNote": "You can change your role anytime from your profile"
   }
 }

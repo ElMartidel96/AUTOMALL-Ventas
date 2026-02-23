@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { AlertCircle, Phone, CheckCircle2, X } from 'lucide-react';
 import { useAccount } from '@/lib/thirdweb';
 import { useSellerProfile } from '@/hooks/useSellerProfile';
+import { useUser } from '@/hooks/useUser';
 
 const DISMISS_KEY_PREFIX = 'seller_reminder_dismissed_';
 
@@ -48,13 +49,17 @@ function dismissBanner(address: string, level: BannerLevel) {
 export function SellerSetupBanner() {
   const { address, isConnected } = useAccount();
   const { seller, isLoading, isOnboarded, hasPhone, completionPercentage } = useSellerProfile();
+  const { user, isLoading: userLoading } = useUser();
   const t = useTranslations('sellerSetup');
   const [dismissed, setDismissed] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
-  if (!mounted || !isConnected || !address || isLoading) return null;
+  if (!mounted || !isConnected || !address || isLoading || userLoading) return null;
+
+  // Buyers don't need dealer setup
+  if (user?.role === 'buyer') return null;
 
   // Determine banner level
   let level: BannerLevel = null;
