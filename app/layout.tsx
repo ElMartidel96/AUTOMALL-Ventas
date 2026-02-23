@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   authors: [{ name: 'Autos MALL Team' }],
   creator: 'Autos MALL LLC',
   publisher: 'Autos MALL LLC',
-  metadataBase: new URL('https://autosmall.com'),
+  metadataBase: new URL('https://www.autosmall.org'),
   icons: {
     icon: [
       { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
@@ -31,18 +31,18 @@ export const metadata: Metadata = {
     apple: { url: '/apple-touch-icon.png', sizes: '180x180' },
   },
   alternates: {
-    canonical: 'https://autosmall.com',
+    canonical: 'https://www.autosmall.org',
   },
   openGraph: {
     title: 'Autos MALL - Tu Plataforma de Venta de Autos con IA',
     description: 'La plataforma todo-en-uno para vendedores independientes de autos. Pagina profesional, asistente IA de ventas, CRM inteligente y comunicacion multicanal.',
-    url: 'https://autosmall.com',
+    url: 'https://www.autosmall.org',
     siteName: 'Autos MALL',
     type: 'website',
     locale: 'en_US',
     images: [
       {
-        url: '/og-automall.png',
+        url: 'https://www.autosmall.org/og-automall.png',
         width: 1200,
         height: 630,
         alt: 'Autos MALL - Tu Plataforma de Venta de Autos con IA',
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Autos MALL - Tu Plataforma de Venta de Autos con IA',
     description: 'La plataforma todo-en-uno para vendedores independientes de autos. Asistente IA, CRM inteligente y tu propia pagina profesional.',
-    images: ['/og-automall.png'],
+    images: ['https://www.autosmall.org/og-automall.png'],
   },
   robots: {
     index: true,
