@@ -235,8 +235,8 @@ export const NavbarSpacer: React.FC = () => {
   }, []);
 
   const heightClass = mounted && isConnected
-    ? 'h-[124px] md:h-[116px]'
-    : 'h-[104px]';
+    ? 'h-[104px] md:h-[96px]'
+    : 'h-[84px]';
 
   return (
     <div

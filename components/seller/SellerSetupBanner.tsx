@@ -98,7 +98,7 @@ export function SellerSetupBanner() {
   const href = level === 'noProfile' ? '/onboarding' : '/profile';
 
   return (
-    <div className={`${style.bg} border-b ${style.border} fixed top-[74px] left-0 right-0 z-[9999]`}>
+    <div className={`${style.bg} border-b ${style.border} fixed top-[104px] left-0 right-0 z-[9999]`}>
       <div className="container mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <Icon className={`w-5 h-5 flex-shrink-0 ${style.iconColor}`} />
