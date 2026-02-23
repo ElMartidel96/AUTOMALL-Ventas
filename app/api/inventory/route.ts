@@ -112,9 +112,23 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getTypedClient();
+
+    // Lookup seller_handle from seller_address
+    let sellerHandle: string | undefined;
+    const { data: sellerRow } = await supabase
+      .from('sellers')
+      .select('handle')
+      .eq('wallet_address', parsed.data.seller_address.toLowerCase())
+      .eq('is_active', true)
+      .single();
+    if (sellerRow?.handle) {
+      sellerHandle = sellerRow.handle;
+    }
+
     const vehicleData = {
       ...parsed.data,
       seller_address: parsed.data.seller_address.toLowerCase(),
+      seller_handle: sellerHandle,
       status: 'draft' as const,
     };
 

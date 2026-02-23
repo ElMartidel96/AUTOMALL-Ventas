@@ -27,6 +27,14 @@ export interface Seller {
   updated_at: string;
 }
 
+/** Public-safe seller contact info returned with catalog vehicles */
+export interface SellerContact {
+  business_name: string;
+  phone: string | null;
+  whatsapp: string | null;
+  logo_url: string | null;
+}
+
 export interface TenantContext {
   seller: Seller | null;
   isSubdomain: boolean;

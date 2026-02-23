@@ -2740,7 +2740,9 @@
       "call": "Call Now",
       "whatsapp": "WhatsApp",
       "email": "Email",
-      "schedule": "Schedule Visit"
+      "schedule": "Schedule Visit",
+      "sellerName": "Sold by {name}",
+      "noContact": "Request Info"
     },
     "related": {
       "title": "Similar Vehicles",
@@ -2791,7 +2793,9 @@
         "email": "Email",
         "emailPlaceholder": "juan@example.com",
         "address": "Address",
-        "addressPlaceholder": "1234 Main St, Houston, TX"
+        "addressPlaceholder": "1234 Main St, Houston, TX",
+        "phoneHelp": "This number will appear on all your vehicle listings",
+        "phoneInvalid": "Enter a valid phone number (min. 10 digits)"
       },
       "branding": {
         "title": "Your Brand",
@@ -2821,5 +2825,25 @@
       "addVehicles": "Add Your First Vehicle"
     },
     "requiresLogin": "Please sign in to create your dealership"
+  },
+  "sellerSetup": {
+    "banner": {
+      "noProfile": {
+        "title": "Set up your dealership",
+        "description": "Create your profile to start selling vehicles with your own contact info",
+        "cta": "Get Started"
+      },
+      "noPhone": {
+        "title": "Add your phone number",
+        "description": "Your phone will appear on all your vehicle listings — add it now",
+        "cta": "Add Phone"
+      },
+      "incomplete": {
+        "title": "Complete your profile ({percentage}%)",
+        "description": "A complete profile builds trust with buyers",
+        "cta": "Complete Profile"
+      },
+      "dismiss": "Remind me later"
+    }
   }
 }

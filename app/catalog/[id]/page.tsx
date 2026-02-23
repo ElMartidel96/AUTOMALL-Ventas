@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Phone,
   MessageCircle,
+  Mail,
   Gauge,
   Calendar,
   Fuel,
@@ -49,9 +50,16 @@ export default function VehicleDetailPage({ params }: { params: { id: string } }
   const { data: vehicle, isLoading, error } = useCatalogVehicle(id);
   const { seller, isSubdomain } = useTenant();
 
-  // Use seller contact info on subdomains, fallback to defaults
-  const contactPhone = (isSubdomain && seller?.phone) || '+18320000000';
-  const contactWhatsApp = (isSubdomain && seller?.whatsapp) || '18320000000';
+  // Priority: subdomain tenant > per-vehicle seller_contact > null (no fake numbers)
+  const contactPhone = (isSubdomain && seller?.phone)
+    || vehicle?.seller_contact?.phone
+    || null;
+  const contactWhatsApp = (isSubdomain && seller?.whatsapp)
+    || vehicle?.seller_contact?.whatsapp
+    || null;
+  const sellerName = (isSubdomain && seller?.business_name)
+    || vehicle?.seller_contact?.business_name
+    || null;
 
   if (isLoading) {
     return (
@@ -170,23 +178,40 @@ export default function VehicleDetailPage({ params }: { params: { id: string } }
                 <h3 className="font-bold text-gray-900 dark:text-white mb-3">
                   {t('contact.title')}
                 </h3>
+                {sellerName && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                    {t('contact.sellerName', { name: sellerName })}
+                  </p>
+                )}
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <a
-                    href={`tel:${contactPhone}`}
-                    className="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-am-orange to-am-orange-light text-white px-5 py-3 rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"
-                  >
-                    <Phone className="w-4 h-4" />
-                    {t('contact.call')}
-                  </a>
-                  <a
-                    href={`https://wa.me/${contactWhatsApp}?text=${encodeURIComponent(`Hi! I'm interested in the ${title}`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-am-green to-emerald-500 text-white px-5 py-3 rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    {t('contact.whatsapp')}
-                  </a>
+                  {contactPhone ? (
+                    <a
+                      href={`tel:${contactPhone}`}
+                      className="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-am-orange to-am-orange-light text-white px-5 py-3 rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"
+                    >
+                      <Phone className="w-4 h-4" />
+                      {t('contact.call')}
+                    </a>
+                  ) : (
+                    <Link
+                      href="/catalog"
+                      className="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-am-blue to-am-blue-light text-white px-5 py-3 rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"
+                    >
+                      <Mail className="w-4 h-4" />
+                      {t('contact.noContact')}
+                    </Link>
+                  )}
+                  {contactWhatsApp && (
+                    <a
+                      href={`https://wa.me/${contactWhatsApp}?text=${encodeURIComponent(`Hi! I'm interested in the ${title}`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-am-green to-emerald-500 text-white px-5 py-3 rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      {t('contact.whatsapp')}
+                    </a>
+                  )}
                 </div>
               </div>
             </motion.div>

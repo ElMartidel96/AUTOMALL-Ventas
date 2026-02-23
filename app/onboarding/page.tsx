@@ -132,7 +132,8 @@ export default function OnboardingPage() {
       case 'handle':
         return handleStatus === 'available';
       case 'business':
-        return data.business_name.trim().length >= 2;
+        return data.business_name.trim().length >= 2
+          && data.phone.replace(/\D/g, '').length >= 10;
       case 'branding':
         return true; // Optional step
       case 'preview':
@@ -436,15 +437,33 @@ export default function OnboardingPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t('steps.business.phone')}
+                      {t('steps.business.phone')} *
                     </label>
                     <input
                       type="tel"
                       value={data.phone}
-                      onChange={(e) => updateData('phone', e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        updateData('phone', val);
+                        // Auto-copy to whatsapp if whatsapp is empty
+                        if (!data.whatsapp) {
+                          setData(prev => ({ ...prev, phone: val, whatsapp: val.replace(/\D/g, '') }));
+                        }
+                      }}
                       placeholder={t('steps.business.phonePlaceholder')}
-                      className="w-full px-4 py-3 rounded-xl bg-white dark:bg-am-dark/80 border border-gray-200 dark:border-am-blue/30 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-am-orange/50"
+                      className={`w-full px-4 py-3 rounded-xl bg-white dark:bg-am-dark/80 border text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-am-orange/50 ${
+                        data.phone && data.phone.replace(/\D/g, '').length < 10
+                          ? 'border-red-300 dark:border-red-500/50'
+                          : 'border-gray-200 dark:border-am-blue/30'
+                      }`}
                     />
+                    <p className="text-xs text-gray-400 mt-1">{t('steps.business.phoneHelp')}</p>
+                    {data.phone && data.phone.replace(/\D/g, '').length < 10 && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {t('steps.business.phoneInvalid')}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

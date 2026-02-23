@@ -2740,7 +2740,9 @@
       "call": "Llamar Ahora",
       "whatsapp": "WhatsApp",
       "email": "Email",
-      "schedule": "Agendar Visita"
+      "schedule": "Agendar Visita",
+      "sellerName": "Vendido por {name}",
+      "noContact": "Solicitar Info"
     },
     "related": {
       "title": "Vehiculos Similares",
@@ -2791,7 +2793,9 @@
         "email": "Correo electronico",
         "emailPlaceholder": "juan@ejemplo.com",
         "address": "Direccion",
-        "addressPlaceholder": "1234 Main St, Houston, TX"
+        "addressPlaceholder": "1234 Main St, Houston, TX",
+        "phoneHelp": "Este numero aparecera en todos tus vehiculos publicados",
+        "phoneInvalid": "Ingresa un numero valido (min. 10 digitos)"
       },
       "branding": {
         "title": "Tu Marca",
@@ -2821,5 +2825,25 @@
       "addVehicles": "Agregar Mi Primer Vehiculo"
     },
     "requiresLogin": "Inicia sesion para crear tu concesionaria"
+  },
+  "sellerSetup": {
+    "banner": {
+      "noProfile": {
+        "title": "Configura tu concesionaria",
+        "description": "Crea tu perfil para vender vehiculos con tu informacion de contacto",
+        "cta": "Comenzar"
+      },
+      "noPhone": {
+        "title": "Agrega tu numero de telefono",
+        "description": "Tu telefono aparecera en todos tus vehiculos — agregalo ahora",
+        "cta": "Agregar Telefono"
+      },
+      "incomplete": {
+        "title": "Completa tu perfil ({percentage}%)",
+        "description": "Un perfil completo genera confianza con los compradores",
+        "cta": "Completar Perfil"
+      },
+      "dismiss": "Recordar despues"
+    }
   }
 }

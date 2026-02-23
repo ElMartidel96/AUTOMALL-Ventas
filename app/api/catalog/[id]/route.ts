@@ -63,6 +63,26 @@ export async function GET(
       .neq('id', id)
       .limit(4);
 
+    // Lookup seller contact if vehicle has seller_handle
+    let sellerContact: { business_name: string; phone: string | null; whatsapp: string | null; logo_url: string | null } | undefined;
+    const vehicleSafe = sanitizeVehicle(vehicle);
+    if (vehicleSafe.seller_handle) {
+      const { data: sellerData } = await supabase
+        .from('sellers')
+        .select('business_name, phone, whatsapp, logo_url')
+        .eq('handle', vehicleSafe.seller_handle)
+        .eq('is_active', true)
+        .single();
+      if (sellerData) {
+        sellerContact = {
+          business_name: sellerData.business_name,
+          phone: sellerData.phone || null,
+          whatsapp: sellerData.whatsapp || null,
+          logo_url: sellerData.logo_url || null,
+        };
+      }
+    }
+
     // Increment views_count
     supabase
       .from('vehicles')
@@ -73,7 +93,8 @@ export async function GET(
     const response = NextResponse.json({
       success: true,
       data: {
-        ...sanitizeVehicle(vehicle),
+        ...vehicleSafe,
+        seller_contact: sellerContact,
         images: images || [],
         related: (related || []).map(sanitizeVehicle),
       },

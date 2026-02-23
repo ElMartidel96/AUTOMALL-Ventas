@@ -112,6 +112,41 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Batch lookup seller contact info for vehicles in this page
+    const vehicles = (data || []).map(sanitizeVehicle);
+    const sellerHandles = [...new Set(
+      vehicles
+        .map((v: Record<string, unknown>) => v.seller_handle as string | undefined)
+        .filter((h: string | undefined): h is string => !!h)
+    )];
+
+    let sellerMap: Record<string, { business_name: string; phone: string | null; whatsapp: string | null; logo_url: string | null }> = {};
+    if (sellerHandles.length > 0) {
+      const { data: sellers } = await supabase
+        .from('sellers')
+        .select('handle, business_name, phone, whatsapp, logo_url')
+        .in('handle', sellerHandles)
+        .eq('is_active', true);
+      if (sellers) {
+        for (const s of sellers) {
+          sellerMap[s.handle] = {
+            business_name: s.business_name,
+            phone: s.phone || null,
+            whatsapp: s.whatsapp || null,
+            logo_url: s.logo_url || null,
+          };
+        }
+      }
+    }
+
+    // Merge seller_contact into each vehicle
+    const vehiclesWithContact = vehicles.map((v: Record<string, unknown>) => ({
+      ...v,
+      seller_contact: v.seller_handle && sellerMap[v.seller_handle as string]
+        ? sellerMap[v.seller_handle as string]
+        : undefined,
+    }));
+
     // Get filter aggregates for sidebar
     let filterQuery = supabase
       .from('vehicles')
@@ -130,7 +165,7 @@ export async function GET(request: NextRequest) {
 
     const response = NextResponse.json({
       success: true,
-      data: (data || []).map(sanitizeVehicle),
+      data: vehiclesWithContact,
       pagination: {
         page,
         limit,

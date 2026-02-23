@@ -73,6 +73,12 @@ export default function CatalogVehicleCard({ vehicle }: Props) {
           )}
         </p>
 
+        {vehicle.seller_contact?.business_name && (
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+            {t('contact.sellerName', { name: vehicle.seller_contact.business_name })}
+          </p>
+        )}
+
         <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 dark:text-gray-400">
           <span className="flex items-center gap-1">
             <Gauge className="w-3.5 h-3.5" />

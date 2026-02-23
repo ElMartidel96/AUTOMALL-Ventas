@@ -8,9 +8,12 @@
 
 import { useQuery } from '@tanstack/react-query';
 import type { Vehicle, VehicleImage } from '@/lib/supabase/types';
+import type { SellerContact } from '@/lib/types/seller';
 
-// Catalog vehicle excludes seller_address
-export type CatalogVehicle = Omit<Vehicle, 'seller_address'>;
+// Catalog vehicle excludes seller_address, optionally includes seller_contact
+export type CatalogVehicle = Omit<Vehicle, 'seller_address'> & {
+  seller_contact?: SellerContact;
+};
 
 export interface CatalogVehicleWithImages extends CatalogVehicle {
   images: VehicleImage[];
