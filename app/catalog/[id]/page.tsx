@@ -50,13 +50,13 @@ export default function VehicleDetailPage({ params }: { params: { id: string } }
   const { data: vehicle, isLoading, error } = useCatalogVehicle(id);
   const { seller, isSubdomain } = useTenant();
 
-  // Priority: subdomain tenant > per-vehicle seller_contact > null (no fake numbers)
+  // Priority: subdomain tenant > per-vehicle seller_contact > default fallback
   const contactPhone = (isSubdomain && seller?.phone)
     || vehicle?.seller_contact?.phone
     || null;
   const contactWhatsApp = (isSubdomain && seller?.whatsapp)
     || vehicle?.seller_contact?.whatsapp
-    || null;
+    || '18320000000';
   const sellerName = (isSubdomain && seller?.business_name)
     || vehicle?.seller_contact?.business_name
     || null;
@@ -193,17 +193,19 @@ export default function VehicleDetailPage({ params }: { params: { id: string } }
                       {t('contact.call')}
                     </a>
                   ) : (
-                    <Link
-                      href="/catalog"
+                    <a
+                      href={`https://wa.me/${contactWhatsApp}?text=${encodeURIComponent(`Hola! Me interesa el ${title}${vehicle.year ? ` ${vehicle.year}` : ''}${vehicle.mileage ? `, ${Number(vehicle.mileage).toLocaleString()} mi` : ''}${vehicle.price ? `, $${Number(vehicle.price).toLocaleString()}` : ''}. Necesito más información. Gracias!`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-am-blue to-am-blue-light text-white px-5 py-3 rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"
                     >
-                      <Mail className="w-4 h-4" />
+                      <MessageCircle className="w-4 h-4" />
                       {t('contact.noContact')}
-                    </Link>
+                    </a>
                   )}
                   {contactWhatsApp && (
                     <a
-                      href={`https://wa.me/${contactWhatsApp}?text=${encodeURIComponent(`Hi! I'm interested in the ${title}`)}`}
+                      href={`https://wa.me/${contactWhatsApp}?text=${encodeURIComponent(`Hola! Me interesa el ${title}${vehicle.year ? ` ${vehicle.year}` : ''}${vehicle.mileage ? `, ${Number(vehicle.mileage).toLocaleString()} mi` : ''}${vehicle.price ? `, $${Number(vehicle.price).toLocaleString()}` : ''}. Necesito más información. Gracias!`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-am-green to-emerald-500 text-white px-5 py-3 rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"

@@ -98,8 +98,11 @@ export default function ProfilePage() {
   }, []);
 
   // Auto-capture email from Thirdweb social login (Google/Apple)
+  // Guard: only attempt once per session to prevent infinite loops
+  const emailCapturedRef = useRef(false);
   useEffect(() => {
-    if (!mounted || !address || !profile || profile.email) return;
+    if (!mounted || !address || !profile || profile.email || emailCapturedRef.current) return;
+    emailCapturedRef.current = true; // Prevent re-running
 
     const captureEmail = async () => {
       try {
@@ -108,12 +111,16 @@ export default function ProfilePage() {
         const { getUserEmail } = await import('thirdweb/wallets');
         const email = await getUserEmail({ client });
         if (email) {
-          await fetch('/api/profile', {
+          const res = await fetch('/api/profile', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ wallet: address, email }),
           });
-          refetch();
+          // Only refetch if the PATCH actually succeeded (not a mock or error)
+          const data = await res.json();
+          if (res.ok && !data.mock) {
+            refetch();
+          }
         }
       } catch {
         // getUserEmail only works for in-app wallets — silently ignore for other wallet types

@@ -200,8 +200,9 @@ export function useProfile(wallet?: string) {
     queryKey: ['profile', wallet],
     queryFn: () => (wallet ? createOrGetProfile(wallet) : Promise.reject('No wallet')),
     enabled: !!wallet,
-    staleTime: 30 * 1000, // 30 seconds
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    retry: false, // Don't retry — prevents infinite loops when user_profiles table is missing
+    staleTime: 5 * 60 * 1000, // 5 minutes (was 30s — too aggressive for mock responses)
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
   const updateMutation = useMutation({

@@ -49,20 +49,6 @@ export const Navbar: React.FC = () => {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-[10000] px-3 sm:px-4 lg:px-6 pt-2 space-y-1.5">
-      {/* Top bar — WhatsApp contact pill */}
-      <div className="w-fit bg-am-dark/90 dark:bg-white/10 backdrop-blur-md border border-white/5 dark:border-white/20 rounded-xl px-4 py-1.5 shadow-sm">
-        <a
-          href={`https://wa.me/${contactWhatsApp}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 text-sm text-white hover:text-green-300 transition-colors"
-          aria-label="WhatsApp"
-        >
-          <MessageCircle className="w-3.5 h-3.5" />
-          <span className="font-medium">{displayPhone}</span>
-        </a>
-      </div>
-
       {/* Main navigation — glass panel */}
       <nav className="bg-white/60 dark:bg-white/10 backdrop-blur-xl border border-gray-200/40 dark:border-white/20 rounded-2xl shadow-lg dark:shadow-none transition-colors duration-300">
         <div className="px-3 sm:px-4">
@@ -222,6 +208,20 @@ export const Navbar: React.FC = () => {
         )}
         </div>
       </nav>
+
+      {/* Contact bar — WhatsApp pill (below navbar) */}
+      <div className="w-fit bg-am-dark/90 dark:bg-white/10 backdrop-blur-md border border-white/5 dark:border-white/20 rounded-xl px-4 py-1.5 shadow-sm">
+        <a
+          href={`https://wa.me/${contactWhatsApp}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 text-sm text-white hover:text-green-300 transition-colors"
+          aria-label="WhatsApp"
+        >
+          <MessageCircle className="w-3.5 h-3.5" />
+          <span className="font-medium">{displayPhone}</span>
+        </a>
+      </div>
     </header>
   );
 };
@@ -235,8 +235,8 @@ export const NavbarSpacer: React.FC = () => {
   }, []);
 
   const heightClass = mounted && isConnected
-    ? 'h-[132px] md:h-[124px]'
-    : 'h-[112px]';
+    ? 'h-[124px] md:h-[116px]'
+    : 'h-[104px]';
 
   return (
     <div
