@@ -2819,10 +2819,15 @@
       }
     },
     "success": {
-      "title": "Your site is live!",
-      "description": "Your professional dealership page is ready at:",
+      "title": "Profile Created!",
+      "description": "Your professional seller profile is set up and ready to go.",
+      "yourUrl": "Your exclusive URL",
       "visitSite": "Visit My Site",
+      "goToDashboard": "Go to Dashboard",
       "addVehicles": "Add Your First Vehicle"
+    },
+    "errors": {
+      "alreadyExists": "You already have a seller profile. Redirecting to dashboard..."
     },
     "requiresLogin": "Please sign in to create your dealership"
   },

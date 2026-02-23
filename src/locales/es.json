@@ -2819,10 +2819,15 @@
       }
     },
     "success": {
-      "title": "Tu sitio esta en linea!",
-      "description": "Tu pagina profesional de concesionaria esta lista en:",
+      "title": "Perfil Creado!",
+      "description": "Tu perfil profesional de vendedor esta configurado y listo.",
+      "yourUrl": "Tu URL exclusiva",
       "visitSite": "Visitar Mi Sitio",
+      "goToDashboard": "Ir al Dashboard",
       "addVehicles": "Agregar Mi Primer Vehiculo"
+    },
+    "errors": {
+      "alreadyExists": "Ya tienes un perfil de vendedor. Redirigiendo al dashboard..."
     },
     "requiresLogin": "Inicia sesion para crear tu concesionaria"
   },

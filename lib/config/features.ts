@@ -42,7 +42,7 @@ export const FEATURE_CGC_TOKEN = envBool('NEXT_PUBLIC_FEATURE_CGC_TOKEN', false)
 // ---------------------------------------------------------------------------
 
 /** Enable seller subdomain routing (vendedor.autosmall.org) */
-export const FEATURE_SELLER_SUBDOMAINS = envBool('NEXT_PUBLIC_FEATURE_SELLER_SUBDOMAINS', false)
+export const FEATURE_SELLER_SUBDOMAINS = envBool('NEXT_PUBLIC_FEATURE_SELLER_SUBDOMAINS', true)
 
 /** Enable AI Sales Agent (Alfred) */
 export const FEATURE_AI_SALES_AGENT = envBool('NEXT_PUBLIC_FEATURE_AI_SALES_AGENT', false)

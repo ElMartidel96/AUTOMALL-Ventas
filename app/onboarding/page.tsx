@@ -19,7 +19,8 @@ import { Navbar, NavbarSpacer } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { useAccount } from '@/lib/thirdweb';
 import { ConnectButtonDAO } from '@/components/thirdweb/ConnectButtonDAO';
-import { APP_DOMAIN } from '@/lib/config/features';
+import { useSellerProfile } from '@/hooks/useSellerProfile';
+import { APP_DOMAIN, FEATURE_SELLER_SUBDOMAINS } from '@/lib/config/features';
 import {
   Globe,
   Building2,
@@ -29,10 +30,10 @@ import {
   Loader2,
   ArrowRight,
   ArrowLeft,
-  Upload,
   AlertCircle,
   Rocket,
   ExternalLink,
+  LayoutDashboard,
   Car,
 } from 'lucide-react';
 
@@ -79,12 +80,21 @@ export default function OnboardingPage() {
   const [handleStatus, setHandleStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'reserved'>('idle');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [successUrl, setSuccessUrl] = useState('');
+  const [successHandle, setSuccessHandle] = useState('');
   const [mounted, setMounted] = useState(false);
+
+  // Detect if user already has a seller profile → redirect
+  const { seller: existingSeller, isLoading: profileLoading } = useSellerProfile();
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (mounted && existingSeller?.onboarding_completed) {
+      router.push('/dashboard');
+    }
+  }, [mounted, existingSeller, router]);
 
   // Check handle availability with debounce
   const checkHandle = useCallback(async (handle: string) => {
@@ -174,11 +184,16 @@ export default function OnboardingPage() {
       const result = await res.json();
 
       if (!res.ok) {
+        // Handle duplicate profile (409) with clear message
+        if (res.status === 409) {
+          setError(t('errors.alreadyExists'));
+          return;
+        }
         setError(result.error || 'Failed to create seller profile');
         return;
       }
 
-      setSuccessUrl(`https://${data.handle}.${APP_DOMAIN}`);
+      setSuccessHandle(data.handle);
     } catch {
       setError('Something went wrong. Please try again.');
     } finally {
@@ -198,11 +213,16 @@ export default function OnboardingPage() {
     setCurrentStep(prev => Math.max(prev - 1, 0));
   };
 
-  // Not mounted yet
-  if (!mounted) return null;
+  // Not mounted yet or checking existing profile
+  if (!mounted || profileLoading) return null;
 
-  // Success state
-  if (successUrl) {
+  // Already onboarded — redirecting (useEffect handles it)
+  if (existingSeller?.onboarding_completed) return null;
+
+  // Success state — profile was just created
+  if (successHandle) {
+    const siteUrl = `https://${successHandle}.${APP_DOMAIN}`;
+
     return (
       <div className="min-h-screen theme-gradient-bg">
         <Navbar />
@@ -218,19 +238,37 @@ export default function OnboardingPage() {
             <p className="text-gray-500 dark:text-gray-400 mb-4">
               {t('success.description')}
             </p>
-            <p className="text-am-orange font-bold text-lg mb-8 break-all">
-              {successUrl}
-            </p>
+
+            {/* Show subdomain URL */}
+            <div className="bg-gray-50 dark:bg-am-blue/10 rounded-xl p-4 mb-6">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                {t('success.yourUrl')}
+              </p>
+              <p className="text-am-orange font-bold text-lg break-all">
+                {siteUrl}
+              </p>
+            </div>
+
             <div className="flex flex-col gap-3">
-              <a
-                href={successUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-am-orange to-am-orange-light text-white px-6 py-3.5 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
-              >
-                <ExternalLink className="w-5 h-5" />
-                {t('success.visitSite')}
-              </a>
+              {FEATURE_SELLER_SUBDOMAINS ? (
+                <a
+                  href={siteUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-am-orange to-am-orange-light text-white px-6 py-3.5 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
+                >
+                  <ExternalLink className="w-5 h-5" />
+                  {t('success.visitSite')}
+                </a>
+              ) : (
+                <button
+                  onClick={() => router.push('/dashboard')}
+                  className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-am-orange to-am-orange-light text-white px-6 py-3.5 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
+                >
+                  <LayoutDashboard className="w-5 h-5" />
+                  {t('success.goToDashboard')}
+                </button>
+              )}
               <button
                 onClick={() => router.push('/inventory')}
                 className="inline-flex items-center justify-center gap-2 glass-button px-6 py-3.5 rounded-xl font-bold"
