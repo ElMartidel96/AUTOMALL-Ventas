@@ -58,8 +58,8 @@ export function SellerSetupBanner() {
 
   if (!mounted || !isConnected || !address || isLoading || userLoading) return null;
 
-  // Buyers don't need dealer setup
-  if (user?.role === 'buyer') return null;
+  // No user record yet (hasn't selected role) or buyer — skip banner
+  if (!user || user.role === 'buyer') return null;
 
   // Determine banner level
   let level: BannerLevel = null;

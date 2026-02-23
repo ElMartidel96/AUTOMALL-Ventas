@@ -14,6 +14,7 @@ import { useTranslations } from 'next-intl';
 import { Navbar, NavbarSpacer } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { useAccount } from '@/lib/thirdweb';
+import { useUser } from '@/hooks/useUser';
 import { FEATURE_WEB3_VISIBLE } from '@/lib/config/features';
 import {
   Car,
@@ -33,6 +34,7 @@ import Link from 'next/link';
 
 export default function SellerDashboard() {
   const { isConnected, address } = useAccount();
+  const { isDealer, isBuyer, isLoading: userLoading } = useUser();
   const tDashboard = useTranslations('dashboard');
 
   return (
@@ -59,7 +61,7 @@ export default function SellerDashboard() {
                 {tDashboard('welcomeSubtitle')}
               </p>
             </div>
-            {isConnected && (
+            {isConnected && isDealer && (
               <div className="flex gap-3">
                 <Link
                   href="/inventory"
@@ -83,6 +85,24 @@ export default function SellerDashboard() {
             <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
               {tDashboard('connectDescription')}
             </p>
+          </div>
+        ) : !userLoading && isBuyer ? (
+          /* Buyer role — redirect to catalog */
+          <div className="glass-panel p-12 text-center">
+            <Car className="w-16 h-16 mx-auto text-am-blue mb-4" />
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+              {tDashboard('title')}
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-6">
+              {tDashboard('connectDescription')}
+            </p>
+            <Link
+              href="/catalog"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-am-orange to-am-orange-light text-white px-6 py-3 rounded-xl font-bold hover:shadow-lg transition-all"
+            >
+              <Car className="w-5 h-5" />
+              {tDashboard('stats.activeListings')}
+            </Link>
           </div>
         ) : (
           <>

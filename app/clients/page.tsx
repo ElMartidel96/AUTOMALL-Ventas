@@ -10,10 +10,12 @@
 import { Navbar, NavbarSpacer } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { useAccount } from '@/lib/thirdweb';
+import { useUser } from '@/hooks/useUser';
 import { Users, Plus, Search, Filter, MessageSquare } from 'lucide-react';
 
 export default function ClientsPage() {
   const { isConnected } = useAccount();
+  const { isDealer, isBuyer, isLoading: userLoading } = useUser();
 
   return (
     <div className="min-h-screen theme-gradient-bg">
@@ -30,7 +32,7 @@ export default function ClientsPage() {
                 Gestiona tus relaciones con compradores y leads
               </p>
             </div>
-            {isConnected && (
+            {isConnected && isDealer && (
               <button className="flex items-center gap-2 bg-am-green hover:bg-am-green/80 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
                 <Plus className="w-4 h-4" />
                 Agregar Cliente
@@ -47,6 +49,16 @@ export default function ClientsPage() {
             </h2>
             <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
               Necesitas iniciar sesion para gestionar tu CRM de clientes.
+            </p>
+          </div>
+        ) : !userLoading && isBuyer ? (
+          <div className="glass-panel p-12 text-center">
+            <Users className="w-16 h-16 mx-auto text-am-green mb-4" />
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+              Acceso para vendedores
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+              El CRM de clientes esta disponible para vendedores y BirdDogs.
             </p>
           </div>
         ) : (

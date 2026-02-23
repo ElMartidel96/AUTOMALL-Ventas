@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAccount } from '@/lib/thirdweb';
+import { useUser } from '@/hooks/useUser';
 import {
   useReferralDashboard,
   useReferralLeaderboard,
@@ -112,6 +113,27 @@ const defaultStats: ReferralStats = {
 // ===== MAIN COMPONENT =====
 export default function ReferralsPage() {
   const t = useTranslations('referrals');
+  const { isBuyer, isLoading: userLoading } = useUser();
+
+  // Buyers see a limited view — referrals are for dealers
+  if (!userLoading && isBuyer) {
+    return (
+      <>
+        <Navbar />
+        <NavbarSpacer />
+        <div className="min-h-screen theme-gradient-bg flex items-center justify-center p-4">
+          <div className="glass-panel p-12 text-center max-w-md">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+              {t('title')}
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400">
+              {t('subtitle')}
+            </p>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

@@ -12,6 +12,7 @@ import { Navbar, NavbarSpacer } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { CGCAccessGate } from '@/components/auth/CGCAccessGate';
 import { useAccount } from '@/lib/thirdweb';
+import { useUser } from '@/hooks/useUser';
 import { useVehicles, useDeleteVehicle, useUpdateVehicleStatus } from '@/hooks/useInventory';
 import { VehicleCard } from '@/components/inventory/VehicleCard';
 import { VehicleForm } from '@/components/inventory/VehicleForm';
@@ -195,7 +196,34 @@ function InventoryContent() {
   );
 }
 
+function BuyerBlock() {
+  const t = useTranslations('inventory');
+  return (
+    <div className="min-h-screen theme-gradient-bg">
+      <Navbar />
+      <NavbarSpacer />
+      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="glass-panel p-12 text-center">
+          <Car className="w-16 h-16 mx-auto text-am-orange mb-4" />
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+            {t('title')}
+          </h2>
+          <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+            {t('subtitle')}
+          </p>
+        </div>
+      </div>
+      <Footer />
+    </div>
+  );
+}
+
 export default function InventoryPage() {
+  const { isBuyer, isLoading } = useUser();
+
+  // Buyers can't manage inventory
+  if (!isLoading && isBuyer) return <BuyerBlock />;
+
   return (
     <CGCAccessGate requiredBalance="0">
       <div className="min-h-screen theme-gradient-bg">
