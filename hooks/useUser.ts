@@ -10,6 +10,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAccount } from '@/lib/thirdweb';
 import type { User, UserRole } from '@/lib/types/user';
 import { isDealerRole } from '@/lib/types/user';
+import { getAuthDataCache } from '@/hooks/useAuthData';
 
 interface UseUserResult {
   user: User | null;
@@ -54,10 +55,17 @@ export function useUser(): UseUserResult {
   const createUser = useCallback(async (chosenRole: UserRole) => {
     if (!address) throw new Error('Not connected');
 
+    // Include OAuth-captured data (email, phone) from social login
+    const authData = getAuthDataCache();
     const res = await fetch('/api/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ wallet: address, role: chosenRole }),
+      body: JSON.stringify({
+        wallet: address,
+        role: chosenRole,
+        ...(authData.email ? { email: authData.email } : {}),
+        ...(authData.phone ? { phone: authData.phone } : {}),
+      }),
     });
 
     const json = await res.json();

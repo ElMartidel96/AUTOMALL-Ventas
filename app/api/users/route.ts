@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { wallet, role = 'buyer', display_name } = body;
+    const { wallet, role = 'buyer', display_name, email, phone } = body;
 
     if (!wallet) {
       return NextResponse.json(
@@ -105,6 +105,8 @@ export async function POST(request: NextRequest) {
         wallet_address: wallet.toLowerCase(),
         role,
         display_name: display_name || null,
+        ...(email ? { email } : {}),
+        ...(phone ? { phone } : {}),
       })
       .select()
       .single();

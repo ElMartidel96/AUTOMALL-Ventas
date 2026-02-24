@@ -2,7 +2,7 @@
  * Autos MALL - Sign In Button
  *
  * Social-only authentication via Thirdweb v5 inAppWallet.
- * Shows Google, Apple, email, and passkey login options.
+ * Shows Google, Apple, Facebook, phone, and email login options.
  * Wallet-based login is hidden but infrastructure remains.
  */
 
@@ -23,7 +23,7 @@ import { FEATURE_WALLET_LOGIN, FEATURE_CGC_TOKEN } from '@/lib/config/features'
 function getWallets() {
   const socialWallet = inAppWallet({
     auth: {
-      options: ['google', 'apple', 'email', 'passkey'],
+      options: ['google', 'apple', 'facebook', 'phone', 'email'],
     },
   })
 
