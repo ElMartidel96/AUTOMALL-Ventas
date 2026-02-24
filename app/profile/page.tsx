@@ -1,10 +1,10 @@
 'use client';
 
 /**
- * Profile Page — Orchestrator
+ * Profile Page — Orchestrator with Tabs
  *
- * Section 1: "Mi Perfil" — visible for ALL roles (buyer, seller, birddog)
- * Section 2: "Mi Concesionaria" — visible only for seller/birddog
+ * Tab 1: "Mi Perfil" — visible for ALL roles (buyer, seller, birddog)
+ * Tab 2: "Mi Concesionaria" — visible only for seller/birddog
  */
 
 import React, { useState, useEffect } from 'react';
@@ -18,7 +18,8 @@ import { useUser } from '@/hooks/useUser';
 import { useReferralDashboard } from '@/hooks/useReferrals';
 import { MyProfileSection } from '@/components/profile/MyProfileSection';
 import { MyDealershipSection } from '@/components/profile/MyDealershipSection';
-import { Store } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Store, User as UserIcon } from 'lucide-react';
 
 export default function ProfilePage() {
   const t = useTranslations('profile');
@@ -87,42 +88,72 @@ export default function ProfilePage() {
     );
   }
 
+  const showDealerTab = isDealer && !!seller;
+
   return (
     <>
       <Navbar />
       <NavbarSpacer />
       <div className="min-h-screen theme-gradient-bg">
-        <div className="container mx-auto px-4 py-8 max-w-4xl space-y-8">
+        <div className="container mx-auto px-4 pb-8 pt-[calc(2rem+2.5cm)] max-w-4xl">
           {/* Page header */}
-          <div>
+          <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
               {t('pageTitle')}
             </h1>
             <p className="text-gray-500 dark:text-gray-400 mt-1">{t('pageSubtitle')}</p>
           </div>
 
-          {/* Section 1: Mi Perfil — ALL roles */}
-          <MyProfileSection
-            user={user}
-            address={address}
-            referralCode={code.code}
-            referralLink={links.links?.default}
-            referralStats={stats.stats}
-            isLoadingReferrals={refLoading}
-          />
+          {/* Tabs */}
+          <Tabs defaultValue="profile" className="w-full">
+            <TabsList
+              className={`glass-crystal-enhanced w-full h-14 rounded-2xl p-1.5 mb-8 grid ${
+                showDealerTab ? 'grid-cols-2' : 'grid-cols-1'
+              }`}
+            >
+              <TabsTrigger
+                value="profile"
+                className="rounded-xl h-full text-sm font-bold transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-am-blue data-[state=active]:to-am-blue-light data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=inactive]:text-gray-500 dark:data-[state=inactive]:text-gray-400 flex items-center justify-center gap-2"
+              >
+                <UserIcon className="w-4 h-4" />
+                {t('tabMyProfile')}
+              </TabsTrigger>
+              {showDealerTab && (
+                <TabsTrigger
+                  value="dealership"
+                  className="rounded-xl h-full text-sm font-bold transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-am-orange data-[state=active]:to-am-orange-light data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=inactive]:text-gray-500 dark:data-[state=inactive]:text-gray-400 flex items-center justify-center gap-2"
+                >
+                  <Store className="w-4 h-4" />
+                  {t('tabMyDealership')}
+                </TabsTrigger>
+              )}
+            </TabsList>
 
-          {/* Section 2: Mi Concesionaria — dealer only */}
-          {isDealer && seller && (
-            <MyDealershipSection
-              seller={seller}
-              address={address}
-              role={role}
-              completionPercentage={completionPercentage}
-              refetch={refetch}
-              referralLink={links.links?.default}
-              updateRole={updateRole}
-            />
-          )}
+            <TabsContent value="profile" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
+              <MyProfileSection
+                user={user}
+                address={address}
+                referralCode={code.code}
+                referralLink={links.links?.default}
+                referralStats={stats.stats}
+                isLoadingReferrals={refLoading}
+              />
+            </TabsContent>
+
+            {showDealerTab && (
+              <TabsContent value="dealership" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
+                <MyDealershipSection
+                  seller={seller}
+                  address={address}
+                  role={role}
+                  completionPercentage={completionPercentage}
+                  refetch={refetch}
+                  referralLink={links.links?.default}
+                  updateRole={updateRole}
+                />
+              </TabsContent>
+            )}
+          </Tabs>
         </div>
       </div>
       <Footer />
@@ -140,14 +171,15 @@ function ProfileSkeleton() {
       <Navbar />
       <NavbarSpacer />
       <div className="min-h-screen theme-gradient-bg">
-        <div className="container mx-auto px-4 py-8 max-w-4xl animate-pulse">
+        <div className="container mx-auto px-4 pb-8 pt-[calc(2rem+2.5cm)] max-w-4xl animate-pulse">
           <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded-xl w-48 mb-2" />
           <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-lg w-64 mb-8" />
+          {/* Tab placeholder */}
+          <div className="glass-crystal-enhanced rounded-2xl h-14 mb-8" />
+          {/* Content placeholders */}
           <div className="glass-crystal-enhanced rounded-2xl h-40 mb-6" />
           <div className="glass-crystal-enhanced rounded-2xl h-48 mb-6" />
-          <div className="glass-crystal-enhanced rounded-2xl h-28 mb-6" />
-          <div className="glass-crystal-enhanced rounded-2xl h-64 mb-6" />
-          <div className="glass-crystal-enhanced rounded-2xl h-48" />
+          <div className="glass-crystal-enhanced rounded-2xl h-28" />
         </div>
       </div>
       <Footer />

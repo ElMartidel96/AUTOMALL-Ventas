@@ -3,12 +3,13 @@
 import React from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { Store, ExternalLink, Link2 } from 'lucide-react';
+import { ExternalLink, Link2 } from 'lucide-react';
 import type { Seller } from '@/lib/types/seller';
 import type { UserRole } from '@/lib/types/user';
 import { isDealerRole } from '@/lib/types/user';
 import { APP_DOMAIN } from '@/lib/config/features';
 import { CopyPanel } from './CopyPanel';
+import { DealerPreviewCard } from './DealerPreviewCard';
 import { SellerForm } from './SellerForm';
 import { RoleChanger } from './RoleChanger';
 
@@ -40,15 +41,6 @@ export function MyDealershipSection({
 
   return (
     <section className="space-y-6">
-      {/* Section header */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          <Store className="w-6 h-6 text-am-orange" />
-          {t('dealershipTitle')}
-        </h2>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">{t('dealershipSubtitle')}</p>
-      </div>
-
       {/* CopyPanels: URL + Referral Link */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <CopyPanel
@@ -67,6 +59,9 @@ export function MyDealershipSection({
           disabled={!referralLink}
         />
       </div>
+
+      {/* Page preview — contact + social links */}
+      <DealerPreviewCard seller={seller} />
 
       {/* Completion bar */}
       <div className="glass-crystal-enhanced rounded-2xl p-5">

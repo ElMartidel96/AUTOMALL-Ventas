@@ -1825,7 +1825,18 @@
     "referralLinkPanel": "Referral Link",
     "emailLabel": "Email",
     "phoneLabel": "Phone",
-    "memberSinceLabel": "Member since"
+    "memberSinceLabel": "Member since",
+    "tabMyProfile": "My Profile",
+    "tabMyDealership": "My Dealership",
+    "dealerPreview": "Page Preview",
+    "dealerPreviewHint": "This is how your info appears on your exclusive page",
+    "contactMethods": "Contact Methods",
+    "socialPresence": "Social Presence",
+    "visitPage": "Visit My Page",
+    "noSocialLinks": "No social links added yet",
+    "noContactInfo": "No contact info added yet",
+    "whatsappLabel": "WhatsApp",
+    "addressLabel": "Address"
   },
   "specialInvite": {
     "header": {

@@ -1934,7 +1934,18 @@
     "referralLinkPanel": "Link de Referido",
     "emailLabel": "Correo",
     "phoneLabel": "Teléfono",
-    "memberSinceLabel": "Miembro desde"
+    "memberSinceLabel": "Miembro desde",
+    "tabMyProfile": "Mi Perfil",
+    "tabMyDealership": "Mi Concesionaria",
+    "dealerPreview": "Vista Previa",
+    "dealerPreviewHint": "Así se ve tu información en tu página exclusiva",
+    "contactMethods": "Métodos de Contacto",
+    "socialPresence": "Presencia en Redes",
+    "visitPage": "Visitar Mi Página",
+    "noSocialLinks": "Aún no has agregado redes sociales",
+    "noContactInfo": "Aún no has agregado información de contacto",
+    "whatsappLabel": "WhatsApp",
+    "addressLabel": "Dirección"
   },
   "taskData": {
     "create_web3_authentication_system": {
