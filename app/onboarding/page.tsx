@@ -11,7 +11,7 @@
  * 4. Preview & launch
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -83,6 +83,7 @@ export default function OnboardingPage() {
   const [error, setError] = useState('');
   const [successHandle, setSuccessHandle] = useState('');
   const [mounted, setMounted] = useState(false);
+  const whatsappManuallyEdited = useRef(false);
 
   // Detect if user already has a seller profile → redirect
   const { seller: existingSeller, isLoading: profileLoading } = useSellerProfile();
@@ -494,10 +495,10 @@ export default function OnboardingPage() {
                       value={data.phone}
                       onChange={(e) => {
                         const val = e.target.value;
-                        updateData('phone', val);
-                        // Auto-copy to whatsapp if whatsapp is empty
-                        if (!data.whatsapp) {
+                        if (!whatsappManuallyEdited.current) {
                           setData(prev => ({ ...prev, phone: val, whatsapp: val.replace(/\D/g, '') }));
+                        } else {
+                          updateData('phone', val);
                         }
                       }}
                       placeholder={t('steps.business.phonePlaceholder')}
@@ -522,7 +523,10 @@ export default function OnboardingPage() {
                     <input
                       type="tel"
                       value={data.whatsapp}
-                      onChange={(e) => updateData('whatsapp', e.target.value)}
+                      onChange={(e) => {
+                        whatsappManuallyEdited.current = true;
+                        updateData('whatsapp', e.target.value);
+                      }}
                       placeholder={t('steps.business.whatsappPlaceholder')}
                       className="w-full px-4 py-3 rounded-xl bg-white dark:bg-am-dark/80 border border-gray-200 dark:border-am-blue/30 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-am-orange/50"
                     />

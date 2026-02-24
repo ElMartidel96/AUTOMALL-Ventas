@@ -89,22 +89,22 @@ export const Navbar: React.FC = () => {
             </Link>
 
             {!isSubdomain && isDealer && (
-              <>
-                <Link
-                  href="/dashboard"
-                  className="text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors text-sm font-bold px-2"
-                >
-                  {t('dashboard')}
-                </Link>
+              <Link
+                href="/dashboard"
+                className="text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors text-sm font-bold px-2"
+              >
+                {t('dashboard')}
+              </Link>
+            )}
 
-                <Link
-                  href="/referrals"
-                  className="text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors text-sm font-bold flex items-center gap-1 px-2"
-                >
-                  {t('referrals')}
-                  <Users className="w-3 h-3" />
-                </Link>
-              </>
+            {!isSubdomain && (
+              <Link
+                href="/referrals"
+                className="text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors text-sm font-bold flex items-center gap-1 px-2"
+              >
+                {t('referrals')}
+                <Users className="w-3 h-3" />
+              </Link>
             )}
 
             {/* Separator */}
@@ -172,7 +172,11 @@ export const Navbar: React.FC = () => {
                     <LayoutDashboard className="w-4 h-4" />
                     {t('dashboard')}
                   </Link>
+                </>
+              )}
 
+              {!isSubdomain && (
+                <>
                   <div className="mx-4 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-am-blue/30 to-transparent opacity-30"></div>
 
                   <Link
