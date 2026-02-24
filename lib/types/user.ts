@@ -15,6 +15,9 @@ export interface User {
   email: string | null;
   phone: string | null;
   avatar_url: string | null;
+  social_instagram: string | null;
+  social_facebook: string | null;
+  social_tiktok: string | null;
   created_at: string;
   updated_at: string;
 }

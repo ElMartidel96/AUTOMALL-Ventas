@@ -922,9 +922,9 @@
       "level1Title": "Direct Referrals",
       "level1Desc": "$20 USD per car sale from your direct referrals",
       "level2Title": "Second Level",
-      "level2Desc": "$10 USD from second-level referral car sales",
+      "level2Desc": "6% commission from second-level referral car sales",
       "level3Title": "Third Level",
-      "level3Desc": "$5 USD from third-level referral car sales",
+      "level3Desc": "3% commission from third-level referral car sales",
       "bonusTitle": "Milestone Bonuses",
       "bonusDesc": "Extra rewards for reaching referral milestones",
       "milestone5": "5 Sales: +$50 USD Bonus",
@@ -1010,7 +1010,7 @@
       "level1Commission": "Direct Referrer (Level 1)",
       "level1Desc": "$20 USD per car sale (Level 1)",
       "level2Commission": "Second Level Referrer",
-      "level2Desc": "$10 USD per car sale (Level 2)",
+      "level2Desc": "$12 USD per car sale (Level 2)",
       "level3Commission": "Third Level Referrer",
       "level3Desc": "$5 USD per car sale (Level 3)",
       "totalDistribution": "Total Distribution",
@@ -1836,7 +1836,15 @@
     "noSocialLinks": "No social links added yet",
     "noContactInfo": "No contact info added yet",
     "whatsappLabel": "WhatsApp",
-    "addressLabel": "Address"
+    "addressLabel": "Address",
+    "personalSocial": "Personal Social Media",
+    "personalSocialHint": "Add your personal accounts (optional)",
+    "personalInstagramPlaceholder": "@yourprofile",
+    "personalFacebookPlaceholder": "facebook.com/yourprofile",
+    "personalTiktokPlaceholder": "@yourprofile",
+    "saveSocial": "Save Social Media",
+    "socialSaved": "Social media saved!",
+    "socialSaveError": "Failed to save. Please try again."
   },
   "specialInvite": {
     "header": {

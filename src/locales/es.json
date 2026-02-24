@@ -1945,7 +1945,15 @@
     "noSocialLinks": "Aún no has agregado redes sociales",
     "noContactInfo": "Aún no has agregado información de contacto",
     "whatsappLabel": "WhatsApp",
-    "addressLabel": "Dirección"
+    "addressLabel": "Dirección",
+    "personalSocial": "Redes Sociales Personales",
+    "personalSocialHint": "Agrega tus cuentas personales (opcional)",
+    "personalInstagramPlaceholder": "@tuperfil",
+    "personalFacebookPlaceholder": "facebook.com/tuperfil",
+    "personalTiktokPlaceholder": "@tuperfil",
+    "saveSocial": "Guardar Redes",
+    "socialSaved": "¡Redes guardadas!",
+    "socialSaveError": "Error al guardar. Intenta de nuevo."
   },
   "taskData": {
     "create_web3_authentication_system": {

@@ -26,7 +26,7 @@ export default function ProfilePage() {
   const tCommon = useTranslations('common');
   const { address, isConnected } = useAccount();
   const { seller, isLoading, completionPercentage, refetch } = useSellerProfile();
-  const { user, role, isDealer, isLoading: userLoading, updateRole } = useUser();
+  const { user, role, isDealer, isLoading: userLoading, updateRole, refetch: refetchUser } = useUser();
   const { code, stats, links, isLoading: refLoading } = useReferralDashboard(address);
   const [mounted, setMounted] = useState(false);
 
@@ -137,6 +137,7 @@ export default function ProfilePage() {
                 referralLink={links.links?.default}
                 referralStats={stats.stats}
                 isLoadingReferrals={refLoading}
+                refetchUser={refetchUser}
               />
             </TabsContent>
 
