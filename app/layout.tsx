@@ -40,20 +40,11 @@ export const metadata: Metadata = {
     siteName: 'Autos MALL',
     type: 'website',
     locale: 'en_US',
-    images: [
-      {
-        url: 'https://www.autosmall.org/og-automall.png',
-        width: 1200,
-        height: 630,
-        alt: 'Autos MALL - Tu Plataforma de Venta de Autos con IA',
-      },
-    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Autos MALL - Tu Plataforma de Venta de Autos con IA',
     description: 'La plataforma todo-en-uno para vendedores independientes de autos. Asistente IA, CRM inteligente y tu propia pagina profesional.',
-    images: ['https://www.autosmall.org/og-automall.png'],
   },
   robots: {
     index: true,

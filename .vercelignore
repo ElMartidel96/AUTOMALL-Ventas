@@ -30,6 +30,8 @@ build
 *.gif
 *.ico
 !app/icon.png
+!app/opengraph-image.png
+!app/twitter-image.png
 !public/favicon.ico
 
 # ══════════════════════════════════════════════════════════════════
