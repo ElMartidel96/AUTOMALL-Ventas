@@ -898,7 +898,10 @@
       "allTime": "Todo el Tiempo",
       "level1": "Nivel 1",
       "level2": "Nivel 2",
-      "level3": "Nivel 3"
+      "level3": "Nivel 3",
+      "viewNetwork": "Ver red",
+      "viewHistory": "Ver historial",
+      "viewRewards": "Ver recompensas"
     },
     "code": {
       "title": "Tu Código de Referido",

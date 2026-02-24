@@ -898,7 +898,10 @@
       "allTime": "All Time",
       "level1": "Level 1",
       "level2": "Level 2",
-      "level3": "Level 3"
+      "level3": "Level 3",
+      "viewNetwork": "View network",
+      "viewHistory": "View history",
+      "viewRewards": "View rewards"
     },
     "code": {
       "title": "Your Referral Code",

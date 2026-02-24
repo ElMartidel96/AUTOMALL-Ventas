@@ -88,6 +88,7 @@ interface Referral {
 interface LeaderboardEntry {
   rank: number;
   address: string;
+  fullAddress?: string;
   referrals: number;
   earned: number;
 }
@@ -208,6 +209,17 @@ function ReferralsDashboard() {
     ? `${window.location.origin}?ref=${referralCode}`
     : `https://www.${APP_DOMAIN}?ref=${referralCode}`);
 
+  const navigateToTab = useCallback((tab: typeof activeTab) => {
+    setActiveTab(tab);
+    setTimeout(() => {
+      document.getElementById('referral-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  }, []);
+
+  const scrollToCodeSection = useCallback(() => {
+    document.getElementById('referral-code-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
   const handleCopy = useCallback(async (text: string) => {
     await navigator.clipboard.writeText(text);
     setCopied(true);
@@ -231,29 +243,33 @@ function ReferralsDashboard() {
           value={stats.totalReferrals.toString()}
           icon={<Users className="h-5 w-5 text-blue-500" />}
           trend="+0 this week"
+          onClick={() => navigateToTab('network')}
         />
         <StatCard
           title={t('stats.activeReferrals')}
           value={stats.activeReferrals.toString()}
           icon={<Activity className="h-5 w-5 text-green-500" />}
           trend="Active now"
+          onClick={() => navigateToTab('history')}
         />
         <StatCard
           title={t('stats.pendingRewards')}
           value={`$${stats.pendingRewards} USD`}
           icon={<Coins className="h-5 w-5 text-amber-500" />}
           trend="Claimable"
+          onClick={() => navigateToTab('rewards')}
         />
         <StatCard
           title={t('stats.totalEarned')}
           value={`$${stats.totalEarned} USD`}
           icon={<TrendingUp className="h-5 w-5 text-purple-500" />}
           trend={t('stats.allTime')}
+          onClick={() => navigateToTab('rewards')}
         />
       </div>
 
       {/* Referral Code Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div id="referral-code-section" className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 glass-panel">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2 text-gray-900 dark:text-white">
@@ -347,17 +363,23 @@ function ReferralsDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <NetworkLevelCard level={1} count={stats.level1Count} percentage={10} />
-            <NetworkLevelCard level={2} count={stats.level2Count} percentage={5} />
-            <NetworkLevelCard level={3} count={stats.level3Count} percentage={2.5} />
-            <div className="pt-4 border-t border-gray-200 dark:border-slate-700">
+            <NetworkLevelCard level={1} count={stats.level1Count} percentage={10} onClick={() => navigateToTab('network')} />
+            <NetworkLevelCard level={2} count={stats.level2Count} percentage={5} onClick={() => navigateToTab('network')} />
+            <NetworkLevelCard level={3} count={stats.level3Count} percentage={2.5} onClick={() => navigateToTab('network')} />
+            <div
+              className="pt-4 border-t border-gray-200 dark:border-slate-700 cursor-pointer group transition-all duration-200 hover:bg-gray-50 dark:hover:bg-slate-700/50 rounded-lg px-2 -mx-2"
+              onClick={() => navigateToTab('network')}
+            >
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   {t('network.totalNetwork')}
                 </span>
-                <span className="text-lg font-bold text-gray-900 dark:text-white">
-                  {stats.level1Count + stats.level2Count + stats.level3Count}
-                </span>
+                <div className="flex items-center gap-1">
+                  <span className="text-lg font-bold text-gray-900 dark:text-white">
+                    {stats.level1Count + stats.level2Count + stats.level3Count}
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-am-orange transition-colors" />
+                </div>
               </div>
             </div>
           </CardContent>
@@ -368,7 +390,7 @@ function ReferralsDashboard() {
       <PermanentReferralCard referralCode={referralCode} walletAddress={address} />
 
       {/* Tabs */}
-      <div className="flex space-x-2 border-b border-gray-200 dark:border-slate-700 pb-2 overflow-x-auto">
+      <div id="referral-tabs" className="flex space-x-2 border-b border-gray-200 dark:border-slate-700 pb-2 overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -386,18 +408,18 @@ function ReferralsDashboard() {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'overview' && <OverviewTab />}
-      {activeTab === 'network' && <NetworkTab stats={stats} />}
-      {activeTab === 'history' && <DirectReferralsHistoryTab />}
-      {activeTab === 'rewards' && <RewardsTab />}
-      {activeTab === 'leaderboard' && <LeaderboardTabWithData />}
+      {activeTab === 'overview' && <OverviewTab onNavigateTab={navigateToTab} onScrollToCode={scrollToCodeSection} />}
+      {activeTab === 'network' && <NetworkTab stats={stats} onNavigateTab={navigateToTab} />}
+      {activeTab === 'history' && <DirectReferralsHistoryTab onNavigateTab={navigateToTab} />}
+      {activeTab === 'rewards' && <RewardsTab onNavigateTab={navigateToTab} />}
+      {activeTab === 'leaderboard' && <LeaderboardTabWithData onNavigateTab={navigateToTab} />}
     </div>
   );
 }
 
 // ===== TAB COMPONENTS =====
 
-function OverviewTab() {
+function OverviewTab({ onNavigateTab, onScrollToCode }: { onNavigateTab: (tab: 'overview' | 'network' | 'rewards' | 'leaderboard' | 'history') => void; onScrollToCode: () => void }) {
   const t = useTranslations('referrals');
 
   return (
@@ -416,6 +438,7 @@ function OverviewTab() {
             title={t('how.step1.title')}
             description={t('how.step1.desc')}
             icon={<LinkIcon className="h-5 w-5" />}
+            onClick={onScrollToCode}
           />
           <StepCard
             step={2}
@@ -428,12 +451,14 @@ function OverviewTab() {
             title={t('how.step3.title')}
             description={t('how.step3.desc')}
             icon={<UserPlus className="h-5 w-5" />}
+            onClick={() => onNavigateTab('network')}
           />
           <StepCard
             step={4}
             title={t('how.step4.title')}
             description={t('how.step4.desc')}
             icon={<Coins className="h-5 w-5" />}
+            onClick={() => onNavigateTab('rewards')}
           />
         </CardContent>
       </Card>
@@ -456,6 +481,7 @@ function OverviewTab() {
             description={t('rewards.level1Desc')}
             percentage={10}
             color="blue"
+            onClick={() => onNavigateTab('rewards')}
           />
           <RewardTierCard
             level={2}
@@ -463,6 +489,7 @@ function OverviewTab() {
             description={t('rewards.level2Desc')}
             percentage={5}
             color="purple"
+            onClick={() => onNavigateTab('rewards')}
           />
           <RewardTierCard
             level={3}
@@ -470,6 +497,7 @@ function OverviewTab() {
             description={t('rewards.level3Desc')}
             percentage={2.5}
             color="cyan"
+            onClick={() => onNavigateTab('rewards')}
           />
         </CardContent>
       </Card>
@@ -477,7 +505,7 @@ function OverviewTab() {
   );
 }
 
-function NetworkTab({ stats }: { stats: ReferralStats }) {
+function NetworkTab({ stats, onNavigateTab }: { stats: ReferralStats; onNavigateTab: (tab: 'overview' | 'network' | 'rewards' | 'leaderboard' | 'history') => void }) {
   const t = useTranslations('referrals');
   const { address } = useAccount();
   const { referrals, isLoading, refetch } = useReferralNetwork(address, { limit: 50 });
@@ -561,7 +589,7 @@ function NetworkTab({ stats }: { stats: ReferralStats }) {
                     <h3 className="font-semibold text-gray-900 dark:text-white">
                       {t('network.level1')} ({level1Referrals.length})
                     </h3>
-                    <span className="text-sm text-blue-600 dark:text-blue-400">$20 USD</span>
+                    <span className="text-sm text-blue-600 dark:text-blue-400 cursor-pointer hover:text-am-orange dark:hover:text-am-orange-light transition-colors" onClick={() => onNavigateTab('rewards')}>$20 USD</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {level1Referrals.map((ref) => (
@@ -591,7 +619,7 @@ function NetworkTab({ stats }: { stats: ReferralStats }) {
                     <h3 className="font-semibold text-gray-900 dark:text-white">
                       {t('network.level2')} ({level2Referrals.length})
                     </h3>
-                    <span className="text-sm text-purple-600 dark:text-purple-400">$10 USD</span>
+                    <span className="text-sm text-purple-600 dark:text-purple-400 cursor-pointer hover:text-am-orange dark:hover:text-am-orange-light transition-colors" onClick={() => onNavigateTab('rewards')}>$10 USD</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {level2Referrals.map((ref) => (
@@ -621,7 +649,7 @@ function NetworkTab({ stats }: { stats: ReferralStats }) {
                     <h3 className="font-semibold text-gray-900 dark:text-white">
                       {t('network.level3')} ({level3Referrals.length})
                     </h3>
-                    <span className="text-sm text-cyan-600 dark:text-cyan-400">$5 USD</span>
+                    <span className="text-sm text-cyan-600 dark:text-cyan-400 cursor-pointer hover:text-am-orange dark:hover:text-am-orange-light transition-colors" onClick={() => onNavigateTab('rewards')}>$5 USD</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {level3Referrals.map((ref) => (
@@ -759,7 +787,7 @@ function ReferralCard({
 }
 
 // Direct Referrals History Tab
-function DirectReferralsHistoryTab() {
+function DirectReferralsHistoryTab({ onNavigateTab }: { onNavigateTab: (tab: 'overview' | 'network' | 'rewards' | 'leaderboard' | 'history') => void }) {
   const t = useTranslations('referrals');
   const { address } = useAccount();
   const { referrals, isLoading, refetch } = useReferralNetwork(address, { level: 1, limit: 100 });
@@ -820,8 +848,8 @@ function DirectReferralsHistoryTab() {
           <div className="space-y-4">
             {/* Summary Stats */}
             <div className="grid grid-cols-3 gap-4 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-100 dark:border-blue-800">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{referrals.length}</p>
+              <div className="text-center cursor-pointer group transition-all duration-200 hover:bg-white/50 dark:hover:bg-slate-700/50 rounded-lg p-2 -m-2" onClick={() => onNavigateTab('network')}>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white group-hover:text-am-orange transition-colors">{referrals.length}</p>
                 <p className="text-sm text-gray-600 dark:text-gray-400">{t('history.totalDirect')}</p>
               </div>
               <div className="text-center">
@@ -830,8 +858,8 @@ function DirectReferralsHistoryTab() {
                 </p>
                 <p className="text-sm text-gray-600 dark:text-gray-400">{t('history.active')}</p>
               </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+              <div className="text-center cursor-pointer group transition-all duration-200 hover:bg-white/50 dark:hover:bg-slate-700/50 rounded-lg p-2 -m-2" onClick={() => onNavigateTab('rewards')}>
+                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 group-hover:text-am-orange transition-colors">
                   {referrals.filter((r) => r.status === 'pending').length}
                 </p>
                 <p className="text-sm text-gray-600 dark:text-gray-400">{t('history.pending')}</p>
@@ -955,16 +983,17 @@ function DirectReferralsHistoryTab() {
                           </div>
                         )}
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 cursor-pointer group transition-all duration-200 hover:bg-amber-50 dark:hover:bg-amber-900/10 rounded-lg p-1 -m-1" onClick={() => onNavigateTab('rewards')}>
                           <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
                             <Coins className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                           </div>
                           <div>
                             <p className="text-gray-500 dark:text-gray-400">{t('history.usdEarned')}</p>
-                            <p className="font-medium text-gray-900 dark:text-white">
+                            <p className="font-medium text-gray-900 dark:text-white group-hover:text-am-orange transition-colors">
                               ${referral.cgcEarned} USD
                             </p>
                           </div>
+                          <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-am-orange transition-colors ml-auto" />
                         </div>
                       </div>
                     </div>
@@ -987,7 +1016,7 @@ function DirectReferralsHistoryTab() {
   );
 }
 
-function RewardsTab() {
+function RewardsTab({ onNavigateTab }: { onNavigateTab: (tab: 'overview' | 'network' | 'rewards' | 'leaderboard' | 'history') => void }) {
   const t = useTranslations('referrals');
   const tBonus = useTranslations('referrals.signupBonus');
   const { address } = useAccount();
@@ -1132,10 +1161,11 @@ function RewardsTab() {
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{tBonus('commissionsDesc')}</p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+              <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 cursor-pointer group hover:shadow-md hover:border-am-orange/30 hover:-translate-y-0.5 transition-all duration-200" onClick={() => onNavigateTab('network')}>
                 <div className="flex items-center gap-2 mb-1">
                   <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center">1</div>
                   <span className="text-sm font-medium text-gray-900 dark:text-white">{tBonus('level1Commission')}</span>
+                  <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-am-orange transition-colors ml-auto" />
                 </div>
                 <p className="text-xs text-gray-600 dark:text-gray-400">{tBonus('level1Desc')}</p>
                 {commissions && (
@@ -1145,10 +1175,11 @@ function RewardsTab() {
                 )}
               </div>
 
-              <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800">
+              <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 cursor-pointer group hover:shadow-md hover:border-am-orange/30 hover:-translate-y-0.5 transition-all duration-200" onClick={() => onNavigateTab('network')}>
                 <div className="flex items-center gap-2 mb-1">
                   <div className="w-6 h-6 rounded-full bg-purple-500 text-white text-xs font-bold flex items-center justify-center">2</div>
                   <span className="text-sm font-medium text-gray-900 dark:text-white">{tBonus('level2Commission')}</span>
+                  <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-am-orange transition-colors ml-auto" />
                 </div>
                 <p className="text-xs text-gray-600 dark:text-gray-400">{tBonus('level2Desc')}</p>
                 {commissions && (
@@ -1158,10 +1189,11 @@ function RewardsTab() {
                 )}
               </div>
 
-              <div className="p-3 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800">
+              <div className="p-3 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 cursor-pointer group hover:shadow-md hover:border-am-orange/30 hover:-translate-y-0.5 transition-all duration-200" onClick={() => onNavigateTab('network')}>
                 <div className="flex items-center gap-2 mb-1">
                   <div className="w-6 h-6 rounded-full bg-cyan-500 text-white text-xs font-bold flex items-center justify-center">3</div>
                   <span className="text-sm font-medium text-gray-900 dark:text-white">{tBonus('level3Commission')}</span>
+                  <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-am-orange transition-colors ml-auto" />
                 </div>
                 <p className="text-xs text-gray-600 dark:text-gray-400">{tBonus('level3Desc')}</p>
                 {commissions && (
@@ -1174,15 +1206,18 @@ function RewardsTab() {
 
             {/* Total Commissions */}
             {commissions && commissions.totalSignupCommissions > 0 && (
-              <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800">
+              <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 cursor-pointer group hover:shadow-lg hover:border-am-orange/30 transition-all duration-200" onClick={() => onNavigateTab('leaderboard')}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Coins className="h-5 w-5 text-amber-500" />
                     <span className="font-medium text-gray-900 dark:text-white">{tBonus('totalEarned')}</span>
                   </div>
-                  <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                    ${commissions.totalSignupCommissions} USD
-                  </p>
+                  <div className="flex items-center gap-1">
+                    <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                      ${commissions.totalSignupCommissions} USD
+                    </p>
+                    <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-am-orange transition-colors" />
+                  </div>
                 </div>
               </div>
             )}
@@ -1215,6 +1250,7 @@ function RewardsTab() {
               description={t('rewards.level1Desc')}
               percentage={10}
               color="blue"
+              onClick={() => onNavigateTab('network')}
             />
             <RewardTierCard
               level={2}
@@ -1222,6 +1258,7 @@ function RewardsTab() {
               description={t('rewards.level2Desc')}
               percentage={5}
               color="purple"
+              onClick={() => onNavigateTab('network')}
             />
             <RewardTierCard
               level={3}
@@ -1229,6 +1266,7 @@ function RewardsTab() {
               description={t('rewards.level3Desc')}
               percentage={2.5}
               color="cyan"
+              onClick={() => onNavigateTab('network')}
             />
           </div>
         </CardContent>
@@ -1278,7 +1316,7 @@ function RewardsTab() {
 }
 
 // Wrapper component that fetches leaderboard data from API
-function LeaderboardTabWithData() {
+function LeaderboardTabWithData({ onNavigateTab }: { onNavigateTab: (tab: 'overview' | 'network' | 'rewards' | 'leaderboard' | 'history') => void }) {
   const { address } = useAccount();
   const { leaderboard, isLoading, userPosition, refetch } = useReferralLeaderboard({
     wallet: address,
@@ -1289,6 +1327,7 @@ function LeaderboardTabWithData() {
   const formattedLeaderboard: LeaderboardEntry[] = leaderboard.map(entry => ({
     rank: entry.rank,
     address: entry.addressShort,
+    fullAddress: entry.address,
     referrals: entry.totalReferrals,
     earned: entry.totalEarnings,
   }));
@@ -1303,10 +1342,10 @@ function LeaderboardTabWithData() {
     );
   }
 
-  return <LeaderboardTab leaderboard={formattedLeaderboard} userPosition={userPosition} />;
+  return <LeaderboardTab leaderboard={formattedLeaderboard} userPosition={userPosition} onNavigateTab={onNavigateTab} />;
 }
 
-function LeaderboardTab({ leaderboard, userPosition }: { leaderboard: LeaderboardEntry[]; userPosition?: any }) {
+function LeaderboardTab({ leaderboard, userPosition, onNavigateTab }: { leaderboard: LeaderboardEntry[]; userPosition?: any; onNavigateTab: (tab: 'overview' | 'network' | 'rewards' | 'leaderboard' | 'history') => void }) {
   const t = useTranslations('referrals');
 
   return (
@@ -1323,14 +1362,17 @@ function LeaderboardTab({ leaderboard, userPosition }: { leaderboard: Leaderboar
       <CardContent>
         {/* User Position Banner */}
         {userPosition && userPosition.rank > 0 && (
-          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 cursor-pointer group hover:shadow-md hover:border-am-orange/30 transition-all duration-200" onClick={() => onNavigateTab('network')}>
             <div className="flex items-center justify-between">
               <span className="text-sm text-blue-700 dark:text-blue-300">
                 {t('leaderboard.yourRank')}: #{userPosition.rank}
               </span>
-              <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                ${userPosition.totalEarnings} USD earned
-              </span>
+              <div className="flex items-center gap-1">
+                <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                  ${userPosition.totalEarnings} USD earned
+                </span>
+                <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-am-orange transition-colors" />
+              </div>
             </div>
           </div>
         )}
@@ -1377,9 +1419,15 @@ function LeaderboardTab({ leaderboard, userPosition }: { leaderboard: Leaderboar
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="font-mono text-sm text-gray-700 dark:text-gray-300">
-                        {entry.address}
-                      </span>
+                      {entry.fullAddress ? (
+                        <Link href={`/user/${entry.fullAddress}`} className="font-mono text-sm text-gray-700 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors">
+                          {entry.address}
+                        </Link>
+                      ) : (
+                        <span className="font-mono text-sm text-gray-700 dark:text-gray-300">
+                          {entry.address}
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-center">
                       <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
@@ -1414,21 +1462,29 @@ function StatCard({
   title,
   value,
   icon,
-  trend
+  trend,
+  onClick,
 }: {
   title: string;
   value: string;
   icon: React.ReactNode;
   trend: string;
+  onClick?: () => void;
 }) {
   return (
-    <Card className="glass-panel">
+    <Card
+      className={`glass-panel ${onClick ? 'cursor-pointer hover:shadow-lg hover:border-am-orange/30 hover:-translate-y-0.5 group transition-all duration-200' : ''}`}
+      onClick={onClick}
+    >
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-2">
           <div className="p-2 rounded-lg bg-gray-100 dark:bg-slate-800">
             {icon}
           </div>
-          <span className="text-xs text-gray-500 dark:text-gray-400">{trend}</span>
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-gray-500 dark:text-gray-400">{trend}</span>
+            {onClick && <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-am-orange transition-colors" />}
+          </div>
         </div>
         <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
         <p className="text-sm text-gray-500 dark:text-gray-400">{title}</p>
@@ -1440,11 +1496,13 @@ function StatCard({
 function NetworkLevelCard({
   level,
   count,
-  percentage
+  percentage,
+  onClick,
 }: {
   level: number;
   count: number;
   percentage: number;
+  onClick?: () => void;
 }) {
   const colors = {
     1: 'from-blue-500 to-blue-600',
@@ -1453,7 +1511,10 @@ function NetworkLevelCard({
   };
 
   return (
-    <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-slate-800">
+    <div
+      className={`flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-slate-800 ${onClick ? 'cursor-pointer hover:shadow-md hover:border-am-orange/30 hover:-translate-y-0.5 group transition-all duration-200' : ''}`}
+      onClick={onClick}
+    >
       <div className="flex items-center space-x-3">
         <div className={`w-8 h-8 rounded-full bg-gradient-to-r ${colors[level as keyof typeof colors]} flex items-center justify-center text-white text-sm font-bold`}>
           {level}
@@ -1463,7 +1524,10 @@ function NetworkLevelCard({
           <p className="text-xs text-gray-500 dark:text-gray-400">{percentage}% commission</p>
         </div>
       </div>
-      <span className="text-lg font-bold text-gray-900 dark:text-white">{count}</span>
+      <div className="flex items-center gap-1">
+        <span className="text-lg font-bold text-gray-900 dark:text-white">{count}</span>
+        {onClick && <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-am-orange transition-colors" />}
+      </div>
     </div>
   );
 }
@@ -1472,15 +1536,20 @@ function StepCard({
   step,
   title,
   description,
-  icon
+  icon,
+  onClick,
 }: {
   step: number;
   title: string;
   description: string;
   icon: React.ReactNode;
+  onClick?: () => void;
 }) {
   return (
-    <div className="flex items-start space-x-4 p-3 rounded-lg bg-gray-50 dark:bg-slate-800">
+    <div
+      className={`flex items-start space-x-4 p-3 rounded-lg bg-gray-50 dark:bg-slate-800 ${onClick ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 hover:shadow-sm group transition-all duration-200' : ''}`}
+      onClick={onClick}
+    >
       <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
         {step}
       </div>
@@ -1488,6 +1557,7 @@ function StepCard({
         <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
           {icon}
           {title}
+          {onClick && <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-am-orange transition-colors ml-auto" />}
         </h4>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{description}</p>
       </div>
@@ -1500,13 +1570,15 @@ function RewardTierCard({
   title,
   description,
   percentage,
-  color
+  color,
+  onClick,
 }: {
   level: number;
   title: string;
   description: string;
   percentage: number;
   color: 'blue' | 'purple' | 'cyan';
+  onClick?: () => void;
 }) {
   const colors = {
     blue: 'from-blue-500 to-blue-600 border-blue-200 dark:border-blue-800',
@@ -1515,12 +1587,18 @@ function RewardTierCard({
   };
 
   return (
-    <div className={`p-4 rounded-xl border ${colors[color]} bg-gradient-to-br from-white to-gray-50 dark:from-slate-800 dark:to-slate-900`}>
+    <div
+      className={`p-4 rounded-xl border ${colors[color]} bg-gradient-to-br from-white to-gray-50 dark:from-slate-800 dark:to-slate-900 ${onClick ? 'cursor-pointer hover:shadow-lg hover:border-am-orange/30 hover:-translate-y-0.5 group transition-all duration-200' : ''}`}
+      onClick={onClick}
+    >
       <div className="flex items-center justify-between mb-2">
         <Badge className={`bg-gradient-to-r ${colors[color]} text-white border-0`}>
           Level {level}
         </Badge>
-        <span className="text-2xl font-bold text-gray-900 dark:text-white">{percentage}%</span>
+        <div className="flex items-center gap-1">
+          <span className="text-2xl font-bold text-gray-900 dark:text-white">{percentage}%</span>
+          {onClick && <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-am-orange transition-colors" />}
+        </div>
       </div>
       <h4 className="font-medium text-gray-900 dark:text-white">{title}</h4>
       <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{description}</p>
