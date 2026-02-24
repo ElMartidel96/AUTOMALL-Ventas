@@ -10,7 +10,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Navbar, NavbarSpacer } from '@/components/layout/Navbar';
-import { PermanentReferralCard } from '@/components/referrals/PermanentReferralCard';
 import { QRCodeModal } from '@/components/referrals/QRCodeModal';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -61,6 +60,8 @@ import {
   History,
   Wallet,
   Eye,
+  DollarSign,
+  Car,
 } from 'lucide-react';
 
 // ===== TYPES =====
@@ -115,27 +116,7 @@ const defaultStats: ReferralStats = {
 // ===== MAIN COMPONENT =====
 export default function ReferralsPage() {
   const t = useTranslations('referrals');
-  const { isBuyer, isLoading: userLoading } = useUser();
-
-  // Buyers see a limited view — referrals are for dealers
-  if (!userLoading && isBuyer) {
-    return (
-      <>
-        <Navbar />
-        <NavbarSpacer />
-        <div className="min-h-screen theme-gradient-bg flex items-center justify-center p-4">
-          <div className="glass-panel p-12 text-center max-w-md">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-              {t('title')}
-            </h2>
-            <p className="text-gray-500 dark:text-gray-400">
-              {t('subtitle')}
-            </p>
-          </div>
-        </div>
-      </>
-    );
-  }
+  const { isBuyer, isDealer } = useUser();
 
   return (
     <>
@@ -173,7 +154,7 @@ export default function ReferralsPage() {
         </div>
 
         <div className="relative z-10 container mx-auto px-4 py-8">
-          <ReferralsDashboard />
+          <ReferralsDashboard isBuyer={isBuyer} isDealer={isDealer} />
         </div>
       </div>
     </>
@@ -181,7 +162,7 @@ export default function ReferralsPage() {
 }
 
 // ===== DASHBOARD =====
-function ReferralsDashboard() {
+function ReferralsDashboard({ isBuyer, isDealer }: { isBuyer: boolean; isDealer: boolean }) {
   const t = useTranslations('referrals');
   const { address } = useAccount();
   const [activeTab, setActiveTab] = useState<'overview' | 'network' | 'rewards' | 'leaderboard' | 'history'>('overview');
@@ -210,11 +191,16 @@ function ReferralsDashboard() {
     : `https://www.${APP_DOMAIN}?ref=${referralCode}`);
 
   const navigateToTab = useCallback((tab: typeof activeTab) => {
-    setActiveTab(tab);
+    // Buyers don't have network or rewards tabs — redirect to history
+    if (isBuyer && (tab === 'network' || tab === 'rewards')) {
+      setActiveTab('history');
+    } else {
+      setActiveTab(tab);
+    }
     setTimeout(() => {
       document.getElementById('referral-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 50);
-  }, []);
+  }, [isBuyer]);
 
   const scrollToCodeSection = useCallback(() => {
     document.getElementById('referral-code-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -226,13 +212,22 @@ function ReferralsDashboard() {
     setTimeout(() => setCopied(false), 2000);
   }, []);
 
-  const tabs = [
+  // Buyer: 3 tabs | Dealer: 5 tabs
+  const buyerTabs = [
+    { id: 'overview', label: t('tabs.overview'), icon: Target },
+    { id: 'history', label: t('tabs.history'), icon: History },
+    { id: 'leaderboard', label: t('tabs.leaderboard'), icon: Trophy },
+  ] as const;
+
+  const dealerTabs = [
     { id: 'overview', label: t('tabs.overview'), icon: Target },
     { id: 'network', label: t('tabs.network'), icon: Network },
     { id: 'history', label: t('tabs.history'), icon: History },
     { id: 'rewards', label: t('tabs.rewards'), icon: Gift },
     { id: 'leaderboard', label: t('tabs.leaderboard'), icon: Trophy },
   ] as const;
+
+  const tabs = isBuyer ? buyerTabs : dealerTabs;
 
   return (
     <div className="space-y-8">
@@ -243,7 +238,7 @@ function ReferralsDashboard() {
           value={stats.totalReferrals.toString()}
           icon={<Users className="h-5 w-5 text-blue-500" />}
           trend="+0 this week"
-          onClick={() => navigateToTab('network')}
+          onClick={() => navigateToTab('history')}
         />
         <StatCard
           title={t('stats.activeReferrals')}
@@ -257,14 +252,14 @@ function ReferralsDashboard() {
           value={`$${stats.pendingRewards} USD`}
           icon={<Coins className="h-5 w-5 text-amber-500" />}
           trend="Claimable"
-          onClick={() => navigateToTab('rewards')}
+          onClick={() => navigateToTab('history')}
         />
         <StatCard
           title={t('stats.totalEarned')}
           value={`$${stats.totalEarned} USD`}
           icon={<TrendingUp className="h-5 w-5 text-purple-500" />}
           trend={t('stats.allTime')}
-          onClick={() => navigateToTab('rewards')}
+          onClick={() => navigateToTab('history')}
         />
       </div>
 
@@ -354,40 +349,63 @@ function ReferralsDashboard() {
           referralCode={referralCode}
         />
 
-        {/* Network Overview */}
-        <Card className="glass-panel">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-gray-900 dark:text-white">
-              <Network className="h-5 w-5 text-purple-500" />
-              <span>{t('network.title')}</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <NetworkLevelCard level={1} count={stats.level1Count} percentage={10} onClick={() => navigateToTab('network')} />
-            <NetworkLevelCard level={2} count={stats.level2Count} percentage={5} onClick={() => navigateToTab('network')} />
-            <NetworkLevelCard level={3} count={stats.level3Count} percentage={2.5} onClick={() => navigateToTab('network')} />
-            <div
-              className="pt-4 border-t border-gray-200 dark:border-slate-700 cursor-pointer group transition-all duration-200 hover:bg-gray-50 dark:hover:bg-slate-700/50 rounded-lg px-2 -mx-2"
-              onClick={() => navigateToTab('network')}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {t('network.totalNetwork')}
-                </span>
-                <div className="flex items-center gap-1">
-                  <span className="text-lg font-bold text-gray-900 dark:text-white">
-                    {stats.level1Count + stats.level2Count + stats.level3Count}
+        {/* Sidebar: Buyer = simple reward card, Dealer = network levels */}
+        {isBuyer ? (
+          <Card className="glass-panel border-2 border-green-200 dark:border-green-800">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2 text-gray-900 dark:text-white">
+                <DollarSign className="h-5 w-5 text-green-500" />
+                <span>{t('buyer.rewardAmount')}</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-center py-4">
+                <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center">
+                  <DollarSign className="h-10 w-10 text-white" />
+                </div>
+                <p className="text-3xl font-bold text-green-600 dark:text-green-400">{t('buyer.rewardAmount')}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('buyer.rewardLabel')}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">{t('buyer.rewardSimple')}</p>
+              </div>
+              <div className="pt-4 border-t border-gray-200 dark:border-slate-700">
+                <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+                  {t('buyer.sharePrompt')}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="glass-panel">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2 text-gray-900 dark:text-white">
+                <Network className="h-5 w-5 text-purple-500" />
+                <span>{t('network.title')}</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <NetworkLevelCard level={1} count={stats.level1Count} percentage={10} onClick={() => navigateToTab('network')} />
+              <NetworkLevelCard level={2} count={stats.level2Count} percentage={6} onClick={() => navigateToTab('network')} />
+              <NetworkLevelCard level={3} count={stats.level3Count} percentage={3} onClick={() => navigateToTab('network')} />
+              <div
+                className="pt-4 border-t border-gray-200 dark:border-slate-700 cursor-pointer group transition-all duration-200 hover:bg-gray-50 dark:hover:bg-slate-700/50 rounded-lg px-2 -mx-2"
+                onClick={() => navigateToTab('network')}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('network.totalNetwork')}
                   </span>
-                  <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-am-orange transition-colors" />
+                  <div className="flex items-center gap-1">
+                    <span className="text-lg font-bold text-gray-900 dark:text-white">
+                      {stats.level1Count + stats.level2Count + stats.level3Count}
+                    </span>
+                    <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-am-orange transition-colors" />
+                  </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
-
-      {/* Permanent Referral Link Section (FEATURED - Multi-use, never expires) */}
-      <PermanentReferralCard referralCode={referralCode} walletAddress={address} />
 
       {/* Tabs */}
       <div id="referral-tabs" className="flex space-x-2 border-b border-gray-200 dark:border-slate-700 pb-2 overflow-x-auto">
@@ -408,10 +426,10 @@ function ReferralsDashboard() {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'overview' && <OverviewTab onNavigateTab={navigateToTab} onScrollToCode={scrollToCodeSection} />}
-      {activeTab === 'network' && <NetworkTab stats={stats} onNavigateTab={navigateToTab} />}
+      {activeTab === 'overview' && <OverviewTab onNavigateTab={navigateToTab} onScrollToCode={scrollToCodeSection} isBuyer={isBuyer} />}
+      {activeTab === 'network' && !isBuyer && <NetworkTab stats={stats} onNavigateTab={navigateToTab} />}
       {activeTab === 'history' && <DirectReferralsHistoryTab onNavigateTab={navigateToTab} />}
-      {activeTab === 'rewards' && <RewardsTab onNavigateTab={navigateToTab} />}
+      {activeTab === 'rewards' && !isBuyer && <RewardsTab onNavigateTab={navigateToTab} />}
       {activeTab === 'leaderboard' && <LeaderboardTabWithData onNavigateTab={navigateToTab} />}
     </div>
   );
@@ -419,12 +437,73 @@ function ReferralsDashboard() {
 
 // ===== TAB COMPONENTS =====
 
-function OverviewTab({ onNavigateTab, onScrollToCode }: { onNavigateTab: (tab: 'overview' | 'network' | 'rewards' | 'leaderboard' | 'history') => void; onScrollToCode: () => void }) {
+function OverviewTab({ onNavigateTab, onScrollToCode, isBuyer }: { onNavigateTab: (tab: 'overview' | 'network' | 'rewards' | 'leaderboard' | 'history') => void; onScrollToCode: () => void; isBuyer: boolean }) {
   const t = useTranslations('referrals');
+
+  if (isBuyer) {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* How It Works — Buyer (3 steps) */}
+        <Card className="glass-panel">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2 text-gray-900 dark:text-white">
+              <Sparkles className="h-5 w-5 text-amber-500" />
+              <span>{t('buyer.howItWorks')}</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <StepCard
+              step={1}
+              title={t('buyer.step1Title')}
+              description={t('buyer.step1Desc')}
+              icon={<Share2 className="h-5 w-5" />}
+              onClick={onScrollToCode}
+            />
+            <StepCard
+              step={2}
+              title={t('buyer.step2Title')}
+              description={t('buyer.step2Desc')}
+              icon={<Car className="h-5 w-5" />}
+            />
+            <StepCard
+              step={3}
+              title={t('buyer.step3Title')}
+              description={t('buyer.step3Desc')}
+              icon={<DollarSign className="h-5 w-5" />}
+              onClick={() => onNavigateTab('history')}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Buyer Reward Card */}
+        <Card className="glass-panel border-2 border-green-200 dark:border-green-800">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2 text-gray-900 dark:text-white">
+              <Gift className="h-5 w-5 text-green-500" />
+              <span>{t('buyer.heroTitle')}</span>
+            </CardTitle>
+            <CardDescription className="text-gray-600 dark:text-gray-400">
+              {t('buyer.heroSubtitle')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-6">
+              <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
+                <DollarSign className="h-12 w-12 text-white" />
+              </div>
+              <p className="text-4xl font-bold text-green-600 dark:text-green-400">{t('buyer.rewardAmount')}</p>
+              <p className="text-gray-600 dark:text-gray-400 mt-2">{t('buyer.rewardLabel')}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-500 mt-3">{t('buyer.rewardSimple')}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* How It Works */}
+      {/* How It Works — Dealer (4 steps) */}
       <Card className="glass-panel">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2 text-gray-900 dark:text-white">
@@ -463,7 +542,7 @@ function OverviewTab({ onNavigateTab, onScrollToCode }: { onNavigateTab: (tab: '
         </CardContent>
       </Card>
 
-      {/* Reward Structure Preview */}
+      {/* Reward Structure Preview — Dealer (3 tiers with updated percentages) */}
       <Card className="glass-panel">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2 text-gray-900 dark:text-white">
@@ -487,7 +566,7 @@ function OverviewTab({ onNavigateTab, onScrollToCode }: { onNavigateTab: (tab: '
             level={2}
             title={t('rewards.level2Title')}
             description={t('rewards.level2Desc')}
-            percentage={5}
+            percentage={6}
             color="purple"
             onClick={() => onNavigateTab('rewards')}
           />
@@ -495,7 +574,7 @@ function OverviewTab({ onNavigateTab, onScrollToCode }: { onNavigateTab: (tab: '
             level={3}
             title={t('rewards.level3Title')}
             description={t('rewards.level3Desc')}
-            percentage={2.5}
+            percentage={3}
             color="cyan"
             onClick={() => onNavigateTab('rewards')}
           />
@@ -589,7 +668,7 @@ function NetworkTab({ stats, onNavigateTab }: { stats: ReferralStats; onNavigate
                     <h3 className="font-semibold text-gray-900 dark:text-white">
                       {t('network.level1')} ({level1Referrals.length})
                     </h3>
-                    <span className="text-sm text-blue-600 dark:text-blue-400 cursor-pointer hover:text-am-orange dark:hover:text-am-orange-light transition-colors" onClick={() => onNavigateTab('rewards')}>$20 USD</span>
+                    <span className="text-sm text-blue-600 dark:text-blue-400 cursor-pointer hover:text-am-orange dark:hover:text-am-orange-light transition-colors" onClick={() => onNavigateTab('rewards')}>10%</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {level1Referrals.map((ref) => (
@@ -619,7 +698,7 @@ function NetworkTab({ stats, onNavigateTab }: { stats: ReferralStats; onNavigate
                     <h3 className="font-semibold text-gray-900 dark:text-white">
                       {t('network.level2')} ({level2Referrals.length})
                     </h3>
-                    <span className="text-sm text-purple-600 dark:text-purple-400 cursor-pointer hover:text-am-orange dark:hover:text-am-orange-light transition-colors" onClick={() => onNavigateTab('rewards')}>$10 USD</span>
+                    <span className="text-sm text-purple-600 dark:text-purple-400 cursor-pointer hover:text-am-orange dark:hover:text-am-orange-light transition-colors" onClick={() => onNavigateTab('rewards')}>6%</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {level2Referrals.map((ref) => (
@@ -649,7 +728,7 @@ function NetworkTab({ stats, onNavigateTab }: { stats: ReferralStats; onNavigate
                     <h3 className="font-semibold text-gray-900 dark:text-white">
                       {t('network.level3')} ({level3Referrals.length})
                     </h3>
-                    <span className="text-sm text-cyan-600 dark:text-cyan-400 cursor-pointer hover:text-am-orange dark:hover:text-am-orange-light transition-colors" onClick={() => onNavigateTab('rewards')}>$5 USD</span>
+                    <span className="text-sm text-cyan-600 dark:text-cyan-400 cursor-pointer hover:text-am-orange dark:hover:text-am-orange-light transition-colors" onClick={() => onNavigateTab('rewards')}>3%</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {level3Referrals.map((ref) => (
@@ -1227,7 +1306,7 @@ function RewardsTab({ onNavigateTab }: { onNavigateTab: (tab: 'overview' | 'netw
           <div className="p-3 rounded-lg bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600 dark:text-gray-400">{tBonus('totalDistribution')}</span>
-              <span className="font-medium text-gray-900 dark:text-white">$235 USD max</span>
+              <span className="font-medium text-gray-900 dark:text-white">$238 USD max</span>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{tBonus('totalDistributionDesc')}</p>
           </div>
@@ -1256,7 +1335,7 @@ function RewardsTab({ onNavigateTab }: { onNavigateTab: (tab: 'overview' | 'netw
               level={2}
               title={t('rewards.level2Title')}
               description={t('rewards.level2Desc')}
-              percentage={5}
+              percentage={6}
               color="purple"
               onClick={() => onNavigateTab('network')}
             />
@@ -1264,7 +1343,7 @@ function RewardsTab({ onNavigateTab }: { onNavigateTab: (tab: 'overview' | 'netw
               level={3}
               title={t('rewards.level3Title')}
               description={t('rewards.level3Desc')}
-              percentage={2.5}
+              percentage={3}
               color="cyan"
               onClick={() => onNavigateTab('network')}
             />

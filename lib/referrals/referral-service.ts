@@ -3,7 +3,7 @@
  *
  * Core service for managing the AutoMALL referral program.
  * Features:
- * - 3-level commission structure (10%, 5%, 2.5%)
+ * - 3-level commission structure (10%, 6%, 3%)
  * - Milestone bonuses (5, 10, 25, 50, 100 referrals)
  * - Real-time tracking and analytics
  * - Fraud prevention
@@ -35,8 +35,8 @@ import type {
 /** Commission rates by level */
 export const COMMISSION_RATES: Record<ReferralLevel, number> = {
   1: 0.10,  // 10% for direct referrals
-  2: 0.05,  // 5% for level 2
-  3: 0.025, // 2.5% for level 3
+  2: 0.06,  // 6% for level 2
+  3: 0.03,  // 3% for level 3
 };
 
 /** Milestone bonus structure */
