@@ -60,6 +60,7 @@ import {
   MASTERCLASS_TYPE_OPTIONS,
   type MasterclassType
 } from '@/lib/supabase/types';
+import { APP_DOMAIN } from '@/lib/config/features';
 
 interface SpecialReferralCardProps {
   referralCode: string;
@@ -296,7 +297,7 @@ export function SpecialReferralCard({ referralCode, walletAddress }: SpecialRefe
       // Build the special invite URL
       const baseUrl = typeof window !== 'undefined'
         ? window.location.origin
-        : 'https://autosmall.com';
+        : `https://www.${APP_DOMAIN}`;
 
       const specialLink = `${baseUrl}/special-invite/${data.inviteCode}`;
       setGeneratedLink(specialLink);
@@ -330,7 +331,7 @@ export function SpecialReferralCard({ referralCode, walletAddress }: SpecialRefe
       const fallbackCode = `${referralCode}-${Date.now().toString(36)}`;
       const baseUrl = typeof window !== 'undefined'
         ? window.location.origin
-        : 'https://autosmall.com';
+        : `https://www.${APP_DOMAIN}`;
 
       // Encode parameters in URL
       const params = new URLSearchParams({

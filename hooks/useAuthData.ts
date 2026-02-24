@@ -103,15 +103,6 @@ export function useAuthData(): AuthData {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ wallet: address, ...updates }),
           }).catch(() => {});
-
-          // Save to profile table (may fail if profile doesn't exist yet — that's ok)
-          if (email) {
-            fetch('/api/profile', {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ wallet: address, email }),
-            }).catch(() => {});
-          }
         }
       } catch {
         // getProfiles fails if user is not authenticated via inAppWallet — expected for crypto wallets

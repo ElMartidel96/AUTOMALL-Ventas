@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAccount } from '@/lib/thirdweb';
 import { useUser } from '@/hooks/useUser';
+import { APP_DOMAIN } from '@/lib/config/features';
 import {
   useReferralDashboard,
   useReferralLeaderboard,
@@ -205,7 +206,7 @@ function ReferralsDashboard() {
   const referralCode = code.code || generateReferralCode(address || '');
   const referralLink = links.links?.default || (typeof window !== 'undefined'
     ? `${window.location.origin}?ref=${referralCode}`
-    : `https://autosmall.com?ref=${referralCode}`);
+    : `https://www.${APP_DOMAIN}?ref=${referralCode}`);
 
   const handleCopy = useCallback(async (text: string) => {
     await navigator.clipboard.writeText(text);

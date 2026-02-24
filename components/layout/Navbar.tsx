@@ -97,15 +97,13 @@ export const Navbar: React.FC = () => {
               </Link>
             )}
 
-            {!isSubdomain && (
-              <Link
-                href="/referrals"
-                className="text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors text-sm font-bold flex items-center gap-1 px-2"
-              >
-                {t('referrals')}
-                <Users className="w-3 h-3" />
-              </Link>
-            )}
+            <Link
+              href="/referrals"
+              className="text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors text-sm font-bold flex items-center gap-1 px-2"
+            >
+              {t('referrals')}
+              <Users className="w-3 h-3" />
+            </Link>
 
             {/* Separator */}
             <div className="w-px h-6 bg-gradient-to-b from-transparent via-gray-300 dark:via-am-blue-light/30 to-transparent opacity-40 mx-2"></div>
@@ -175,20 +173,16 @@ export const Navbar: React.FC = () => {
                 </>
               )}
 
-              {!isSubdomain && (
-                <>
-                  <div className="mx-4 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-am-blue/30 to-transparent opacity-30"></div>
+              <div className="mx-4 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-am-blue/30 to-transparent opacity-30"></div>
 
-                  <Link
-                    href="/referrals"
-                    className="block text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors px-4 py-3 font-bold text-base flex items-center gap-2"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <Users className="w-4 h-4" />
-                    {t('referrals')}
-                  </Link>
-                </>
-              )}
+              <Link
+                href="/referrals"
+                className="block text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors px-4 py-3 font-bold text-base flex items-center gap-2"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <Users className="w-4 h-4" />
+                {t('referrals')}
+              </Link>
 
               <div className="mx-4 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-am-blue/30 to-transparent opacity-30"></div>
 

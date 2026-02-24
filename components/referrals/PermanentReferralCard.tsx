@@ -66,6 +66,7 @@ import {
   MASTERCLASS_TYPE_OPTIONS,
   type MasterclassType
 } from '@/lib/supabase/types';
+import { APP_DOMAIN } from '@/lib/config/features';
 import { BookOpen } from 'lucide-react';
 
 interface PermanentReferralCardProps {
@@ -435,7 +436,7 @@ export function PermanentReferralCard({ referralCode, walletAddress }: Permanent
       // Build the permanent invite URL
       const baseUrl = typeof window !== 'undefined'
         ? window.location.origin
-        : 'https://autosmall.com';
+        : `https://www.${APP_DOMAIN}`;
 
       const permanentLink = `${baseUrl}/permanent-invite/${data.inviteCode}`;
       setGeneratedLink(permanentLink);
