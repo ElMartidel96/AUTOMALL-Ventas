@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
+import React, { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   Store,
@@ -9,7 +8,6 @@ import {
   MessageCircle,
   Mail,
   MapPin,
-  Camera,
   Check,
   CheckCircle,
   AlertCircle,
@@ -19,7 +17,6 @@ import {
 import type { Seller } from '@/lib/types/seller';
 import { InstagramIcon, FacebookIcon, TikTokIcon } from '@/components/icons/SocialIcons';
 import { ImageUploadField } from '@/components/ui/ImageUploadField';
-import { compressImageSmart } from '@/lib/inventory/image-utils';
 
 function InputField({
   label,
@@ -87,11 +84,6 @@ export function SellerForm({
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Logo upload
-  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
-  const [logoStatus, setLogoStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const logoInputRef = useRef<HTMLInputElement>(null);
-
   // Sync form if seller prop changes (e.g. after refetch)
   useEffect(() => {
     setForm({
@@ -142,58 +134,6 @@ export function SellerForm({
     }
   };
 
-  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !address) return;
-
-    setIsUploadingLogo(true);
-    setLogoStatus('idle');
-
-    try {
-      const { blob, format } = await compressImageSmart(file, {
-        maxWidth: 500,
-        maxHeight: 500,
-        preserveTransparency: true,
-      });
-
-      const ext = format === 'image/png' ? 'png' : format === 'image/webp' ? 'webp' : 'jpg';
-      const formData = new FormData();
-      formData.append('file', new File([blob], `logo.${ext}`, { type: format }));
-      formData.append('wallet', address);
-
-      const res = await fetch('/api/profile/avatar', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const contentType = res.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) {
-        throw new Error(res.status === 413 ? 'File too large' : `Server error (${res.status})`);
-      }
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Upload failed');
-
-      if (data.data?.avatar_url) {
-        await fetch('/api/sellers', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ wallet: address, logo_url: data.data.avatar_url }),
-        });
-      }
-
-      setLogoStatus('success');
-      refetch();
-      setTimeout(() => setLogoStatus('idle'), 3000);
-    } catch {
-      setLogoStatus('error');
-      setTimeout(() => setLogoStatus('idle'), 5000);
-    } finally {
-      setIsUploadingLogo(false);
-      if (logoInputRef.current) logoInputRef.current.value = '';
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* Logo & Branding */}
@@ -203,57 +143,31 @@ export function SellerForm({
           {t('branding')}
         </h3>
 
-        <div className="flex items-center gap-5">
-          <div className="relative group">
-            <div className="w-20 h-20 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden ring-2 ring-gray-200 dark:ring-gray-700">
-              {isUploadingLogo ? (
-                <Loader2 className="w-6 h-6 text-am-orange animate-spin" />
-              ) : seller.logo_url ? (
-                <Image
-                  src={seller.logo_url}
-                  alt="Logo"
-                  width={80}
-                  height={80}
-                  className="w-full h-full object-cover"
-                  unoptimized
-                />
-              ) : (
-                <Store className="w-8 h-8 text-gray-400" />
-              )}
-            </div>
-            <input
-              ref={logoInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleLogoUpload}
-              className="hidden"
-            />
-            <button
-              onClick={() => logoInputRef.current?.click()}
-              disabled={isUploadingLogo}
-              className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-am-orange text-white flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-all hover:scale-110 disabled:opacity-50"
-            >
-              <Camera className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <div className="flex-1">
-            <button
-              onClick={() => logoInputRef.current?.click()}
-              disabled={isUploadingLogo}
-              className="px-4 py-2 rounded-xl text-sm font-medium glass-crystal text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
-            >
-              {t('logoUpload')}
-            </button>
-            <p className="text-xs text-gray-400 mt-1">{t('logoHelp')}</p>
-            {logoStatus === 'success' && (
-              <p className="text-xs text-am-green flex items-center gap-1 mt-1"><CheckCircle className="w-3 h-3" />{t('logoSuccess')}</p>
-            )}
-            {logoStatus === 'error' && (
-              <p className="text-xs text-red-500 flex items-center gap-1 mt-1"><AlertCircle className="w-3 h-3" />Error</p>
-            )}
-          </div>
-        </div>
+        <ImageUploadField
+          label={t('logoUpload')}
+          help={t('logoHelp')}
+          currentUrl={seller.logo_url || undefined}
+          uploadEndpoint="/api/profile/avatar"
+          walletAddress={address}
+          compressOptions={{ maxWidth: 500, maxHeight: 500, preserveTransparency: true }}
+          previewAspect="square"
+          onUploadComplete={async (url) => {
+            await fetch('/api/sellers', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ wallet: address, logo_url: url }),
+            });
+            refetch();
+          }}
+          strings={{
+            dragOrClick: t('logoUpload'),
+            compressing: t('saving'),
+            uploading: t('saving'),
+            success: t('logoSuccess'),
+            error: t('saveError'),
+            change: t('logoUpload'),
+          }}
+        />
       </div>
 
       {/* Hero / Background Image */}
