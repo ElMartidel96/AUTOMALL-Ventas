@@ -124,7 +124,7 @@ export default function ReferralsPage() {
       <NavbarSpacer />
 
       {/* Open access - no token gating for viewing */}
-      <div className="min-h-screen theme-gradient-bg">
+      <div className="min-h-screen theme-gradient-bg -mt-[8px]">
         {/* Background effects */}
         <div className="fixed inset-0 opacity-30 dark:opacity-20 pointer-events-none overflow-hidden">
           <div className="absolute top-20 left-20 w-72 h-72 bg-blue-400 dark:bg-blue-600 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-xl animate-pulse"></div>

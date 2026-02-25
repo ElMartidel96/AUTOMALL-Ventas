@@ -49,7 +49,7 @@ export default function SellerDashboard() {
         <div className="absolute bottom-20 left-1/2 w-72 h-72 bg-am-green rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-xl animate-pulse delay-2000"></div>
       </div>
 
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-6 -mt-[19px]">
         {/* Welcome Header */}
         <div className="glass-panel p-6 mb-8">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

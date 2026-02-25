@@ -79,7 +79,7 @@ export default function CatalogPage() {
       <NavbarSpacer />
 
       {/* Header */}
-      <section className="pt-8 pb-4 px-4">
+      <section className="pt-8 pb-4 px-4 -mt-[19px]">
         <div className="container mx-auto max-w-7xl">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
             {t('title')}

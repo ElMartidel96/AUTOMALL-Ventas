@@ -99,7 +99,7 @@ export default function ProfilePage() {
       <Navbar />
       <NavbarSpacer />
       <div className="min-h-screen theme-gradient-bg">
-        <div className="container mx-auto px-4 pb-8 pt-8 max-w-4xl">
+        <div className="container mx-auto px-4 pb-8 pt-8 max-w-4xl -mt-[19px]">
           {/* Page header */}
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
