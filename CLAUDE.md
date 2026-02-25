@@ -34,8 +34,13 @@ All Web3/blockchain UI is hidden behind feature flags. **NEVER expose crypto con
 | `FEATURE_WALLET_LOGIN` | false | Hides crypto wallet login options |
 | `FEATURE_DAO_GOVERNANCE` | false | Hides governance system |
 | `FEATURE_CGC_TOKEN` | false | Hides CGC token references |
-| `FEATURE_SELLER_SUBDOMAINS` | false | Seller subdomain system (future) |
+| `FEATURE_SELLER_SUBDOMAINS` | true | Seller subdomain system |
 | `FEATURE_AI_SALES_AGENT` | false | AI sales assistant (future) |
+| `FEATURE_AI_AGENT_CONNECTOR` | false | AI Agent Connector (MCP Gateway + Chat + API Keys) |
+| `FEATURE_INVENTORY` | true | Vehicle inventory management |
+| `FEATURE_CRM` | false | CRM / client management |
+| `FEATURE_WHATSAPP` | false | WhatsApp Business integration |
+| `FEATURE_CATALOG` | true | Public vehicle catalog |
 
 ## Critical Rules
 1. **Zero crypto exposure**: No user-facing text should mention blockchain, wallets, tokens, DAO, or CGC. The platform must appear as a pure car sales tool.
@@ -53,21 +58,29 @@ app/                    # Next.js pages (App Router)
   inventory/            # Vehicle inventory (placeholder)
   clients/              # CRM (placeholder)
   referrals/            # Referral network
-  profile/              # Seller profile
+  profile/              # Seller profile (+ AI Assistant tab)
+  api/agent/chat/       # AI Agent platform chat (Vercel AI SDK v5)
+  api/agent/keys/       # AI Agent API key management
+  api/mcp/gateway/      # MCP Gateway for external AI apps
   docs/                 # Reserved for future lab collaboration (NOT dealer UI)
   admin/                # Admin panel (hidden)
-  agent/                # AI agent (hidden, future)
 components/
   layout/               # Navbar, Footer
+  agent/                # AI Agent UI (ConnectorPanel, ChatWidget)
   thirdweb/             # ConnectButtonDAO (social login)
   dashboard/            # Dashboard panels (crypto - hidden)
   ui/                   # Reusable UI (shadcn-style)
 lib/
   config/features.ts    # Feature flags
+  agent/tools/          # AI Agent tool registry + implementations
+  agent/security/       # Permission engine + audit logger
+  agent/prompts/        # Dynamic system prompt generator
+  agent/types/          # Connector type definitions
   thirdweb/             # Auth provider & hooks
   web3/                 # Blockchain hooks (hidden)
   supabase/             # Database client
 src/locales/            # en.json, es.json translations
+supabase/migrations/    # Database migrations (agent_connector)
 public/                 # Static assets
   logo-automall.png     # Hero logo (optimized 84KB, 1000x552)
   logo-automall-nav.png # Navbar logo (240x132)
@@ -81,6 +94,53 @@ public/                 # Static assets
 - **Translations**: `const t = useTranslations('namespace');`
 - **Feature gate**: `import { FEATURE_WEB3_VISIBLE } from '@/lib/config/features';`
 - **Glass components**: `<div className="glass-panel p-6">...</div>`
+- **AI Agent tools**: `import { toolRegistry } from '@/lib/agent/tools/tool-registry';`
+- **Permission check**: `canExecuteTool(role, toolName, scopes)`
+
+## AI Agent Connector System
+
+### Architecture
+3 connection modes share a single Tool Registry (~17 tools):
+1. **Platform Chat** (`/api/agent/chat`) — In-app streaming chat via Vercel AI SDK v5
+2. **MCP Gateway** (`/api/mcp/gateway`) — JSON-RPC 2.0 for Claude Desktop / external AI
+3. **OpenAPI Actions** (Phase 2) — For ChatGPT Custom GPTs
+
+### Key Files
+| File | Purpose |
+|------|---------|
+| `lib/agent/tools/tool-registry.ts` | Central registry of all 17 tools |
+| `lib/agent/tools/catalog-tools.ts` | search_vehicles, get_vehicle_details, compare_vehicles |
+| `lib/agent/tools/inventory-tools.ts` | list_my_vehicles, add_vehicle, update_vehicle, update_vehicle_status |
+| `lib/agent/tools/profile-tools.ts` | get_my_profile, update_my_profile, get_dealer_profile |
+| `lib/agent/tools/referral-tools.ts` | get_my_referral_code, get_referral_stats, get_referral_network |
+| `lib/agent/security/permission-engine.ts` | Role x scope validation, rate limiting, API key auth |
+| `lib/agent/security/audit-logger.ts` | Auto-logging of every tool execution |
+| `lib/agent/prompts/automall-system-prompt.ts` | Dynamic per-role system prompts (EN/ES) |
+| `lib/agent/types/connector-types.ts` | TypeScript types for the entire system |
+| `app/api/agent/chat/route.ts` | Platform chat endpoint (AI SDK v5 streamText) |
+| `app/api/mcp/gateway/route.ts` | MCP Streamable HTTP server |
+| `app/api/agent/keys/route.ts` | API key CRUD (SHA-256 hashed) |
+| `components/agent/AgentConnectorPanel.tsx` | Profile tab UI for key management + guides |
+| `components/agent/AgentChatWidget.tsx` | Floating chat widget (bottom-right) |
+
+### Database Tables (Supabase)
+| Table | Purpose |
+|-------|---------|
+| `agent_api_keys` | Hashed API keys with scopes, rate limits, expiration |
+| `agent_audit_log` | Every tool call logged (wallet, tool, input/output, duration) |
+| `agent_approval_queue` | Destructive action approvals (Phase 2+) |
+
+### Security
+- API keys are SHA-256 hashed — raw key shown ONCE at creation
+- Permission matrix: role (buyer/seller/birddog/admin) x scope (read/write/admin)
+- Rate limiting per API key (default 100 req/hour)
+- Audit log on every tool execution (fire-and-forget)
+- Zero crypto/blockchain exposure in any tool, prompt, or UI
+
+### Important: DO NOT MODIFY legacy files
+- `app/api/mcp-docs/route.ts` — CryptoGift MCP server (intacto)
+- `app/api/agent/route.ts` — CryptoGift agent endpoint (intacto)
+- `lib/agent/types.ts` — CryptoGift agent modes (intacto)
 
 ## i18n Namespaces
 | Namespace | Usage |
@@ -93,6 +153,7 @@ public/                 # Static assets
 | `common` | Shared buttons, labels |
 | `wallet` | Auth/connection (internal) |
 | `referrals` | Referral system |
+| `agent` | AI Agent connector (API keys, connection guides, chat widget) |
 
 ## Development
 ```bash

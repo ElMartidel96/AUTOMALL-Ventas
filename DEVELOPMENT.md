@@ -17,6 +17,117 @@ Todas las referencias históricas a "2M CGC" en este documento se refieren ahora
 
 ---
 
+## 🎬 SESIÓN DE DESARROLLO - 25 FEBRERO 2026 ⭐ AI AGENT CONNECTOR SYSTEM
+
+### 📅 Fecha: 25 Febrero 2026
+### 👤 Desarrollador: Godez22
+### 🎯 Objetivo: Implementar sistema completo de AI Agent Connector (MCP Gateway + Platform Chat + API Keys)
+
+### 📊 RESUMEN EJECUTIVO
+- ✅ **Tool Registry**: 17 tools centralizados (Catalog, Inventory, Profile, Referrals, Analytics, Utility)
+- ✅ **Permission Engine**: Validación rol×scope, rate limiting, API key auth (SHA-256)
+- ✅ **Audit Logger**: Log automático de toda ejecución de tool en `agent_audit_log`
+- ✅ **MCP Gateway** (`/api/mcp/gateway`): JSON-RPC 2.0, Streamable HTTP, bearer auth, sessions
+- ✅ **Platform Chat** (`/api/agent/chat`): Vercel AI SDK v5 `streamText()` con tools dinámicos
+- ✅ **API Key Management** (`/api/agent/keys`): CRUD con SHA-256 hash, prefix-only display
+- ✅ **System Prompt Generator**: Prompts dinámicos por rol (EN/ES) para Alfred
+- ✅ **AgentConnectorPanel**: UI para gestión de API keys + guías Claude/ChatGPT/Gemini
+- ✅ **AgentChatWidget**: Chat flotante con AI SDK v5 `useChat` + `TextStreamChatTransport`
+- ✅ **Feature Flag**: `FEATURE_AI_AGENT_CONNECTOR` — activado en Vercel
+- ✅ **Database Migration**: 3 tablas SQL listas para ejecutar en Supabase
+- ✅ **i18n**: ~40 claves en namespace `agent` (EN/ES)
+- ✅ **Profile Integration**: Nueva tab "AI Assistant" con gradiente verde
+- ✅ **Zero crypto exposure**: Ningún tool, prompt o UI menciona blockchain/CGC/DAO
+
+### 🔧 ARCHIVOS CREADOS (15)
+
+| # | Archivo | Líneas | Descripción |
+|---|---------|--------|-------------|
+| 1 | `lib/agent/types/connector-types.ts` | 174 | Tipos: AgentTool, ToolContext, ApiKey, MCP, Chat schemas |
+| 2 | `supabase/migrations/20260224_agent_connector.sql` | 64 | 3 tablas + indexes + RLS |
+| 3 | `lib/agent/tools/catalog-tools.ts` | 130 | search_vehicles, get_vehicle_details, compare_vehicles |
+| 4 | `lib/agent/tools/inventory-tools.ts` | 187 | list_my_vehicles, add/update_vehicle, update_status |
+| 5 | `lib/agent/tools/profile-tools.ts` | 139 | get_my_profile, update_my_profile, get_dealer_profile |
+| 6 | `lib/agent/tools/referral-tools.ts` | 123 | get_my_referral_code, get_referral_stats, get_network |
+| 7 | `lib/agent/tools/tool-registry.ts` | 155 | Registry central (singleton) + utility tools inline |
+| 8 | `lib/agent/security/permission-engine.ts` | 167 | canExecuteTool, checkRateLimit, validateApiKey, resolveUserRole |
+| 9 | `lib/agent/security/audit-logger.ts` | 112 | logToolExecution, executeToolWithAudit (fire-and-forget) |
+| 10 | `lib/agent/prompts/automall-system-prompt.ts` | 81 | generateSystemPrompt (dinámico por rol, EN/ES) |
+| 11 | `app/api/agent/chat/route.ts` | 120 | POST streaming + GET health check |
+| 12 | `app/api/mcp/gateway/route.ts` | 250 | POST JSON-RPC + GET health + DELETE session |
+| 13 | `app/api/agent/keys/route.ts` | 173 | POST create + GET list + DELETE revoke |
+| 14 | `components/agent/AgentConnectorPanel.tsx` | 355 | Tabs: API Keys, Claude, ChatGPT, Gemini |
+| 15 | `components/agent/AgentChatWidget.tsx` | 165 | FAB + chat panel expandible |
+
+### 🔧 ARCHIVOS MODIFICADOS (6)
+
+| Archivo | Cambio |
+|---------|--------|
+| `lib/config/features.ts` | +3 líneas: `FEATURE_AI_AGENT_CONNECTOR` flag |
+| `app/profile/page.tsx` | +23 líneas: import Bot/AgentConnectorPanel, tab "AI Assistant" |
+| `package.json` | +1 dep: `zod-to-json-schema` |
+| `pnpm-lock.yaml` | Lockfile updated |
+| `src/locales/en.json` | +46 líneas: namespace `agent` (~40 claves) |
+| `src/locales/es.json` | +46 líneas: namespace `agent` (~40 claves) |
+
+### 📦 DEPENDENCIAS NUEVAS
+- `zod-to-json-schema` — Convierte Zod schemas a JSON Schema para MCP tool definitions
+
+### 🏗️ ARQUITECTURA DEL SISTEMA
+
+```
+┌─────────────────────────────────────────────────┐
+│              TOOL REGISTRY (central)            │
+│  17 tools: catalog, inventory, profile, etc.    │
+│  Zod schemas + permission matrix + audit log    │
+└──────────┬──────────────┬──────────────┬────────┘
+           │              │              │
+    ┌──────▼──────┐ ┌────▼────┐  ┌──────▼──────┐
+    │  Mode 1:    │ │ Mode 2: │  │  Mode 3:    │
+    │  Platform   │ │  MCP    │  │  OpenAPI    │
+    │  Panel Chat │ │ Gateway │  │  Actions    │
+    │ (in-app)    │ │(remote) │  │ (Phase 2)   │
+    └─────────────┘ └─────────┘  └─────────────┘
+```
+
+### 🔐 SEGURIDAD
+- API keys: `aml_` prefix + 32 hex chars, SHA-256 hash in DB
+- Permission matrix: role (buyer/seller/birddog/admin) × scope (read/write/admin)
+- Rate limiting: 100 req/hour default per API key
+- Audit log: every tool call → `agent_audit_log` table
+- Zero crypto exposure enforced in system prompt + tool design
+
+### 🗄️ DATABASE TABLES (pendiente ejecutar en Supabase)
+- `agent_api_keys` — API keys hasheadas con scopes, rate limits, expiración
+- `agent_audit_log` — Log de toda llamada a tool
+- `agent_approval_queue` — Cola de aprobación para acciones destructivas (Fase 2)
+
+### 📝 NOTAS TÉCNICAS IMPORTANTES
+1. **AI SDK v5 API cambió significativamente** vs v4:
+   - `useChat` ya no tiene `input`/`handleInputChange`/`handleSubmit`/`isLoading`
+   - Usa `sendMessage({ text })`, `status` ('streaming'|'submitted'|'ready'), `TextStreamChatTransport`
+   - `streamText()` usa `toTextStreamResponse()` (no `toDataStreamResponse()`)
+   - No existe `maxSteps` ni `maxToolRoundtrips` — usa `stopWhen` (omitimos para default)
+   - Tools se definen como objetos planos `{ description, parameters, execute }` — el helper `tool()` tiene problemas de overload con schemas dinámicos
+2. **Legacy files NO modificados**: `/api/agent/route.ts`, `/api/mcp-docs/route.ts`, `lib/agent/types.ts`
+3. **Migration SQL es manual**: Debe ejecutarse en Supabase SQL Editor post-deploy
+
+### 💻 COMMITS
+
+| Hash | Mensaje |
+|------|---------|
+| `da0b3a9` | feat: implement AI Agent Connector system (MCP Gateway + Platform Chat + API Keys) |
+
+### 📊 IMPACT ANALYSIS
+- **+2,556 líneas** de código nuevo, **21 archivos** tocados
+- **0 archivos legacy modificados** — coexistencia perfecta con CryptoGift
+- **Feature flag** controla visibilidad total — `false` por defecto, activado en Vercel prod
+- **Endpoints nuevos**: `/api/agent/chat`, `/api/mcp/gateway`, `/api/agent/keys`
+- **UI nueva**: Tab "AI Assistant" en Profile + chat widget flotante
+- **Build verification**: `pnpm build` pasa sin errores
+
+---
+
 ## 🎬 SESIÓN DE DESARROLLO - 14 ENERO 2026 ⭐ VIDEO CAROUSEL PERFECCIONADO
 
 ### 📅 Fecha: 14 Enero 2026
