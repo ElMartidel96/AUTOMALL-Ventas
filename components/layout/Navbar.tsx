@@ -234,9 +234,10 @@ export const NavbarSpacer: React.FC = () => {
     setMounted(true);
   }, []);
 
+  // Base navbar height + 1.8cm (≈68px) global page margin increase
   const heightClass = mounted && isConnected
-    ? 'h-[104px] md:h-[96px]'
-    : 'h-[84px]';
+    ? 'h-[172px] md:h-[164px]'
+    : 'h-[152px]';
 
   return (
     <div
