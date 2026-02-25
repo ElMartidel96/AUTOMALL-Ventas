@@ -26,6 +26,7 @@ import { useAccount } from '@/lib/thirdweb';
 import { useCGCBalance } from '@/lib/web3/hooks';
 import { useAgent } from '@/lib/agent/useAgent';
 import { cn } from '@/lib/utils';
+import { FEATURE_CGC_TOKEN } from '@/lib/config/features';
 
 // ===================================================
 // 🎨 TYPES
@@ -43,12 +44,8 @@ interface Message {
 // ===================================================
 
 export function ApexAgent() {
-  const t = useTranslations('agent.bubble');
-  const router = useRouter();
-  const pathname = usePathname();
-
-  // Don't render on the agent page itself
-  if (pathname === '/agent') {
+  // Legacy CryptoGift component — disabled in AutoMALL mode
+  if (!FEATURE_CGC_TOKEN) {
     return null;
   }
 

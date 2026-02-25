@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Lock, AlertCircle, ExternalLink, Coins } from 'lucide-react'
+import { FEATURE_CGC_TOKEN } from '@/lib/config/features'
 
 /**
  * Beautiful gradient background wrapper for access gates
@@ -92,7 +93,33 @@ export function CGCAccessGate({
   const hasRequiredBalance = cgcBalanceNum >= requiredBalanceNum
   const isConnecting = false // Thirdweb handles this internally
 
-  // Loading state
+  // AutoMALL mode: When CGC token feature is disabled, skip ALL crypto checks.
+  // Only require wallet connection — no balance, no network check.
+  if (!FEATURE_CGC_TOKEN) {
+    if (!isConnected || !address) {
+      return (
+        <GateBackground>
+          <Card className="w-full max-w-md glass-panel border-white/20 dark:border-slate-700/50">
+            <CardHeader className="text-center">
+              <CardTitle className="flex items-center justify-center space-x-2 text-gray-900 dark:text-white">
+                <Lock className="h-5 w-5" />
+                <span>{title}</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-gray-600 dark:text-gray-400 text-sm text-center">{description}</p>
+              <div className="pt-2">
+                <ConnectButtonDAO fullWidth />
+              </div>
+            </CardContent>
+          </Card>
+        </GateBackground>
+      )
+    }
+    return <>{children}</>
+  }
+
+  // Loading state (CryptoGift mode only)
   if (isConnecting || (isConnected && isBalanceLoading)) {
     return (
       <GateBackground>

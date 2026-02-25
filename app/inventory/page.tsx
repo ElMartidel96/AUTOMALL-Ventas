@@ -10,7 +10,6 @@ import React, { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { Navbar, NavbarSpacer } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
-import { CGCAccessGate } from '@/components/auth/CGCAccessGate';
 import { useAccount } from '@/lib/thirdweb';
 import { useUser } from '@/hooks/useUser';
 import { useVehicles, useDeleteVehicle, useUpdateVehicleStatus } from '@/hooks/useInventory';
@@ -225,15 +224,13 @@ export default function InventoryPage() {
   if (!isLoading && isBuyer) return <BuyerBlock />;
 
   return (
-    <CGCAccessGate requiredBalance="0">
-      <div className="min-h-screen theme-gradient-bg">
-        <Navbar />
-        <NavbarSpacer />
-        <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <InventoryContent />
-        </div>
-        <Footer />
+    <div className="min-h-screen theme-gradient-bg">
+      <Navbar />
+      <NavbarSpacer />
+      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <InventoryContent />
       </div>
-    </CGCAccessGate>
+      <Footer />
+    </div>
   );
 }
