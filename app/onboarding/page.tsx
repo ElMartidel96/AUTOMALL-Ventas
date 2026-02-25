@@ -22,6 +22,7 @@ import { ConnectButtonDAO } from '@/components/thirdweb/ConnectButtonDAO';
 import { useSellerProfile } from '@/hooks/useSellerProfile';
 import { useUser } from '@/hooks/useUser';
 import { APP_DOMAIN, FEATURE_SELLER_SUBDOMAINS } from '@/lib/config/features';
+import { ImageUploadField } from '@/components/ui/ImageUploadField';
 import {
   Globe,
   Building2,
@@ -84,6 +85,7 @@ export default function OnboardingPage() {
   const [successHandle, setSuccessHandle] = useState('');
   const [mounted, setMounted] = useState(false);
   const whatsappManuallyEdited = useRef(false);
+  const [useLogoAsHero, setUseLogoAsHero] = useState(false);
 
   // Detect if user already has a seller profile → redirect
   const { seller: existingSeller, isLoading: profileLoading } = useSellerProfile();
@@ -574,50 +576,80 @@ export default function OnboardingPage() {
                 </p>
               </div>
 
-              {/* Logo URL (simplified — direct URL input for now) */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('steps.branding.logo')}
-                </label>
-                <input
-                  type="url"
-                  value={data.logo_url}
-                  onChange={(e) => updateData('logo_url', e.target.value)}
-                  placeholder="https://..."
-                  className="w-full px-4 py-3 rounded-xl bg-white dark:bg-am-dark/80 border border-gray-200 dark:border-am-blue/30 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-am-orange/50"
+              {/* Logo Upload */}
+              {address && (
+                <ImageUploadField
+                  label={t('steps.branding.logo')}
+                  help={t('steps.branding.logoHelp')}
+                  currentUrl={data.logo_url || undefined}
+                  uploadEndpoint="/api/profile/avatar"
+                  walletAddress={address}
+                  compressOptions={{ maxWidth: 500, maxHeight: 500, preserveTransparency: true }}
+                  previewAspect="square"
+                  onUploadComplete={(url) => {
+                    updateData('logo_url', url);
+                    if (useLogoAsHero) {
+                      updateData('hero_image_url', url);
+                    }
+                  }}
+                  strings={{
+                    dragOrClick: t('steps.branding.dragOrClick'),
+                    compressing: t('steps.branding.compressing'),
+                    uploading: t('steps.branding.uploadingImage'),
+                    success: t('steps.branding.uploadSuccess'),
+                    error: t('steps.branding.uploadError'),
+                    change: t('steps.branding.changeImage'),
+                  }}
                 />
-                <p className="text-xs text-gray-400 mt-1">{t('steps.branding.logoHelp')}</p>
-                {data.logo_url && (
-                  <div className="mt-2 w-20 h-20 rounded-xl overflow-hidden bg-gray-100 dark:bg-am-blue/10">
-                    <Image
-                      src={data.logo_url}
-                      alt="Logo preview"
-                      width={80}
-                      height={80}
-                      className="w-full h-full object-contain"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
+              )}
 
-              {/* Hero Image URL */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('steps.branding.heroImage')}
-                </label>
-                <input
-                  type="url"
-                  value={data.hero_image_url}
-                  onChange={(e) => updateData('hero_image_url', e.target.value)}
-                  placeholder="https://..."
-                  className="w-full px-4 py-3 rounded-xl bg-white dark:bg-am-dark/80 border border-gray-200 dark:border-am-blue/30 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-am-orange/50"
-                />
-                <p className="text-xs text-gray-400 mt-1">{t('steps.branding.heroImageHelp')}</p>
-              </div>
+              {/* Hero Image Upload */}
+              {address && (
+                <div className="space-y-3">
+                  <ImageUploadField
+                    label={t('steps.branding.heroImage')}
+                    help={t('steps.branding.heroImageHelp')}
+                    currentUrl={data.hero_image_url || undefined}
+                    uploadEndpoint="/api/upload/hero"
+                    walletAddress={address}
+                    compressOptions={{ maxWidth: 1920, maxHeight: 1080, preserveTransparency: false }}
+                    previewAspect="wide"
+                    disabled={useLogoAsHero}
+                    onUploadComplete={(url) => updateData('hero_image_url', url)}
+                    strings={{
+                      dragOrClick: t('steps.branding.dragOrClick'),
+                      compressing: t('steps.branding.compressing'),
+                      uploading: t('steps.branding.uploadingImage'),
+                      success: t('steps.branding.uploadSuccess'),
+                      error: t('steps.branding.uploadError'),
+                      change: t('steps.branding.changeImage'),
+                    }}
+                  />
+
+                  {/* Checkbox: use logo as background */}
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={useLogoAsHero}
+                      onChange={(e) => {
+                        setUseLogoAsHero(e.target.checked);
+                        if (e.target.checked && data.logo_url) {
+                          updateData('hero_image_url', data.logo_url);
+                        } else if (!e.target.checked) {
+                          updateData('hero_image_url', '');
+                        }
+                      }}
+                      className="w-5 h-5 rounded-lg border-2 border-gray-300 dark:border-gray-600 text-am-orange focus:ring-am-orange/50 accent-am-orange"
+                    />
+                    <div>
+                      <span className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-am-orange transition-colors">
+                        {t('steps.branding.useLogoAsHero')}
+                      </span>
+                      <p className="text-xs text-gray-400">{t('steps.branding.useLogoAsHeroHint')}</p>
+                    </div>
+                  </label>
+                </div>
+              )}
 
               {/* Social Media */}
               <div>

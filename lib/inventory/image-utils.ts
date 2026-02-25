@@ -90,3 +90,95 @@ export function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+// ── Smart Compression ──────────────────────────────────────────────────────
+
+/**
+ * Detect if an image has transparency (alpha channel).
+ * Samples a small version for speed.
+ */
+export async function hasTransparency(file: File): Promise<boolean> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const canvas = document.createElement('canvas');
+    const sampleW = Math.min(bitmap.width, 100);
+    const sampleH = Math.min(bitmap.height, 100);
+    canvas.width = sampleW;
+    canvas.height = sampleH;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) { bitmap.close(); return false; }
+    ctx.drawImage(bitmap, 0, 0, sampleW, sampleH);
+    bitmap.close();
+    const data = ctx.getImageData(0, 0, sampleW, sampleH).data;
+    for (let i = 3; i < data.length; i += 4) {
+      if (data[i] < 250) return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+export interface SmartCompressOptions {
+  maxWidth?: number;
+  maxHeight?: number;
+  initialQuality?: number;
+  maxOutputBytes?: number;
+  preserveTransparency?: boolean;
+}
+
+/**
+ * Smart image compression — accepts ANY file size.
+ *
+ * - Detects transparency and preserves it (PNG) when possible
+ * - Iteratively reduces quality until output < maxOutputBytes
+ * - Never rejects based on input size
+ */
+export async function compressImageSmart(
+  file: File,
+  options: SmartCompressOptions = {},
+): Promise<{ blob: Blob; format: string }> {
+  const {
+    maxWidth = 500,
+    maxHeight = 500,
+    initialQuality = 0.85,
+    maxOutputBytes = 2 * 1024 * 1024,
+    preserveTransparency = true,
+  } = options;
+
+  // Detect transparency for format selection
+  const transparent = preserveTransparency && await hasTransparency(file);
+  const preferredFormat = transparent ? 'image/png' : 'image/webp';
+
+  // First attempt with preferred format
+  let blob = await compressImage(file, {
+    maxWidth,
+    maxHeight,
+    quality: initialQuality,
+    type: preferredFormat,
+  });
+
+  // If PNG is too large, fall back to WebP (lossy but smaller)
+  if (blob.size > maxOutputBytes && transparent) {
+    blob = await compressImage(file, {
+      maxWidth,
+      maxHeight,
+      quality: initialQuality,
+      type: 'image/webp',
+    });
+  }
+
+  // Iteratively reduce quality until under limit
+  let quality = initialQuality;
+  while (blob.size > maxOutputBytes && quality > 0.3) {
+    quality -= 0.1;
+    blob = await compressImage(file, {
+      maxWidth,
+      maxHeight,
+      quality,
+      type: 'image/webp',
+    });
+  }
+
+  return { blob, format: blob.type };
+}

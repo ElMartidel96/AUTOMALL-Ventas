@@ -72,7 +72,12 @@ export default function Home() {
   return (
     <>
       {/* Fixed canvas background — covers entire viewport, spotlight follows cursor */}
-      <HeroCanvas imageSrc="/logo-automall.png" fixed />
+      <HeroCanvas
+        imageSrc={isSubdomain && seller?.hero_image_url
+          ? seller.hero_image_url
+          : '/logo-automall.png'}
+        fixed
+      />
 
       <div className="min-h-screen relative z-10">
         <Navbar />

@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import type { Seller } from '@/lib/types/seller';
 import { InstagramIcon, FacebookIcon, TikTokIcon } from '@/components/icons/SocialIcons';
+import { ImageUploadField } from '@/components/ui/ImageUploadField';
+import { compressImageSmart } from '@/lib/inventory/image-utils';
 
 function InputField({
   label,
@@ -58,33 +60,6 @@ function InputField({
       {help && <p className="text-xs text-gray-400 mt-1">{help}</p>}
     </div>
   );
-}
-
-function compressImage(file: File, maxSize = 500, quality = 0.85): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const img = new window.Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      let { width, height } = img;
-      if (width > maxSize || height > maxSize) {
-        const ratio = Math.min(maxSize / width, maxSize / height);
-        width = Math.round(width * ratio);
-        height = Math.round(height * ratio);
-      }
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return reject(new Error('Canvas context failed'));
-      ctx.drawImage(img, 0, 0, width, height);
-      canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error('Compression failed'))),
-        'image/jpeg',
-        quality,
-      );
-    };
-    img.onerror = () => reject(new Error('Failed to load image'));
-    img.src = URL.createObjectURL(file);
-  });
 }
 
 export function SellerForm({
@@ -171,20 +146,19 @@ export function SellerForm({
     const file = event.target.files?.[0];
     if (!file || !address) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      setLogoStatus('error');
-      setTimeout(() => setLogoStatus('idle'), 3000);
-      return;
-    }
-
     setIsUploadingLogo(true);
     setLogoStatus('idle');
 
     try {
-      const compressed = await compressImage(file, 500, 0.85);
+      const { blob, format } = await compressImageSmart(file, {
+        maxWidth: 500,
+        maxHeight: 500,
+        preserveTransparency: true,
+      });
 
+      const ext = format === 'image/png' ? 'png' : format === 'image/webp' ? 'webp' : 'jpg';
       const formData = new FormData();
-      formData.append('file', new File([compressed], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }));
+      formData.append('file', new File([blob], `logo.${ext}`, { type: format }));
       formData.append('wallet', address);
 
       const res = await fetch('/api/profile/avatar', {
@@ -280,6 +254,35 @@ export function SellerForm({
             )}
           </div>
         </div>
+      </div>
+
+      {/* Hero / Background Image */}
+      <div className="glass-crystal-enhanced rounded-2xl p-5">
+        <ImageUploadField
+          label={t('heroImage')}
+          help={t('heroHelp')}
+          currentUrl={seller.hero_image_url || undefined}
+          uploadEndpoint="/api/upload/hero"
+          walletAddress={address}
+          compressOptions={{ maxWidth: 1920, maxHeight: 1080, preserveTransparency: false }}
+          previewAspect="wide"
+          onUploadComplete={async (url) => {
+            await fetch('/api/sellers', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ wallet: address, hero_image_url: url }),
+            });
+            refetch();
+          }}
+          strings={{
+            dragOrClick: t('logoUpload'),
+            compressing: t('saving'),
+            uploading: t('saving'),
+            success: t('logoSuccess'),
+            error: t('saveError'),
+            change: t('logoUpload'),
+          }}
+        />
       </div>
 
       {/* Business Information */}
