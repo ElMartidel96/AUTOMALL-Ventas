@@ -7,7 +7,7 @@
 
 'use client';
 
-import { ApexAgent } from '@/components/agent/ApexAgent';
+import { AgentChatWidget } from '@/components/agent/AgentChatWidget';
 import { SellerSetupBanner } from '@/components/seller/SellerSetupBanner';
 import { RoleSelectorModal } from '@/components/user/RoleSelectorModal';
 import { useAuthData } from '@/hooks/useAuthData';
@@ -20,7 +20,7 @@ export function GlobalWidgets() {
     <>
       <RoleSelectorModal />
       <SellerSetupBanner />
-      <ApexAgent />
+      <AgentChatWidget />
     </>
   );
 }

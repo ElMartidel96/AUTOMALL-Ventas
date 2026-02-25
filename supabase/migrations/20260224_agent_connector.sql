@@ -62,3 +62,13 @@ CREATE INDEX IF NOT EXISTS idx_agent_approval_queue_wallet ON agent_approval_que
 ALTER TABLE agent_api_keys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE agent_audit_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE agent_approval_queue ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies: service_role can do everything (API routes use service key)
+CREATE POLICY "agent_api_keys_service_all" ON agent_api_keys
+  FOR ALL USING (auth.role() = 'service_role');
+
+CREATE POLICY "agent_audit_log_service_all" ON agent_audit_log
+  FOR ALL USING (auth.role() = 'service_role');
+
+CREATE POLICY "agent_approval_queue_service_all" ON agent_approval_queue
+  FOR ALL USING (auth.role() = 'service_role');

@@ -17,18 +17,15 @@ const GetMyProfileInput = z.object({})
 
 const UpdateMyProfileInput = z.object({
   display_name: z.string().min(1).max(100).optional().describe('Display name'),
-  bio: z.string().max(500).optional().describe('Short bio'),
   phone: z.string().max(20).optional().describe('Phone number'),
-  city: z.string().max(100).optional().describe('City'),
-  state: z.string().max(100).optional().describe('State'),
-  instagram: z.string().max(100).optional().describe('Instagram handle'),
-  facebook: z.string().max(200).optional().describe('Facebook profile URL'),
-  tiktok: z.string().max(100).optional().describe('TikTok handle'),
+  social_instagram: z.string().max(100).optional().describe('Instagram handle'),
+  social_facebook: z.string().max(200).optional().describe('Facebook profile URL'),
+  social_tiktok: z.string().max(100).optional().describe('TikTok handle'),
 })
 
 const GetDealerProfileInput = z.object({
   dealer_address: z.string().optional().describe('Dealer wallet address. If omitted, returns your own dealer profile.'),
-  dealer_slug: z.string().optional().describe('Dealer slug/subdomain name'),
+  dealer_handle: z.string().optional().describe('Dealer handle/subdomain name'),
 })
 
 // ===================================================
@@ -56,13 +53,10 @@ async function updateMyProfile(input: z.infer<typeof UpdateMyProfileInput>, ctx:
 
   const updates: Record<string, any> = {}
   if (input.display_name !== undefined) updates.display_name = input.display_name
-  if (input.bio !== undefined) updates.bio = input.bio
   if (input.phone !== undefined) updates.phone = input.phone
-  if (input.city !== undefined) updates.city = input.city
-  if (input.state !== undefined) updates.state = input.state
-  if (input.instagram !== undefined) updates.instagram = input.instagram
-  if (input.facebook !== undefined) updates.facebook = input.facebook
-  if (input.tiktok !== undefined) updates.tiktok = input.tiktok
+  if (input.social_instagram !== undefined) updates.social_instagram = input.social_instagram
+  if (input.social_facebook !== undefined) updates.social_facebook = input.social_facebook
+  if (input.social_tiktok !== undefined) updates.social_tiktok = input.social_tiktok
 
   if (Object.keys(updates).length === 0) {
     return { message: 'No fields to update' }
@@ -86,11 +80,11 @@ async function getDealerProfile(input: z.infer<typeof GetDealerProfileInput>, ct
   if (!supabaseAdmin) throw new Error('Database not configured')
 
   let query = supabaseAdmin
-    .from('seller_profiles')
-    .select('id, wallet_address, dealership_name, slug, description, logo_url, banner_url, city, state, phone, website, created_at')
+    .from('sellers')
+    .select('id, wallet_address, handle, business_name, tagline, phone, whatsapp, email, logo_url, hero_image_url, city, state, social_instagram, social_facebook, social_tiktok, is_active, created_at')
 
-  if (input.dealer_slug) {
-    query = query.eq('slug', input.dealer_slug)
+  if (input.dealer_handle) {
+    query = query.eq('handle', input.dealer_handle)
   } else if (input.dealer_address) {
     query = query.eq('wallet_address', input.dealer_address)
   } else {
@@ -120,7 +114,7 @@ export const profileTools: AgentTool[] = [
   },
   {
     name: 'update_my_profile',
-    description: 'Update your profile information (display name, bio, phone, city, social media).',
+    description: 'Update your profile information (display name, phone, social media).',
     category: 'Profile',
     inputSchema: UpdateMyProfileInput,
     permission: 'write',
@@ -129,7 +123,7 @@ export const profileTools: AgentTool[] = [
   },
   {
     name: 'get_dealer_profile',
-    description: 'Get a dealer\'s public profile (dealership name, location, contact). Search by address or slug.',
+    description: 'Get a dealer\'s public profile (business name, location, contact). Search by wallet address or handle.',
     category: 'Profile',
     inputSchema: GetDealerProfileInput,
     permission: 'read',

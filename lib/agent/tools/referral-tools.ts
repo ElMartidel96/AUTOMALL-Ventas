@@ -72,13 +72,7 @@ async function getReferralNetwork(input: z.infer<typeof GetReferralNetworkInput>
 
   const { data, error } = await supabaseAdmin
     .from('referrals')
-    .select(`
-      id,
-      referred_address,
-      status,
-      created_at,
-      referred:users!referrals_referred_address_fkey(display_name, role)
-    `)
+    .select('id, referred_address, status, created_at')
     .eq('referrer_address', ctx.walletAddress)
     .order('created_at', { ascending: false })
     .limit(input.limit ?? 20)

@@ -112,7 +112,7 @@ export async function validateApiKey(keyHash: string): Promise<ValidatedApiKey |
 
   const { data, error } = await supabaseAdmin
     .from('agent_api_keys')
-    .select('id, wallet_address, scopes, rate_limit, name, is_active, expires_at')
+    .select('id, wallet_address, scopes, rate_limit, name, is_active, expires_at, usage_count')
     .eq('key_hash', keyHash)
     .single()
 
@@ -124,15 +124,15 @@ export async function validateApiKey(keyHash: string): Promise<ValidatedApiKey |
   // Check expiration
   if (data.expires_at && new Date(data.expires_at) < new Date()) return null
 
-  // Update last_used_at and usage_count
-  await supabaseAdmin
+  // Update last_used_at and usage_count (fire & forget)
+  supabaseAdmin
     .from('agent_api_keys')
     .update({
       last_used_at: new Date().toISOString(),
-      usage_count: (data as any).usage_count + 1,
+      usage_count: (data.usage_count ?? 0) + 1,
     })
     .eq('id', data.id)
-    .then(() => {}) // fire and forget
+    .then(() => {})
 
   return {
     id: data.id,
