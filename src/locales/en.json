@@ -2874,5 +2874,51 @@
     "changeSuccess": "Role updated!",
     "buyerToDealer": "You'll need to set up your professional profile",
     "roleNote": "You can change your role anytime from your profile"
+  },
+  "agent": {
+    "title": "AI Assistant",
+    "subtitle": "Connect your favorite AI to AutoMALL",
+    "tabs": {
+      "apiKeys": "API Keys"
+    },
+    "keyCreated": "API Key Created!",
+    "keyCreatedWarning": "Copy this key now — it won't be shown again.",
+    "dismissKeyAlert": "I've saved my key",
+    "createNewKey": "Create New API Key",
+    "keyNamePlaceholder": "Key name (e.g. My Claude)",
+    "yourKeys": "Your Keys",
+    "noKeys": "No API keys yet. Create one to connect your AI.",
+    "calls": "calls",
+    "revokeKey": "Revoke Key",
+    "tabAiAssistant": "AI Assistant",
+    "guide": {
+      "connectWith": "Connect with",
+      "configuration": "Configuration",
+      "copy": "Copy",
+      "copied": "Copied!",
+      "replaceKey": "Replace YOUR_API_KEY with the key you generated in the API Keys tab.",
+      "claude": {
+        "step1": "Open Claude Desktop and go to Settings > MCP Servers.",
+        "step2": "Add a new MCP server with the configuration below.",
+        "step3": "Save and restart Claude Desktop. You can now ask Claude about your AutoMALL account."
+      },
+      "chatgpt": {
+        "step1": "Create a Custom GPT in ChatGPT and go to Configure > Actions.",
+        "step2": "Add a new action using the MCP endpoint configuration below.",
+        "step3": "Save the GPT. You can now ask it about your AutoMALL inventory and referrals."
+      },
+      "gemini": {
+        "step1": "Open Google AI Studio or Gemini Extensions settings.",
+        "step2": "Add a new extension using the endpoint configuration below.",
+        "step3": "Save and test. Gemini can now interact with your AutoMALL account."
+      }
+    },
+    "chat": {
+      "open": "Open AI Assistant",
+      "subtitle": "AutoMALL AI Assistant",
+      "welcome": "Hi! I'm Alfred, your AutoMALL assistant. How can I help you today?",
+      "placeholder": "Ask me anything...",
+      "error": "Something went wrong. Please try again."
+    }
   }
 }

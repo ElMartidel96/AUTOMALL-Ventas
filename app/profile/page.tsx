@@ -19,11 +19,14 @@ import { useReferralDashboard } from '@/hooks/useReferrals';
 import { MyProfileSection } from '@/components/profile/MyProfileSection';
 import { MyDealershipSection } from '@/components/profile/MyDealershipSection';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Store, User as UserIcon } from 'lucide-react';
+import { Store, User as UserIcon, Bot } from 'lucide-react';
+import { FEATURE_AI_AGENT_CONNECTOR } from '@/lib/config/features';
+import { AgentConnectorPanel } from '@/components/agent/AgentConnectorPanel';
 
 export default function ProfilePage() {
   const t = useTranslations('profile');
   const tCommon = useTranslations('common');
+  const tAgent = useTranslations('agent');
   const { address, isConnected } = useAccount();
   const { seller, isLoading, completionPercentage, refetch } = useSellerProfile();
   const { user, role, isDealer, isLoading: userLoading, updateRole, refetch: refetchUser } = useUser();
@@ -89,6 +92,7 @@ export default function ProfilePage() {
   }
 
   const showDealerTab = isDealer && !!seller;
+  const showAgentTab = FEATURE_AI_AGENT_CONNECTOR;
 
   return (
     <>
@@ -108,7 +112,7 @@ export default function ProfilePage() {
           <Tabs defaultValue="profile" className="w-full">
             <TabsList
               className={`glass-crystal-enhanced w-full h-14 rounded-2xl p-1.5 mb-8 grid ${
-                showDealerTab ? 'grid-cols-2' : 'grid-cols-1'
+                showDealerTab && showAgentTab ? 'grid-cols-3' : showDealerTab || showAgentTab ? 'grid-cols-2' : 'grid-cols-1'
               }`}
             >
               <TabsTrigger
@@ -125,6 +129,15 @@ export default function ProfilePage() {
                 >
                   <Store className="w-4 h-4" />
                   {t('tabMyDealership')}
+                </TabsTrigger>
+              )}
+              {showAgentTab && (
+                <TabsTrigger
+                  value="agent"
+                  className="rounded-xl h-full text-sm font-bold transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-am-green data-[state=active]:to-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=inactive]:text-gray-500 dark:data-[state=inactive]:text-gray-400 flex items-center justify-center gap-2"
+                >
+                  <Bot className="w-4 h-4" />
+                  {tAgent('tabAiAssistant')}
                 </TabsTrigger>
               )}
             </TabsList>
@@ -152,6 +165,12 @@ export default function ProfilePage() {
                   referralLink={links.links?.default}
                   updateRole={updateRole}
                 />
+              </TabsContent>
+            )}
+
+            {showAgentTab && (
+              <TabsContent value="agent" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
+                <AgentConnectorPanel walletAddress={address} />
               </TabsContent>
             )}
           </Tabs>

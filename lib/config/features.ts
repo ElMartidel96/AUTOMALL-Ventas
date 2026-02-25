@@ -59,6 +59,9 @@ export const FEATURE_WHATSAPP = envBool('NEXT_PUBLIC_FEATURE_WHATSAPP', false)
 /** Enable public vehicle catalog */
 export const FEATURE_CATALOG = envBool('NEXT_PUBLIC_FEATURE_CATALOG', true)
 
+/** Enable AI Agent Connector (MCP Gateway + Platform Chat + API Keys) */
+export const FEATURE_AI_AGENT_CONNECTOR = envBool('NEXT_PUBLIC_FEATURE_AI_AGENT_CONNECTOR', false)
+
 // ---------------------------------------------------------------------------
 // App Identity
 // ---------------------------------------------------------------------------

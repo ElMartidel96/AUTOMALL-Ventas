@@ -2874,5 +2874,51 @@
     "changeSuccess": "Rol actualizado!",
     "buyerToDealer": "Necesitaras configurar tu perfil profesional",
     "roleNote": "Puedes cambiar tu rol en cualquier momento desde tu perfil"
+  },
+  "agent": {
+    "title": "Asistente IA",
+    "subtitle": "Conecta tu IA favorita a AutoMALL",
+    "tabs": {
+      "apiKeys": "Claves API"
+    },
+    "keyCreated": "Clave API Creada!",
+    "keyCreatedWarning": "Copia esta clave ahora — no se mostrara de nuevo.",
+    "dismissKeyAlert": "Ya guarde mi clave",
+    "createNewKey": "Crear Nueva Clave API",
+    "keyNamePlaceholder": "Nombre de la clave (ej. Mi Claude)",
+    "yourKeys": "Tus Claves",
+    "noKeys": "Sin claves API aun. Crea una para conectar tu IA.",
+    "calls": "llamadas",
+    "revokeKey": "Revocar Clave",
+    "tabAiAssistant": "Asistente IA",
+    "guide": {
+      "connectWith": "Conectar con",
+      "configuration": "Configuracion",
+      "copy": "Copiar",
+      "copied": "Copiado!",
+      "replaceKey": "Reemplaza YOUR_API_KEY con la clave que generaste en la pestana de Claves API.",
+      "claude": {
+        "step1": "Abre Claude Desktop y ve a Settings > MCP Servers.",
+        "step2": "Agrega un nuevo servidor MCP con la configuracion de abajo.",
+        "step3": "Guarda y reinicia Claude Desktop. Ahora puedes preguntarle a Claude sobre tu cuenta de AutoMALL."
+      },
+      "chatgpt": {
+        "step1": "Crea un GPT Personalizado en ChatGPT y ve a Configure > Actions.",
+        "step2": "Agrega una nueva accion usando la configuracion MCP de abajo.",
+        "step3": "Guarda el GPT. Ahora puedes preguntarle sobre tu inventario y referidos de AutoMALL."
+      },
+      "gemini": {
+        "step1": "Abre Google AI Studio o la configuracion de extensiones de Gemini.",
+        "step2": "Agrega una nueva extension usando la configuracion de abajo.",
+        "step3": "Guarda y prueba. Gemini ahora puede interactuar con tu cuenta de AutoMALL."
+      }
+    },
+    "chat": {
+      "open": "Abrir Asistente IA",
+      "subtitle": "Asistente IA de AutoMALL",
+      "welcome": "Hola! Soy Alfred, tu asistente de AutoMALL. Como puedo ayudarte hoy?",
+      "placeholder": "Preguntame lo que quieras...",
+      "error": "Algo salio mal. Intenta de nuevo."
+    }
   }
 }
