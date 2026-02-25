@@ -87,7 +87,7 @@ export default function Home() {
         {/* ════════════════════════════════════════════════════════════
            HERO TEXT — Overlays the fixed canvas background
            ════════════════════════════════════════════════════════════ */}
-        <section className="relative min-h-screen flex items-center px-4 py-8 md:py-0 -mt-[64px]">
+        <section className="relative min-h-screen flex items-center px-4 py-8 md:py-0 -mt-[calc(64px+1cm)]">
           <div className="container mx-auto max-w-7xl">
             <div className={`w-full md:w-[40%] text-center md:text-left transition-all duration-1000 ${
               isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
