@@ -22,6 +22,7 @@ import {
   Heart,
 } from 'lucide-react';
 import { useTenant } from '@/lib/tenant/TenantProvider';
+import { DEFAULT_LOGO_FOOTER } from '@/lib/config/defaults';
 
 export const Footer: React.FC = () => {
   const t = useTranslations('footer');
@@ -54,7 +55,7 @@ export const Footer: React.FC = () => {
                 />
               ) : (
                 <Image
-                  src="/logo-automall-footer.png"
+                  src={DEFAULT_LOGO_FOOTER}
                   alt="Autos MALL"
                   width={220}
                   height={120}

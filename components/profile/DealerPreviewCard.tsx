@@ -3,9 +3,10 @@
 import React from 'react';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
-import { Store, Phone, MessageCircle, Mail, MapPin, ExternalLink, Eye } from 'lucide-react';
+import { Phone, MessageCircle, Mail, MapPin, ExternalLink, Eye } from 'lucide-react';
 import { InstagramIcon, FacebookIcon, TikTokIcon } from '@/components/icons/SocialIcons';
 import { APP_DOMAIN } from '@/lib/config/features';
+import { DEFAULT_LOGO } from '@/lib/config/defaults';
 import type { Seller } from '@/lib/types/seller';
 
 function normalizeSocialUrl(value: string, platform: 'instagram' | 'facebook' | 'tiktok'): string {
@@ -39,18 +40,14 @@ export function DealerPreviewCard({ seller }: { seller: Seller }) {
         {/* Header: Logo + Business Name + Tagline */}
         <div className="flex items-center gap-4 mb-5">
           <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden ring-2 ring-gray-200 dark:ring-gray-700 flex-shrink-0">
-            {seller.logo_url ? (
-              <Image
-                src={seller.logo_url}
-                alt={seller.business_name}
-                width={56}
-                height={56}
-                className="w-full h-full object-cover"
-                unoptimized
-              />
-            ) : (
-              <Store className="w-6 h-6 text-gray-400" />
-            )}
+            <Image
+              src={seller.logo_url || DEFAULT_LOGO}
+              alt={seller.business_name}
+              width={56}
+              height={56}
+              className="w-full h-full object-cover"
+              unoptimized
+            />
           </div>
           <div className="min-w-0">
             <h4 className="font-bold text-lg text-gray-900 dark:text-white truncate">

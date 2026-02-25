@@ -23,6 +23,7 @@ import { useSellerProfile } from '@/hooks/useSellerProfile';
 import { useUser } from '@/hooks/useUser';
 import { APP_DOMAIN, FEATURE_SELLER_SUBDOMAINS } from '@/lib/config/features';
 import { ImageUploadField } from '@/components/ui/ImageUploadField';
+import { DEFAULT_LOGO, DEFAULT_HERO_IMAGE } from '@/lib/config/defaults';
 import {
   Globe,
   Building2,
@@ -582,6 +583,8 @@ export default function OnboardingPage() {
                   label={t('steps.branding.logo')}
                   help={t('steps.branding.logoHelp')}
                   currentUrl={data.logo_url || undefined}
+                  defaultUrl={DEFAULT_LOGO}
+                  defaultLabel={t('steps.branding.defaultBadge')}
                   uploadEndpoint="/api/profile/avatar"
                   walletAddress={address}
                   compressOptions={{ maxWidth: 500, maxHeight: 500, preserveTransparency: true }}
@@ -592,6 +595,12 @@ export default function OnboardingPage() {
                       updateData('hero_image_url', url);
                     }
                   }}
+                  onDelete={() => {
+                    updateData('logo_url', '');
+                    if (useLogoAsHero) {
+                      updateData('hero_image_url', '');
+                    }
+                  }}
                   strings={{
                     dragOrClick: t('steps.branding.dragOrClick'),
                     compressing: t('steps.branding.compressing'),
@@ -599,6 +608,7 @@ export default function OnboardingPage() {
                     success: t('steps.branding.uploadSuccess'),
                     error: t('steps.branding.uploadError'),
                     change: t('steps.branding.changeImage'),
+                    delete: t('steps.branding.deleteImage'),
                   }}
                 />
               )}
@@ -610,12 +620,15 @@ export default function OnboardingPage() {
                     label={t('steps.branding.heroImage')}
                     help={t('steps.branding.heroImageHelp')}
                     currentUrl={data.hero_image_url || undefined}
+                    defaultUrl={DEFAULT_HERO_IMAGE}
+                    defaultLabel={t('steps.branding.defaultBadge')}
                     uploadEndpoint="/api/upload/hero"
                     walletAddress={address}
                     compressOptions={{ maxWidth: 1920, maxHeight: 1080, preserveTransparency: false }}
                     previewAspect="wide"
                     disabled={useLogoAsHero}
                     onUploadComplete={(url) => updateData('hero_image_url', url)}
+                    onDelete={() => updateData('hero_image_url', '')}
                     strings={{
                       dragOrClick: t('steps.branding.dragOrClick'),
                       compressing: t('steps.branding.compressing'),
@@ -623,6 +636,7 @@ export default function OnboardingPage() {
                       success: t('steps.branding.uploadSuccess'),
                       error: t('steps.branding.uploadError'),
                       change: t('steps.branding.changeImage'),
+                      delete: t('steps.branding.deleteImage'),
                     }}
                   />
 

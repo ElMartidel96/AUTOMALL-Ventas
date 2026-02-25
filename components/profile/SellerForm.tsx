@@ -17,6 +17,7 @@ import {
 import type { Seller } from '@/lib/types/seller';
 import { InstagramIcon, FacebookIcon, TikTokIcon } from '@/components/icons/SocialIcons';
 import { ImageUploadField } from '@/components/ui/ImageUploadField';
+import { DEFAULT_LOGO, DEFAULT_HERO_IMAGE } from '@/lib/config/defaults';
 
 function InputField({
   label,
@@ -147,6 +148,8 @@ export function SellerForm({
           label={t('logoUpload')}
           help={t('logoHelp')}
           currentUrl={seller.logo_url || undefined}
+          defaultUrl={DEFAULT_LOGO}
+          defaultLabel={t('defaultBadge')}
           uploadEndpoint="/api/profile/avatar"
           walletAddress={address}
           compressOptions={{ maxWidth: 500, maxHeight: 500, preserveTransparency: true }}
@@ -159,6 +162,14 @@ export function SellerForm({
             });
             refetch();
           }}
+          onDelete={async () => {
+            await fetch('/api/sellers', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ wallet: address, logo_url: null }),
+            });
+            refetch();
+          }}
           strings={{
             dragOrClick: t('logoUpload'),
             compressing: t('saving'),
@@ -166,6 +177,7 @@ export function SellerForm({
             success: t('logoSuccess'),
             error: t('saveError'),
             change: t('logoUpload'),
+            delete: t('deleteImage'),
           }}
         />
       </div>
@@ -176,6 +188,8 @@ export function SellerForm({
           label={t('heroImage')}
           help={t('heroHelp')}
           currentUrl={seller.hero_image_url || undefined}
+          defaultUrl={DEFAULT_HERO_IMAGE}
+          defaultLabel={t('defaultBadge')}
           uploadEndpoint="/api/upload/hero"
           walletAddress={address}
           compressOptions={{ maxWidth: 1920, maxHeight: 1080, preserveTransparency: false }}
@@ -188,6 +202,14 @@ export function SellerForm({
             });
             refetch();
           }}
+          onDelete={async () => {
+            await fetch('/api/sellers', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ wallet: address, hero_image_url: null }),
+            });
+            refetch();
+          }}
           strings={{
             dragOrClick: t('logoUpload'),
             compressing: t('saving'),
@@ -195,6 +217,7 @@ export function SellerForm({
             success: t('logoSuccess'),
             error: t('saveError'),
             change: t('logoUpload'),
+            delete: t('deleteImage'),
           }}
         />
       </div>

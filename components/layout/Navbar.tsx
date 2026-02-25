@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { FEATURE_WEB3_VISIBLE, FEATURE_CGC_TOKEN } from '@/lib/config/features';
 import { useTenant } from '@/lib/tenant/TenantProvider';
+import { DEFAULT_LOGO_NAV } from '@/lib/config/defaults';
 import { useUser } from '@/hooks/useUser';
 
 export const Navbar: React.FC = () => {
@@ -59,7 +60,7 @@ export const Navbar: React.FC = () => {
           <div className="flex items-center space-x-2">
             <Link href="/" className="flex items-center gap-2">
               <Image
-                src={isSubdomain && seller?.logo_url ? seller.logo_url : '/logo-automall-nav.png'}
+                src={isSubdomain && seller?.logo_url ? seller.logo_url : DEFAULT_LOGO_NAV}
                 alt={isSubdomain && seller ? seller.business_name : 'Autos MALL'}
                 width={180}
                 height={100}

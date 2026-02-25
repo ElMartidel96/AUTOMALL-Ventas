@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import FeaturedCarousel from '@/components/catalog/FeaturedCarousel';
 import { useTenant } from '@/lib/tenant/TenantProvider';
+import { DEFAULT_HERO_IMAGE } from '@/lib/config/defaults';
 
 /* ─── Car Brand Logos ─────────────────────────────────────────────────
    Real brand logos as transparent PNGs (200x200) in public/brands/.
@@ -75,7 +76,7 @@ export default function Home() {
       <HeroCanvas
         imageSrc={isSubdomain && seller?.hero_image_url
           ? seller.hero_image_url
-          : '/logo-automall.png'}
+          : DEFAULT_HERO_IMAGE}
         fixed
       />
 
