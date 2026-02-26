@@ -9,7 +9,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createHash, randomBytes } from 'crypto'
 import { supabaseAdmin } from '@/lib/supabase/client'
 import { CreateApiKeySchema } from '@/lib/agent/types/connector-types'
-import { FEATURE_AI_AGENT_CONNECTOR } from '@/lib/config/features'
 
 export const runtime = 'nodejs'
 
@@ -21,9 +20,6 @@ const MAX_KEYS_PER_USER = 5
 // ===================================================
 
 export async function POST(req: NextRequest) {
-  if (!FEATURE_AI_AGENT_CONNECTOR) {
-    return NextResponse.json({ error: 'AI Agent not enabled' }, { status: 404 })
-  }
   if (!supabaseAdmin) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 500 })
   }
@@ -110,9 +106,6 @@ export async function POST(req: NextRequest) {
 // ===================================================
 
 export async function GET(req: NextRequest) {
-  if (!FEATURE_AI_AGENT_CONNECTOR) {
-    return NextResponse.json({ error: 'AI Agent not enabled' }, { status: 404 })
-  }
   if (!supabaseAdmin) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 500 })
   }
@@ -140,9 +133,6 @@ export async function GET(req: NextRequest) {
 // ===================================================
 
 export async function DELETE(req: NextRequest) {
-  if (!FEATURE_AI_AGENT_CONNECTOR) {
-    return NextResponse.json({ error: 'AI Agent not enabled' }, { status: 404 })
-  }
   if (!supabaseAdmin) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 500 })
   }

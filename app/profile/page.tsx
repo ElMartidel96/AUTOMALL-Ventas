@@ -7,9 +7,10 @@
  * Tab 2: "Mi Concesionaria" — visible only for seller/birddog
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { useSearchParams } from 'next/navigation';
 import { Navbar, NavbarSpacer } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { useAccount } from '@/lib/thirdweb';
@@ -32,6 +33,15 @@ export default function ProfilePage() {
   const { user, role, isDealer, isLoading: userLoading, updateRole, refetch: refetchUser } = useUser();
   const { code, stats, links, isLoading: refLoading } = useReferralDashboard(address);
   const [mounted, setMounted] = useState(false);
+  const searchParams = useSearchParams();
+
+  // Read ?tab= from URL for deep linking (e.g. from chat widget CTA)
+  const initialTab = useMemo(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'agent' || tab === 'dealership' || tab === 'profile') return tab;
+    return 'profile';
+  }, [searchParams]);
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -108,8 +118,8 @@ export default function ProfilePage() {
             <p className="text-gray-500 dark:text-gray-400 mt-1">{t('pageSubtitle')}</p>
           </div>
 
-          {/* Tabs */}
-          <Tabs defaultValue="profile" className="w-full">
+          {/* Tabs — controlled mode for deep linking via ?tab= */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList
               className={`glass-crystal-enhanced w-full h-14 rounded-2xl p-1.5 mb-8 grid ${
                 showDealerTab && showAgentTab ? 'grid-cols-3' : showDealerTab || showAgentTab ? 'grid-cols-2' : 'grid-cols-1'

@@ -2791,6 +2791,7 @@
       "open": "Open apeX Assistant",
       "subtitle": "AutoMALL AI Assistant",
       "welcome": "Hey! I'm apeX, your AutoMALL assistant. I can help you search vehicles, manage your inventory, check your referrals, and much more. What do you need?",
+      "welcomeSetup": "Hey! I'm apeX, your AutoMALL AI assistant. Connect your favorite AI to start managing your account, inventory, and referrals with artificial intelligence.",
       "placeholder": "Ask me anything...",
       "error": "Something went wrong. Please try again.",
       "tooltip": "Need help? Ask apeX!",
