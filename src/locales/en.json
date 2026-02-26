@@ -2794,7 +2794,9 @@
       "placeholder": "Ask me anything...",
       "error": "Something went wrong. Please try again.",
       "tooltip": "Need help? Ask apeX!",
-      "clear": "Clear chat"
+      "clear": "Clear chat",
+      "connectAI": "Connect your AI",
+      "connectBanner": "Connect your AI (ChatGPT, Claude, Gemini) →"
     }
   }
 }

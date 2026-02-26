@@ -4,6 +4,9 @@
  * Vercel AI SDK v5 streaming chat with AutoMALL tool registry.
  * This is the in-app chat for authenticated users.
  *
+ * Auth: Reads wallet from `x-wallet-address` header OR `walletAddress` body field.
+ * The widget sends both for robustness.
+ *
  * NOT to be confused with /api/agent/route.ts (CryptoGift legacy).
  */
 
@@ -15,32 +18,32 @@ import { generateSystemPrompt } from '@/lib/agent/prompts/automall-system-prompt
 import { canExecuteTool } from '@/lib/agent/security/permission-engine'
 import { executeToolWithAudit } from '@/lib/agent/security/audit-logger'
 import { resolveUserRole } from '@/lib/agent/security/permission-engine'
-import { AgentChatRequestSchema } from '@/lib/agent/types/connector-types'
 import type { ToolContext } from '@/lib/agent/types/connector-types'
-import { FEATURE_AI_AGENT_CONNECTOR } from '@/lib/config/features'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
-  // Feature flag check
-  if (!FEATURE_AI_AGENT_CONNECTOR) {
-    return NextResponse.json({ error: 'AI Agent not enabled' }, { status: 404 })
-  }
-
   try {
-    // Extract wallet address from headers (set by auth middleware)
-    const walletAddress = req.headers.get('x-wallet-address')
-    if (!walletAddress) {
+    // Parse body first (needed for wallet fallback)
+    const body = await req.json()
+
+    // Extract wallet: header first, body fallback
+    const walletAddress =
+      req.headers.get('x-wallet-address') ||
+      body?.walletAddress ||
+      null
+    if (!walletAddress || typeof walletAddress !== 'string') {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    // Parse and validate request
-    const body = await req.json()
-    const parsed = AgentChatRequestSchema.safeParse(body)
-    if (!parsed.success) {
+    // AI SDK v5 TextStreamChatTransport sends { messages, ...bodyFields }
+    // Messages may use `parts` (v5 format) or `content` (classic format).
+    // We pass them directly to streamText which handles both.
+    const messages = body?.messages
+    if (!Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
-        { error: 'Invalid request', details: parsed.error.flatten() },
+        { error: 'Invalid request: messages array is required' },
         { status: 400 }
       )
     }
@@ -93,11 +96,11 @@ export async function POST(req: NextRequest) {
       locale: req.headers.get('accept-language')?.startsWith('es') ? 'es' : 'en',
     })
 
-    // Stream response
+    // Stream response — pass messages as-is (AI SDK v5 handles format)
     const result = streamText({
       model: openai('gpt-4o'),
       system: systemPrompt,
-      messages: parsed.data.messages,
+      messages,
       tools: aiTools,
     })
 
@@ -114,7 +117,7 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   return NextResponse.json({
     service: 'AutoMALL AI Agent Chat',
-    status: FEATURE_AI_AGENT_CONNECTOR ? 'active' : 'disabled',
+    status: 'active',
     tools: toolRegistry.size,
   })
 }

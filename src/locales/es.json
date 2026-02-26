@@ -2794,7 +2794,9 @@
       "placeholder": "Preguntame lo que quieras...",
       "error": "Algo salio mal. Intenta de nuevo.",
       "tooltip": "Necesitas ayuda? Preguntale a apeX!",
-      "clear": "Limpiar chat"
+      "clear": "Limpiar chat",
+      "connectAI": "Conecta tu IA",
+      "connectBanner": "Conecta tu IA (ChatGPT, Claude, Gemini) →"
     }
   }
 }

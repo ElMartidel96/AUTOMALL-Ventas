@@ -6,22 +6,40 @@
  * Bottom-right FAB with apeX avatar that expands into a chat panel.
  * Uses the new AutoMALL agent backend (/api/agent/chat) via Vercel AI SDK v5.
  * Always visible when user is connected — no token gate required.
+ *
+ * Architecture: Wrapper → Inner pattern ensures useChat hook only initializes
+ * when wallet address is guaranteed (prevents 401 from missing headers).
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { useChat } from '@ai-sdk/react'
 import { TextStreamChatTransport } from 'ai'
-import { X, Send, User, Loader2, Trash2, ChevronDown } from 'lucide-react'
+import { Send, User, Trash2, ChevronDown, Settings2 } from 'lucide-react'
 import { useAccount } from '@/lib/thirdweb'
+import Link from 'next/link'
 
 // ===================================================
-// MAIN COMPONENT
+// WRAPPER — Guards address availability before hooks
 // ===================================================
 
 export function AgentChatWidget() {
-  const t = useTranslations('agent')
   const { address, isConnected } = useAccount()
+
+  // Only mount the inner component when address is guaranteed
+  if (!isConnected || !address) {
+    return null
+  }
+
+  return <AgentChatWidgetInner address={address} />
+}
+
+// ===================================================
+// INNER — All hooks called with guaranteed address
+// ===================================================
+
+function AgentChatWidgetInner({ address }: { address: string }) {
+  const t = useTranslations('agent')
   const [isOpen, setIsOpen] = useState(false)
   const [inputValue, setInputValue] = useState('')
   const [showTooltip, setShowTooltip] = useState(true)
@@ -29,10 +47,12 @@ export function AgentChatWidget() {
   const inputRef = useRef<HTMLInputElement>(null)
   const chatRef = useRef<HTMLDivElement>(null)
 
+  // useChat with BOTH header and body for robustness
   const { messages, sendMessage, status, error, setMessages } = useChat({
     transport: new TextStreamChatTransport({
       api: '/api/agent/chat',
-      headers: address ? { 'x-wallet-address': address } : undefined,
+      headers: { 'x-wallet-address': address },
+      body: { walletAddress: address },
     }),
   })
 
@@ -44,7 +64,7 @@ export function AgentChatWidget() {
     return () => clearTimeout(timer)
   }, [])
 
-  // Auto-scroll to bottom on new messages
+  // Auto-scroll on new messages
   useEffect(() => {
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -83,11 +103,6 @@ export function AgentChatWidget() {
     setMessages([])
   }, [setMessages])
 
-  // Only render for connected users
-  if (!isConnected || !address) {
-    return null
-  }
-
   return (
     <div className="fixed bottom-6 right-6 z-50" style={{ zIndex: 9999 }}>
 
@@ -114,6 +129,15 @@ export function AgentChatWidget() {
               </div>
             </div>
             <div className="flex items-center gap-1">
+              {/* Connect your AI link */}
+              <Link
+                href="/profile?tab=agent"
+                onClick={() => setIsOpen(false)}
+                className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+                title={t('chat.connectAI')}
+              >
+                <Settings2 className="w-4 h-4" />
+              </Link>
               <button
                 onClick={handleClear}
                 className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
@@ -131,7 +155,7 @@ export function AgentChatWidget() {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ maxHeight: '380px' }}>
+          <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ maxHeight: '340px' }}>
             {/* Welcome state */}
             {messages.length === 0 && (
               <div className="text-center py-6">
@@ -151,7 +175,6 @@ export function AgentChatWidget() {
                 key={msg.id}
                 className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                {/* apeX avatar for assistant */}
                 {msg.role === 'assistant' && (
                   <div className="w-7 h-7 rounded-full overflow-hidden border border-am-blue/30 shrink-0 mt-0.5">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -171,7 +194,6 @@ export function AgentChatWidget() {
                     ))}
                   </p>
                 </div>
-                {/* User avatar */}
                 {msg.role === 'user' && (
                   <div className="w-7 h-7 rounded-full bg-am-orange flex items-center justify-center shrink-0 mt-0.5">
                     <User className="w-4 h-4 text-white" />
@@ -209,8 +231,19 @@ export function AgentChatWidget() {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Connect AI banner */}
+          <Link
+            href="/profile?tab=agent"
+            onClick={() => setIsOpen(false)}
+            className="block px-4 py-2 bg-gradient-to-r from-am-orange/10 to-am-orange-light/10 border-t border-b border-am-orange/20 text-center hover:from-am-orange/20 hover:to-am-orange-light/20 transition-colors"
+          >
+            <p className="text-xs font-semibold text-am-orange">
+              {t('chat.connectBanner')}
+            </p>
+          </Link>
+
           {/* Input */}
-          <div className="px-3 py-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+          <div className="px-3 py-3 bg-white dark:bg-gray-900">
             <div className="flex gap-2">
               <input
                 ref={inputRef}
@@ -262,27 +295,19 @@ export function AgentChatWidget() {
         }`}
         aria-label={t('chat.open')}
       >
-        {/* apeX Avatar */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/apeX22.PNG"
-          alt="apeX Assistant"
-          className="w-full h-full object-cover"
-        />
+        <img src="/apeX22.PNG" alt="apeX Assistant" className="w-full h-full object-cover" />
 
-        {/* Minimize overlay when open */}
         {isOpen && (
           <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
             <ChevronDown className="w-5 h-5 text-white drop-shadow-lg" />
           </div>
         )}
 
-        {/* Online indicator */}
         {!isOpen && (
           <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-gray-900" />
         )}
 
-        {/* Pulse when has unread messages */}
         {messages.length > 0 && !isOpen && (
           <div className="absolute inset-0 rounded-full border-2 border-am-blue/50 animate-ping pointer-events-none" />
         )}
