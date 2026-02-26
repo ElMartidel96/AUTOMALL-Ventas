@@ -42,28 +42,27 @@ function AgentConnectionHubInner({ address }: { address: string }) {
   const t = useTranslations('agent')
   const [isOpen, setIsOpen] = useState(false)
   const [showTooltip, setShowTooltip] = useState(true)
-  // null = loading, false = no keys, true = has keys
+  // null = loading, false = no connections, true = has connections (OAuth or API keys)
   const [aiConnected, setAiConnected] = useState<boolean | null>(null)
-  const [keyCount, setKeyCount] = useState(0)
+  const [connectionCount, setConnectionCount] = useState(0)
   const [copiedUrl, setCopiedUrl] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
 
   const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://autosmall.org'
   const mcpUrl = `${appUrl}/api/mcp/gateway`
 
-  // Check connection status when widget opens
+  // Check connection status (OAuth + API keys) when widget opens
   useEffect(() => {
     if (!isOpen) return
     let cancelled = false
-    fetch('/api/agent/keys', {
+    fetch('/api/agent/connections', {
       headers: { 'x-wallet-address': address },
     })
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (cancelled) return
-        const activeKeys = data?.keys?.filter((k: any) => k.is_active) ?? []
-        setAiConnected(activeKeys.length > 0)
-        setKeyCount(activeKeys.length)
+        setAiConnected(data?.connected ?? false)
+        setConnectionCount(data?.total ?? 0)
       })
       .catch(() => {
         if (!cancelled) setAiConnected(false)
@@ -211,7 +210,7 @@ function AgentConnectionHubInner({ address }: { address: string }) {
                 <div>
                   <p className="text-sm font-bold text-gray-900 dark:text-white">{t('hub.connected')}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {t('hub.keysActive', { count: keyCount })}
+                    {t('hub.keysActive', { count: connectionCount })}
                   </p>
                 </div>
               </div>

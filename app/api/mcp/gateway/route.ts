@@ -28,8 +28,12 @@ import type { JsonRpcRequest, JsonRpcResponse, ToolContext, McpSession } from '@
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
+// Supported MCP protocol versions (newest first)
+const SUPPORTED_PROTOCOL_VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05']
+const DEFAULT_PROTOCOL_VERSION = '2024-11-05'
+
 // In-memory session store (sufficient for serverless — sessions re-created per cold start)
-const sessions = new Map<string, McpSession>()
+const sessions = new Map<string, McpSession & { protocolVersion?: string }>()
 
 // Resolved credentials from either auth method
 interface ResolvedAuth {
@@ -138,19 +142,24 @@ export async function POST(req: NextRequest) {
   // Resolve user role
   const role = await resolveUserRole(auth.wallet_address)
 
+  // Resolve session protocol version from Mcp-Session-Id header (post-initialize)
+  const sessionId = req.headers.get('mcp-session-id')
+  const session = sessionId ? sessions.get(sessionId) : undefined
+  const protocolVersion = session?.protocolVersion || DEFAULT_PROTOCOL_VERSION
+
   // Route JSON-RPC methods
   switch (rpcReq.method) {
     case 'initialize':
       return handleInitialize(rpcReq, auth, role)
 
     case 'tools/list':
-      return handleToolsList(rpcReq, auth, role)
+      return handleToolsList(rpcReq, auth, role, protocolVersion)
 
     case 'tools/call':
-      return handleToolsCall(rpcReq, auth, role, req)
+      return handleToolsCall(rpcReq, auth, role, req, protocolVersion)
 
     case 'ping':
-      return jsonRpcSuccess(rpcReq.id, {})
+      return jsonRpcSuccess(rpcReq.id, {}, protocolVersion)
 
     default:
       return jsonRpcError(rpcReq.id, -32601, `Method not found: ${rpcReq.method}`)
@@ -167,7 +176,8 @@ export async function GET() {
   return NextResponse.json({
     service: 'AutoMALL MCP Gateway',
     protocol: 'MCP Streamable HTTP',
-    version: '2025-06-18',
+    mcp_version: DEFAULT_PROTOCOL_VERSION,
+    supported_versions: SUPPORTED_PROTOCOL_VERSIONS,
     status: FEATURE_AI_AGENT_CONNECTOR ? 'active' : 'disabled',
     tools: toolRegistry.size,
     authentication: 'OAuth 2.1',
@@ -217,6 +227,12 @@ function handleInitialize(
 ): NextResponse {
   const sessionId = randomUUID()
 
+  // Negotiate protocol version — use client's version if we support it, otherwise our default
+  const clientVersion = rpcReq.params?.protocolVersion as string | undefined
+  const negotiatedVersion = clientVersion && SUPPORTED_PROTOCOL_VERSIONS.includes(clientVersion)
+    ? clientVersion
+    : DEFAULT_PROTOCOL_VERSION
+
   sessions.set(sessionId, {
     id: sessionId,
     walletAddress: auth.wallet_address,
@@ -224,10 +240,11 @@ function handleInitialize(
     apiKeyId: auth.id,
     createdAt: Date.now(),
     lastAccessedAt: Date.now(),
+    protocolVersion: negotiatedVersion,
   })
 
   const response = jsonRpcSuccess(rpcReq.id, {
-    protocolVersion: '2025-06-18',
+    protocolVersion: negotiatedVersion,
     capabilities: {
       tools: { listChanged: false },
     },
@@ -238,23 +255,30 @@ function handleInitialize(
   })
 
   response.headers.set('Mcp-Session-Id', sessionId)
+  response.headers.set('Mcp-Protocol-Version', negotiatedVersion)
   return response
 }
 
 function handleToolsList(
   rpcReq: JsonRpcRequest,
   auth: ResolvedAuth,
-  role: string
+  role: string,
+  protocolVersion: string
 ): NextResponse {
   const tools = toolRegistry.getToolsForScopes(role as any, auth.scopes)
 
-  const mcpTools = tools.map(t => ({
-    name: t.name,
-    description: t.description,
-    inputSchema: zodToJsonSchema(t.inputSchema, { target: 'openApi3' }),
-  }))
+  const mcpTools = tools.map(t => {
+    // MCP spec requires JSON Schema (not OpenAPI 3.0) without $schema meta property
+    const schema = zodToJsonSchema(t.inputSchema, { target: 'jsonSchema7' }) as Record<string, unknown>
+    delete schema.$schema
+    return {
+      name: t.name,
+      description: t.description,
+      inputSchema: schema,
+    }
+  })
 
-  return jsonRpcSuccess(rpcReq.id, { tools: mcpTools })
+  return jsonRpcSuccess(rpcReq.id, { tools: mcpTools }, protocolVersion)
 }
 
 async function handleToolsCall(
@@ -262,6 +286,7 @@ async function handleToolsCall(
   auth: ResolvedAuth,
   role: string,
   req: NextRequest,
+  protocolVersion: string,
 ): Promise<NextResponse> {
   const { name, arguments: args } = rpcReq.params || {}
 
@@ -306,27 +331,29 @@ async function handleToolsCall(
   if (result.success) {
     return jsonRpcSuccess(rpcReq.id, {
       content: [{ type: 'text', text: JSON.stringify(result.data, null, 2) }],
-    })
+    }, protocolVersion)
   }
 
   return jsonRpcSuccess(rpcReq.id, {
     content: [{ type: 'text', text: `Error: ${result.error}` }],
     isError: true,
-  })
+  }, protocolVersion)
 }
 
 // ===================================================
 // HELPERS
 // ===================================================
 
-function jsonRpcSuccess(id: string | number | undefined, result: any): NextResponse {
+function jsonRpcSuccess(id: string | number | undefined, result: any, protocolVersion?: string): NextResponse {
   const body: JsonRpcResponse = { jsonrpc: '2.0', id, result }
-  return NextResponse.json(body, {
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-    },
-  })
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+  }
+  if (protocolVersion) {
+    headers['Mcp-Protocol-Version'] = protocolVersion
+  }
+  return NextResponse.json(body, { headers })
 }
 
 function jsonRpcError(id: string | number | undefined | null, code: number, message: string): NextResponse {

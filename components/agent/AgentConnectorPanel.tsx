@@ -35,15 +35,14 @@ export function AgentConnectorPanel({ walletAddress }: Props) {
   const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://autosmall.org'
   const mcpUrl = `${appUrl}/api/mcp/gateway`
 
-  // Check active OAuth connections
+  // Check active connections (OAuth + API keys)
   useEffect(() => {
-    fetch('/api/agent/keys', {
+    fetch('/api/agent/connections', {
       headers: { 'x-wallet-address': walletAddress },
     })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        const active = data?.keys?.filter((k: any) => k.is_active)?.length ?? 0
-        setConnectedCount(active)
+        setConnectedCount(data?.total ?? 0)
       })
       .catch(() => {})
   }, [walletAddress])
