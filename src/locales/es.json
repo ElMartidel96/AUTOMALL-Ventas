@@ -2790,23 +2790,69 @@
     "chat": {
       "open": "Abrir Asistente apeX",
       "subtitle": "Conector IA de AutoMALL",
-      "welcomeSetup": "Hola! Soy apeX, tu asistente IA de AutoMALL. Conecta tu IA favorita (ChatGPT, Claude, Gemini) para gestionar tu cuenta, inventario y referidos con inteligencia artificial.",
+      "welcomeSetup": "Conecta tu IA favorita (ChatGPT, Claude, Gemini, Cursor) para gestionar tu cuenta, inventario y referidos. El login es automatico — sin claves API.",
       "tooltip": "Conecta tu IA con apeX!",
       "connectAI": "Config. IA",
       "connectBanner": "Conecta tu IA (ChatGPT, Claude, Gemini) →"
     },
     "hub": {
       "connected": "IA Conectada",
-      "keysActive": "{count, plural, one {# clave activa} other {# claves activas}}",
+      "keysActive": "{count, plural, one {# conexion activa} other {# conexiones activas}}",
       "capabilities": "Tu IA puede",
       "capSearch": "Buscar vehiculos en el catalogo",
       "capInventory": "Gestionar tu inventario de vehiculos",
       "capReferrals": "Consultar referidos y estadisticas",
       "capProfile": "Ver y actualizar tu perfil",
       "andMore": "+ 13 herramientas mas disponibles",
-      "howToUse": "Abre tu app de IA favorita (Claude, ChatGPT o Gemini) y preguntale lo que quieras sobre tu cuenta de AutoMALL. Tu IA ya esta conectada.",
-      "manageKeys": "Administrar claves",
-      "guides": "Guias de conexion"
+      "howToUse": "Abre tu app de IA y preguntale lo que quieras sobre tu cuenta de AutoMALL. Tu IA ya esta conectada y autorizada.",
+      "manageKeys": "Configuracion"
+    },
+    "widget": {
+      "serverUrl": "Tu URL del servidor",
+      "allPlatforms": "Todas las plataformas"
+    },
+    "connector": {
+      "title": "Conecta tu IA",
+      "subtitle": "Conexion con un click y login automatico",
+      "howItWorks": "Pega la URL del servidor en tu app de IA. La autenticacion es automatica — veras un popup de login de AutoMALL. Sin claves API.",
+      "serverUrl": "Tu URL del Servidor MCP",
+      "urlExplainer": "Esta URL funciona con cualquier IA compatible con MCP. Pegala y el login es automatico.",
+      "cursorDesc": "Conexion instantanea con un click",
+      "claudeDesc": "Settings → Connectors → Pegar URL",
+      "chatgptDesc": "Settings → Connectors → Pegar URL",
+      "geminiDesc": "Extensions → Agregar servidor MCP",
+      "addToCursor": "Instalar",
+      "claudeStep1": "Abre Claude Desktop → Settings → Connectors",
+      "claudeStep2": "Click en \"Add\" y pega la URL de arriba. Un popup de login aparecera automaticamente.",
+      "chatgptStep1": "Abre ChatGPT → Settings → Connectors → Developer Mode ON",
+      "chatgptStep2": "Click en \"Create\", pega la URL de arriba. Un popup de login aparecera automaticamente.",
+      "geminiStep1": "Abre Gemini → Extensions o Gemini CLI",
+      "geminiStep2": "Agrega la URL como servidor MCP. La autenticacion se maneja automaticamente.",
+      "copyUrl": "Copiar URL",
+      "copied": "Copiado!",
+      "autoAuth": "Login automatico via OAuth — sin claves API",
+      "capabilities": "Lo que tu IA puede hacer",
+      "capSearch": "Buscar vehiculos",
+      "capInventory": "Gestionar inventario",
+      "capReferrals": "Estadisticas de referidos",
+      "capProfile": "Gestion de perfil",
+      "securityTitle": "Seguro por diseno",
+      "securityDesc": "Autenticacion OAuth 2.1 con PKCE. Tu IA recibe un token seguro que expira automaticamente. Puedes revocar el acceso en cualquier momento desde esta pagina.",
+      "advancedKeys": "Avanzado: Claves API Manuales",
+      "advancedExplainer": "Para usuarios avanzados que prefieren autenticacion manual con Bearer token en vez de OAuth."
+    },
+    "oauth": {
+      "title": "Autorizar Acceso de IA",
+      "loginFirst": "Inicia sesion en tu cuenta de AutoMALL para autorizar esta conexion de IA.",
+      "wantsAccess": "quiere acceder a tu cuenta de AutoMALL",
+      "permissions": "Esta IA podra:",
+      "scopeRead": "Leer tus vehiculos, perfil y datos de referidos",
+      "scopeWrite": "Gestionar tu inventario y actualizar tu perfil",
+      "connectedAs": "Sesion iniciada como",
+      "approve": "Autorizar",
+      "deny": "Cancelar",
+      "invalidRequest": "Solicitud Invalida",
+      "missingParams": "Este enlace de autorizacion tiene parametros faltantes. Intenta conectar de nuevo desde tu app de IA."
     }
   }
 }

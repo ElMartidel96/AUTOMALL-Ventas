@@ -86,6 +86,20 @@ const nextConfig = {
     ];
   },
 
+  async rewrites() {
+    return [
+      // OAuth 2.1 well-known endpoints for MCP Gateway discovery
+      {
+        source: '/.well-known/oauth-protected-resource',
+        destination: '/api/oauth/metadata/protected-resource',
+      },
+      {
+        source: '/.well-known/oauth-authorization-server',
+        destination: '/api/oauth/metadata/authorization-server',
+      },
+    ];
+  },
+
   async redirects() {
     return [];
   },

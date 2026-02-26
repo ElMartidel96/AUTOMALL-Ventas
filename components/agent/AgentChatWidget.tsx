@@ -5,17 +5,18 @@
  *
  * Bottom-right FAB with apeX avatar that expands into a connection panel.
  * This is NOT a chatbot — the platform uses a "connect-your-own-AI" model.
- * Users connect their preferred AI (Claude, ChatGPT, Gemini) via MCP Gateway.
+ * Users connect their preferred AI (Claude, ChatGPT, Gemini, Cursor) via
+ * OAuth 2.1 on the MCP Gateway. Zero API key management needed.
  *
  * States:
- *   1. Not connected (no API keys) → Welcome + setup CTA
- *   2. Connected (has API keys) → Status dashboard + quick actions
- *   3. Loading → Spinner while checking keys
+ *   1. Not connected (no active sessions) → Welcome + one-click setup CTA
+ *   2. Connected (has active sessions) → Status dashboard + quick actions
+ *   3. Loading → Spinner while checking status
  */
 
 import React, { useState, useRef, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
-import { ChevronDown, Settings2, Loader2, Zap, CheckCircle2, Key, ExternalLink } from 'lucide-react'
+import { ChevronDown, Settings2, Loader2, Zap, CheckCircle2, Sparkles, Copy, Check } from 'lucide-react'
 import { useAccount } from '@/lib/thirdweb'
 import Link from 'next/link'
 
@@ -44,9 +45,13 @@ function AgentConnectionHubInner({ address }: { address: string }) {
   // null = loading, false = no keys, true = has keys
   const [aiConnected, setAiConnected] = useState<boolean | null>(null)
   const [keyCount, setKeyCount] = useState(0)
+  const [copiedUrl, setCopiedUrl] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
 
-  // Check API keys every time widget opens
+  const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://autosmall.org'
+  const mcpUrl = `${appUrl}/api/mcp/gateway`
+
+  // Check connection status when widget opens
   useEffect(() => {
     if (!isOpen) return
     let cancelled = false
@@ -85,6 +90,16 @@ function AgentConnectionHubInner({ address }: { address: string }) {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isOpen])
+
+  const copyUrl = () => {
+    navigator.clipboard.writeText(mcpUrl)
+    setCopiedUrl(true)
+    setTimeout(() => setCopiedUrl(false), 2000)
+  }
+
+  // Cursor deep link
+  const cursorConfig = btoa(JSON.stringify({ url: mcpUrl }))
+  const cursorDeepLink = `cursor://anysphere.cursor-deeplink/mcp/install?name=AutoMALL&config=${cursorConfig}`
 
   return (
     <div className="fixed bottom-6 right-6 z-50" style={{ zIndex: 9999 }}>
@@ -135,24 +150,55 @@ function AgentConnectionHubInner({ address }: { address: string }) {
             </div>
           )}
 
-          {/* ─── STATE: Not connected — Setup CTA ─── */}
+          {/* ─── STATE: Not connected — Quick Setup ─── */}
           {aiConnected === false && (
-            <div className="p-6 text-center">
-              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-am-blue/20 shadow-md mx-auto mb-4">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/apeX11.png" alt="apeX" className="w-full h-full object-cover" />
+            <div className="p-5 space-y-4">
+              <div className="text-center">
+                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-am-blue/20 shadow-md mx-auto mb-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/apeX11.png" alt="apeX" className="w-full h-full object-cover" />
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 max-w-[260px] mx-auto">
+                  {t('chat.welcomeSetup')}
+                </p>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 max-w-[260px] mx-auto mb-6">
-                {t('chat.welcomeSetup')}
-              </p>
-              <Link
-                href="/profile?tab=agent"
-                onClick={() => setIsOpen(false)}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-am-orange to-am-orange-light text-white font-bold text-sm hover:shadow-lg transition-all"
-              >
-                <Zap className="w-4 h-4" />
-                {t('chat.connectBanner')}
-              </Link>
+
+              {/* Quick copy URL */}
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3">
+                <p className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">
+                  {t('widget.serverUrl')}
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="text-xs font-mono flex-1 truncate text-am-blue">
+                    {mcpUrl}
+                  </code>
+                  <button
+                    onClick={copyUrl}
+                    className="shrink-0 p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg"
+                  >
+                    {copiedUrl ? <Check className="w-3.5 h-3.5 text-am-green" /> : <Copy className="w-3.5 h-3.5 text-gray-400" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick action buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => window.open(cursorDeepLink, '_self')}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-purple-400 text-white text-xs font-bold hover:shadow-lg transition-all"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  Cursor
+                </button>
+                <Link
+                  href="/profile?tab=agent"
+                  onClick={() => setIsOpen(false)}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-am-orange to-am-orange-light text-white text-xs font-bold hover:shadow-lg transition-all"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  {t('widget.allPlatforms')}
+                </Link>
+              </div>
             </div>
           )}
 
@@ -182,9 +228,6 @@ function AgentConnectionHubInner({ address }: { address: string }) {
                       {t(key)}
                     </div>
                   ))}
-                  <p className="text-xs text-gray-400 dark:text-gray-500 pl-3.5">
-                    {t('hub.andMore')}
-                  </p>
                 </div>
               </div>
 
@@ -202,16 +245,8 @@ function AgentConnectionHubInner({ address }: { address: string }) {
                   onClick={() => setIsOpen(false)}
                   className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                 >
-                  <Key className="w-3.5 h-3.5" />
+                  <Settings2 className="w-3.5 h-3.5" />
                   {t('hub.manageKeys')}
-                </Link>
-                <Link
-                  href="/profile?tab=agent"
-                  onClick={() => setIsOpen(false)}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-am-blue to-am-blue-light text-sm font-semibold text-white hover:shadow-lg transition-all"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  {t('hub.guides')}
                 </Link>
               </div>
             </div>

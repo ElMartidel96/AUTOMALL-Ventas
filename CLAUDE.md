@@ -100,10 +100,17 @@ public/                 # Static assets
 ## AI Agent Connector System
 
 ### Architecture
-3 connection modes share a single Tool Registry (~17 tools):
-1. **Platform Chat** (`/api/agent/chat`) — In-app streaming chat via Vercel AI SDK v5
-2. **MCP Gateway** (`/api/mcp/gateway`) — JSON-RPC 2.0 for Claude Desktop / external AI
-3. **OpenAPI Actions** (Phase 2) — For ChatGPT Custom GPTs
+Connect-your-own-AI model — AutoMALL does NOT run its own AI. Users connect THEIR preferred AI
+(ChatGPT, Claude, Gemini, Cursor) to AutoMALL's MCP Gateway. The platform is a Tool/Capability Gateway.
+
+**Authentication**: OAuth 2.1 (automatic) or API keys (manual advanced)
+- OAuth flow: User pastes MCP URL in AI app → AI discovers OAuth → login popup → connected automatically
+- API keys: `aml_` prefix, SHA-256 hashed, for power users/CLI
+
+**Connection methods**:
+1. **MCP Gateway** (`/api/mcp/gateway`) — JSON-RPC 2.0 with OAuth 2.1 + PKCE
+2. **Cursor Deep Link** — `cursor://` protocol for true one-click installation
+3. **API keys** — Manual Bearer token auth (advanced, collapsed in UI)
 
 ### Key Files
 | File | Purpose |
@@ -117,11 +124,26 @@ public/                 # Static assets
 | `lib/agent/security/audit-logger.ts` | Auto-logging of every tool execution |
 | `lib/agent/prompts/automall-system-prompt.ts` | Dynamic per-role system prompts (EN/ES) |
 | `lib/agent/types/connector-types.ts` | TypeScript types for the entire system |
-| `app/api/agent/chat/route.ts` | Platform chat endpoint (AI SDK v5 streamText) |
-| `app/api/mcp/gateway/route.ts` | MCP Streamable HTTP server |
+| `lib/agent/oauth/oauth-utils.ts` | Token generation, PKCE verification, hashing |
+| `lib/agent/oauth/oauth-store.ts` | Supabase operations for OAuth clients/codes/tokens |
+| `app/api/mcp/gateway/route.ts` | MCP Streamable HTTP server (OAuth + API key auth) |
+| `app/api/oauth/register/route.ts` | Dynamic Client Registration (RFC 7591) |
+| `app/api/oauth/authorize/route.ts` | Authorization code generation |
+| `app/api/oauth/token/route.ts` | Token exchange (auth code → access+refresh tokens) |
+| `app/api/oauth/metadata/*/route.ts` | Well-known OAuth discovery endpoints |
+| `app/oauth/authorize/page.tsx` | OAuth consent page (Thirdweb login + approve) |
+| `app/api/agent/chat/route.ts` | Informational endpoint (no server-side AI) |
 | `app/api/agent/keys/route.ts` | API key CRUD (SHA-256 hashed) |
-| `components/agent/AgentConnectorPanel.tsx` | Profile tab UI for key management + guides |
-| `components/agent/AgentChatWidget.tsx` | Floating chat widget (bottom-right) |
+| `components/agent/AgentConnectorPanel.tsx` | Profile tab: one-click connection UI |
+| `components/agent/AgentChatWidget.tsx` | Floating connection hub widget (bottom-right) |
+
+### OAuth 2.1 Flow (MCP spec compliant)
+1. AI client discovers `/.well-known/oauth-protected-resource` (RFC 9728)
+2. AI client discovers `/.well-known/oauth-authorization-server` (RFC 8414)
+3. Dynamic Client Registration via `POST /api/oauth/register` (RFC 7591)
+4. Authorization Code + PKCE via `/oauth/authorize` → user approves
+5. Token exchange via `POST /api/oauth/token`
+6. Access token (`oat_` prefix) used as Bearer token for MCP requests
 
 ### Database Tables (Supabase)
 | Table | Purpose |
@@ -129,12 +151,18 @@ public/                 # Static assets
 | `agent_api_keys` | Hashed API keys with scopes, rate limits, expiration |
 | `agent_audit_log` | Every tool call logged (wallet, tool, input/output, duration) |
 | `agent_approval_queue` | Destructive action approvals (Phase 2+) |
+| `agent_oauth_clients` | Dynamic Client Registration data |
+| `agent_oauth_codes` | Authorization codes (10 min TTL, single-use) |
+| `agent_oauth_tokens` | Access tokens (1h) + refresh tokens (30d) |
 
 ### Security
+- OAuth 2.1 with PKCE (S256) — mandatory for all clients
 - API keys are SHA-256 hashed — raw key shown ONCE at creation
+- OAuth tokens: access (1h expiry), refresh (30d expiry), revocable
 - Permission matrix: role (buyer/seller/birddog/admin) x scope (read/write/admin)
 - Rate limiting per API key (default 100 req/hour)
 - Audit log on every tool execution (fire-and-forget)
+- WWW-Authenticate header on 401 for automatic OAuth discovery
 - Zero crypto/blockchain exposure in any tool, prompt, or UI
 
 ### Important: DO NOT MODIFY legacy files

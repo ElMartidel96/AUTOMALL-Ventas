@@ -2790,23 +2790,69 @@
     "chat": {
       "open": "Open apeX Assistant",
       "subtitle": "AutoMALL AI Connector",
-      "welcomeSetup": "Hey! I'm apeX, your AutoMALL AI assistant. Connect your favorite AI (ChatGPT, Claude, Gemini) to manage your account, inventory, and referrals with artificial intelligence.",
+      "welcomeSetup": "Connect your favorite AI (ChatGPT, Claude, Gemini, Cursor) to manage your account, inventory, and referrals. Login is automatic — no API keys needed.",
       "tooltip": "Connect your AI with apeX!",
       "connectAI": "AI Settings",
       "connectBanner": "Connect your AI (ChatGPT, Claude, Gemini) →"
     },
     "hub": {
       "connected": "AI Connected",
-      "keysActive": "{count, plural, one {# active key} other {# active keys}}",
+      "keysActive": "{count, plural, one {# active connection} other {# active connections}}",
       "capabilities": "Your AI can",
       "capSearch": "Search vehicles in the catalog",
       "capInventory": "Manage your vehicle inventory",
       "capReferrals": "Check referrals and stats",
       "capProfile": "View and update your profile",
       "andMore": "+ 13 more tools available",
-      "howToUse": "Open your favorite AI app (Claude, ChatGPT, or Gemini) and ask anything about your AutoMALL account. Your AI is already connected.",
-      "manageKeys": "Manage keys",
-      "guides": "Setup guides"
+      "howToUse": "Open your AI app and ask anything about your AutoMALL account. Your AI is already connected and authorized.",
+      "manageKeys": "Settings"
+    },
+    "widget": {
+      "serverUrl": "Your server URL",
+      "allPlatforms": "All platforms"
+    },
+    "connector": {
+      "title": "Connect Your AI",
+      "subtitle": "One-click connection with automatic login",
+      "howItWorks": "Paste the server URL into your AI app. Authentication happens automatically — you'll see a login popup from AutoMALL. No API keys needed.",
+      "serverUrl": "Your MCP Server URL",
+      "urlExplainer": "This URL works with any MCP-compatible AI. Paste it and login is automatic.",
+      "cursorDesc": "Instant one-click connection",
+      "claudeDesc": "Settings → Connectors → Paste URL",
+      "chatgptDesc": "Settings → Connectors → Paste URL",
+      "geminiDesc": "Extensions → Add MCP server",
+      "addToCursor": "Install",
+      "claudeStep1": "Open Claude Desktop → Settings → Connectors",
+      "claudeStep2": "Click \"Add\" and paste the URL above. A login popup will appear automatically.",
+      "chatgptStep1": "Open ChatGPT → Settings → Connectors → Developer Mode ON",
+      "chatgptStep2": "Click \"Create\", paste the URL above. A login popup will appear automatically.",
+      "geminiStep1": "Open Gemini → Extensions or Gemini CLI",
+      "geminiStep2": "Add the URL as an MCP server. Authentication is handled automatically.",
+      "copyUrl": "Copy URL",
+      "copied": "Copied!",
+      "autoAuth": "Login is automatic via OAuth — no API keys needed",
+      "capabilities": "What your AI can do",
+      "capSearch": "Search vehicles",
+      "capInventory": "Manage inventory",
+      "capReferrals": "Referral stats",
+      "capProfile": "Profile management",
+      "securityTitle": "Secure by design",
+      "securityDesc": "OAuth 2.1 authentication with PKCE. Your AI gets a secure token that expires automatically. You can revoke access anytime from this page.",
+      "advancedKeys": "Advanced: Manual API Keys",
+      "advancedExplainer": "For power users who prefer manual Bearer token authentication instead of OAuth."
+    },
+    "oauth": {
+      "title": "Authorize AI Access",
+      "loginFirst": "Sign in to your AutoMALL account to authorize this AI connection.",
+      "wantsAccess": "wants to access your AutoMALL account",
+      "permissions": "This AI will be able to:",
+      "scopeRead": "Read your vehicles, profile, and referral data",
+      "scopeWrite": "Manage your inventory and update your profile",
+      "connectedAs": "Signed in as",
+      "approve": "Authorize",
+      "deny": "Cancel",
+      "invalidRequest": "Invalid Request",
+      "missingParams": "This authorization link is missing required parameters. Please try connecting again from your AI app."
     }
   }
 }
