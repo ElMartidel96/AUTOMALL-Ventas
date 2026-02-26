@@ -1,28 +1,35 @@
 'use client'
 
 /**
- * AgentChatWidget — Floating chat widget for the AutoMALL AI assistant
+ * AgentChatWidget — apeX Floating Chat Widget for AutoMALL
  *
- * Bottom-right FAB that expands into a chat panel with streaming responses.
- * Uses /api/agent/chat endpoint via Vercel AI SDK v5 useChat.
+ * Bottom-right FAB with apeX avatar that expands into a chat panel.
+ * Uses the new AutoMALL agent backend (/api/agent/chat) via Vercel AI SDK v5.
+ * Always visible when user is connected — no token gate required.
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { useChat } from '@ai-sdk/react'
 import { TextStreamChatTransport } from 'ai'
-import { X, Send, Bot, User, Loader2, Sparkles } from 'lucide-react'
+import { X, Send, User, Loader2, Trash2, ChevronDown } from 'lucide-react'
 import { useAccount } from '@/lib/thirdweb'
-import { FEATURE_AI_AGENT_CONNECTOR } from '@/lib/config/features'
+
+// ===================================================
+// MAIN COMPONENT
+// ===================================================
 
 export function AgentChatWidget() {
   const t = useTranslations('agent')
   const { address, isConnected } = useAccount()
   const [isOpen, setIsOpen] = useState(false)
   const [inputValue, setInputValue] = useState('')
+  const [showTooltip, setShowTooltip] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const chatRef = useRef<HTMLDivElement>(null)
 
-  const { messages, sendMessage, status, error } = useChat({
+  const { messages, sendMessage, status, error, setMessages } = useChat({
     transport: new TextStreamChatTransport({
       api: '/api/agent/chat',
       headers: address ? { 'x-wallet-address': address } : undefined,
@@ -31,10 +38,39 @@ export function AgentChatWidget() {
 
   const isLoading = status === 'streaming' || status === 'submitted'
 
-  // Auto-scroll to bottom
+  // Auto-hide tooltip after 5 seconds
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    const timer = setTimeout(() => setShowTooltip(false), 5000)
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    if (isOpen) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages, isOpen])
+
+  // Focus input when chat opens
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [isOpen])
+
+  // Click outside to close
+  useEffect(() => {
+    if (!isOpen) return
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (target.closest('[data-apex-bubble]')) return
+      if (chatRef.current && !chatRef.current.contains(target)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isOpen])
 
   const handleSend = useCallback(() => {
     const text = inputValue.trim()
@@ -43,59 +79,83 @@ export function AgentChatWidget() {
     sendMessage({ text })
   }, [inputValue, isLoading, sendMessage])
 
-  // Don't render if feature is disabled or user not connected
-  if (!FEATURE_AI_AGENT_CONNECTOR || !isConnected || !address) {
+  const handleClear = useCallback(() => {
+    setMessages([])
+  }, [setMessages])
+
+  // Only render for connected users
+  if (!isConnected || !address) {
     return null
   }
 
   return (
-    <>
-      {/* FAB Button */}
-      {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-am-blue to-am-blue-light text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all flex items-center justify-center"
-          aria-label={t('chat.open')}
-        >
-          <Sparkles className="w-6 h-6" />
-        </button>
-      )}
+    <div className="fixed bottom-6 right-6 z-50" style={{ zIndex: 9999 }}>
 
       {/* Chat Panel */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-50 w-[380px] max-w-[calc(100vw-2rem)] h-[560px] max-h-[calc(100vh-4rem)] flex flex-col rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        <div
+          ref={chatRef}
+          className="absolute bottom-20 right-0 w-80 sm:w-96 rounded-2xl shadow-2xl overflow-hidden border border-gray-200/50 dark:border-gray-700/50 bg-white dark:bg-gray-900 animate-in slide-in-from-bottom-4 duration-300"
+          style={{ maxHeight: '520px' }}
+        >
           {/* Header */}
-          <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-am-blue to-am-blue-light text-white">
-            <Bot className="w-6 h-6" />
-            <div className="flex-1">
-              <p className="font-bold text-sm">Alfred</p>
-              <p className="text-xs text-white/70">{t('chat.subtitle')}</p>
+          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-am-blue to-am-blue-light text-white">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white/30 shadow-md shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/apeX11.png" alt="apeX" className="w-full h-full object-cover" />
+              </div>
+              <div>
+                <p className="font-bold text-sm leading-tight">apeX</p>
+                <div className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                  <p className="text-[11px] text-white/70">{t('chat.subtitle')}</p>
+                </div>
+              </div>
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="p-1 hover:bg-white/20 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleClear}
+                className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+                title={t('chat.clear')}
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+              >
+                <ChevronDown className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ maxHeight: '380px' }}>
+            {/* Welcome state */}
             {messages.length === 0 && (
-              <div className="text-center py-8">
-                <Bot className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('chat.welcome')}</p>
+              <div className="text-center py-6">
+                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-am-blue/20 shadow-md mx-auto mb-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/apeX11.png" alt="apeX" className="w-full h-full object-cover" />
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400 max-w-[260px] mx-auto">
+                  {t('chat.welcome')}
+                </p>
               </div>
             )}
 
+            {/* Message list */}
             {messages.map(msg => (
               <div
                 key={msg.id}
                 className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
+                {/* apeX avatar for assistant */}
                 {msg.role === 'assistant' && (
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-am-blue to-am-blue-light flex items-center justify-center shrink-0 mt-0.5">
-                    <Bot className="w-4 h-4 text-white" />
+                  <div className="w-7 h-7 rounded-full overflow-hidden border border-am-blue/30 shrink-0 mt-0.5">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/apeX11.png" alt="apeX" className="w-full h-full object-cover" />
                   </div>
                 )}
                 <div
@@ -111,27 +171,39 @@ export function AgentChatWidget() {
                     ))}
                   </p>
                 </div>
+                {/* User avatar */}
                 {msg.role === 'user' && (
-                  <div className="w-7 h-7 rounded-lg bg-am-orange flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-7 h-7 rounded-full bg-am-orange flex items-center justify-center shrink-0 mt-0.5">
                     <User className="w-4 h-4 text-white" />
                   </div>
                 )}
               </div>
             ))}
 
+            {/* Streaming indicator */}
             {isLoading && (
               <div className="flex gap-2 items-center">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-am-blue to-am-blue-light flex items-center justify-center">
-                  <Bot className="w-4 h-4 text-white" />
+                <div className="w-7 h-7 rounded-full overflow-hidden border border-am-blue/30 shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/apeX11.png" alt="apeX" className="w-full h-full object-cover" />
                 </div>
                 <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-bl-md px-4 py-3">
-                  <Loader2 className="w-4 h-4 animate-spin text-am-blue" />
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 rounded-full bg-am-blue animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 rounded-full bg-am-blue animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 rounded-full bg-am-blue animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
                 </div>
               </div>
             )}
 
+            {/* Error */}
             {error && (
-              <p className="text-xs text-red-400 text-center">{t('chat.error')}</p>
+              <div className="text-center py-2">
+                <p className="text-xs text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg inline-block">
+                  {t('chat.error')}
+                </p>
+              </div>
             )}
 
             <div ref={messagesEndRef} />
@@ -141,12 +213,13 @@ export function AgentChatWidget() {
           <div className="px-3 py-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
             <div className="flex gap-2">
               <input
+                ref={inputRef}
                 type="text"
                 value={inputValue}
                 onChange={e => setInputValue(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
                 placeholder={t('chat.placeholder')}
-                className="flex-1 px-3 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-sm border border-gray-200 dark:border-gray-700 focus:border-am-blue focus:outline-none"
+                className="flex-1 px-3 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-sm border border-gray-200 dark:border-gray-700 focus:border-am-blue focus:outline-none transition-colors"
                 disabled={isLoading}
               />
               <button
@@ -160,6 +233,60 @@ export function AgentChatWidget() {
           </div>
         </div>
       )}
-    </>
+
+      {/* Tooltip */}
+      {showTooltip && !isOpen && (
+        <div className="absolute bottom-[72px] right-0 animate-in fade-in slide-in-from-right-2 duration-300 pointer-events-none">
+          <div className="glass-panel px-4 py-2 rounded-xl shadow-lg border border-white/20 dark:border-gray-700/50 whitespace-nowrap">
+            <span className="text-sm font-medium text-gray-900 dark:text-white">
+              {t('chat.tooltip')}
+            </span>
+          </div>
+          <div className="absolute -bottom-1.5 right-6 w-3 h-3 bg-white/80 dark:bg-gray-800/80 rotate-45 border-r border-b border-white/20 dark:border-gray-700/50" />
+        </div>
+      )}
+
+      {/* FAB — apeX Bubble */}
+      <button
+        data-apex-bubble
+        onClick={() => {
+          setIsOpen(!isOpen)
+          setShowTooltip(false)
+        }}
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => {
+          if (!isOpen) setTimeout(() => setShowTooltip(false), 2000)
+        }}
+        className={`relative w-14 h-14 rounded-full overflow-hidden transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-110 active:scale-105 ${
+          isOpen ? 'ring-2 ring-am-blue/50 ring-offset-2 ring-offset-transparent' : ''
+        }`}
+        aria-label={t('chat.open')}
+      >
+        {/* apeX Avatar */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/apeX22.PNG"
+          alt="apeX Assistant"
+          className="w-full h-full object-cover"
+        />
+
+        {/* Minimize overlay when open */}
+        {isOpen && (
+          <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+            <ChevronDown className="w-5 h-5 text-white drop-shadow-lg" />
+          </div>
+        )}
+
+        {/* Online indicator */}
+        {!isOpen && (
+          <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-gray-900" />
+        )}
+
+        {/* Pulse when has unread messages */}
+        {messages.length > 0 && !isOpen && (
+          <div className="absolute inset-0 rounded-full border-2 border-am-blue/50 animate-ping pointer-events-none" />
+        )}
+      </button>
+    </div>
   )
 }

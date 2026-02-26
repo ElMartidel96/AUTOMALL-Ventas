@@ -2788,11 +2788,13 @@
       }
     },
     "chat": {
-      "open": "Open AI Assistant",
+      "open": "Open apeX Assistant",
       "subtitle": "AutoMALL AI Assistant",
-      "welcome": "Hi! I'm Alfred, your AutoMALL assistant. How can I help you today?",
+      "welcome": "Hey! I'm apeX, your AutoMALL assistant. I can help you search vehicles, manage your inventory, check your referrals, and much more. What do you need?",
       "placeholder": "Ask me anything...",
-      "error": "Something went wrong. Please try again."
+      "error": "Something went wrong. Please try again.",
+      "tooltip": "Need help? Ask apeX!",
+      "clear": "Clear chat"
     }
   }
 }
