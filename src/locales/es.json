@@ -2789,15 +2789,24 @@
     },
     "chat": {
       "open": "Abrir Asistente apeX",
-      "subtitle": "Asistente IA de AutoMALL",
-      "welcome": "Hola! Soy apeX, tu asistente de AutoMALL. Puedo ayudarte a buscar vehiculos, gestionar tu inventario, revisar tus referidos y mucho mas. Que necesitas?",
-      "welcomeSetup": "Hola! Soy apeX, tu asistente IA de AutoMALL. Conecta tu IA favorita para empezar a gestionar tu cuenta, inventario y referidos con inteligencia artificial.",
-      "placeholder": "Preguntame lo que quieras...",
-      "error": "Algo salio mal. Intenta de nuevo.",
-      "tooltip": "Necesitas ayuda? Preguntale a apeX!",
-      "clear": "Limpiar chat",
-      "connectAI": "Conecta tu IA",
+      "subtitle": "Conector IA de AutoMALL",
+      "welcomeSetup": "Hola! Soy apeX, tu asistente IA de AutoMALL. Conecta tu IA favorita (ChatGPT, Claude, Gemini) para gestionar tu cuenta, inventario y referidos con inteligencia artificial.",
+      "tooltip": "Conecta tu IA con apeX!",
+      "connectAI": "Config. IA",
       "connectBanner": "Conecta tu IA (ChatGPT, Claude, Gemini) →"
+    },
+    "hub": {
+      "connected": "IA Conectada",
+      "keysActive": "{count, plural, one {# clave activa} other {# claves activas}}",
+      "capabilities": "Tu IA puede",
+      "capSearch": "Buscar vehiculos en el catalogo",
+      "capInventory": "Gestionar tu inventario de vehiculos",
+      "capReferrals": "Consultar referidos y estadisticas",
+      "capProfile": "Ver y actualizar tu perfil",
+      "andMore": "+ 13 herramientas mas disponibles",
+      "howToUse": "Abre tu app de IA favorita (Claude, ChatGPT o Gemini) y preguntale lo que quieras sobre tu cuenta de AutoMALL. Tu IA ya esta conectada.",
+      "manageKeys": "Administrar claves",
+      "guides": "Guias de conexion"
     }
   }
 }

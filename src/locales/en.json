@@ -2789,15 +2789,24 @@
     },
     "chat": {
       "open": "Open apeX Assistant",
-      "subtitle": "AutoMALL AI Assistant",
-      "welcome": "Hey! I'm apeX, your AutoMALL assistant. I can help you search vehicles, manage your inventory, check your referrals, and much more. What do you need?",
-      "welcomeSetup": "Hey! I'm apeX, your AutoMALL AI assistant. Connect your favorite AI to start managing your account, inventory, and referrals with artificial intelligence.",
-      "placeholder": "Ask me anything...",
-      "error": "Something went wrong. Please try again.",
-      "tooltip": "Need help? Ask apeX!",
-      "clear": "Clear chat",
-      "connectAI": "Connect your AI",
+      "subtitle": "AutoMALL AI Connector",
+      "welcomeSetup": "Hey! I'm apeX, your AutoMALL AI assistant. Connect your favorite AI (ChatGPT, Claude, Gemini) to manage your account, inventory, and referrals with artificial intelligence.",
+      "tooltip": "Connect your AI with apeX!",
+      "connectAI": "AI Settings",
       "connectBanner": "Connect your AI (ChatGPT, Claude, Gemini) →"
+    },
+    "hub": {
+      "connected": "AI Connected",
+      "keysActive": "{count, plural, one {# active key} other {# active keys}}",
+      "capabilities": "Your AI can",
+      "capSearch": "Search vehicles in the catalog",
+      "capInventory": "Manage your vehicle inventory",
+      "capReferrals": "Check referrals and stats",
+      "capProfile": "View and update your profile",
+      "andMore": "+ 13 more tools available",
+      "howToUse": "Open your favorite AI app (Claude, ChatGPT, or Gemini) and ask anything about your AutoMALL account. Your AI is already connected.",
+      "manageKeys": "Manage keys",
+      "guides": "Setup guides"
     }
   }
 }

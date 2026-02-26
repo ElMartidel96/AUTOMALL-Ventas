@@ -1,71 +1,52 @@
 'use client'
 
 /**
- * AgentChatWidget — apeX Floating Chat Widget for AutoMALL
+ * AgentConnectionHub — apeX Floating Connection Widget for AutoMALL
  *
- * Bottom-right FAB with apeX avatar that expands into a chat panel.
- * Uses the AutoMALL agent backend (/api/agent/chat) via Vercel AI SDK v5.
+ * Bottom-right FAB with apeX avatar that expands into a connection panel.
+ * This is NOT a chatbot — the platform uses a "connect-your-own-AI" model.
+ * Users connect their preferred AI (Claude, ChatGPT, Gemini) via MCP Gateway.
  *
- * Architecture:
- *   Wrapper → Inner pattern ensures useChat hook only initializes
- *   when wallet address is guaranteed (prevents 401 from missing headers).
- *
- * UX Flow:
- *   1. User opens widget → checks if they have API keys (/api/agent/keys)
- *   2. No keys → shows welcome + "Connect your AI" CTA (no input field)
- *   3. Has keys → shows full chat with input field
+ * States:
+ *   1. Not connected (no API keys) → Welcome + setup CTA
+ *   2. Connected (has API keys) → Status dashboard + quick actions
+ *   3. Loading → Spinner while checking keys
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
-import { useChat } from '@ai-sdk/react'
-import { TextStreamChatTransport } from 'ai'
-import { Send, User, Trash2, ChevronDown, Settings2, Loader2, Zap } from 'lucide-react'
+import { ChevronDown, Settings2, Loader2, Zap, CheckCircle2, Key, ExternalLink } from 'lucide-react'
 import { useAccount } from '@/lib/thirdweb'
 import Link from 'next/link'
 
 // ===================================================
-// WRAPPER — Guards address availability before hooks
+// WRAPPER — Guards address availability
 // ===================================================
 
 export function AgentChatWidget() {
   const { address, isConnected } = useAccount()
 
-  // Only mount the inner component when address is guaranteed
   if (!isConnected || !address) {
     return null
   }
 
-  return <AgentChatWidgetInner address={address} />
+  return <AgentConnectionHubInner address={address} />
 }
 
 // ===================================================
-// INNER — All hooks called with guaranteed address
+// INNER — Connection Hub (NOT a chat)
 // ===================================================
 
-function AgentChatWidgetInner({ address }: { address: string }) {
+function AgentConnectionHubInner({ address }: { address: string }) {
   const t = useTranslations('agent')
   const [isOpen, setIsOpen] = useState(false)
-  const [inputValue, setInputValue] = useState('')
   const [showTooltip, setShowTooltip] = useState(true)
-  // null = loading check, false = no API keys, true = has active keys
+  // null = loading, false = no keys, true = has keys
   const [aiConnected, setAiConnected] = useState<boolean | null>(null)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const chatRef = useRef<HTMLDivElement>(null)
+  const [keyCount, setKeyCount] = useState(0)
+  const panelRef = useRef<HTMLDivElement>(null)
 
-  // useChat with BOTH header and body for robustness
-  const { messages, sendMessage, status, error, setMessages } = useChat({
-    transport: new TextStreamChatTransport({
-      api: '/api/agent/chat',
-      headers: { 'x-wallet-address': address },
-      body: { walletAddress: address },
-    }),
-  })
-
-  const isLoading = status === 'streaming' || status === 'submitted'
-
-  // Check if user has API keys every time widget opens
+  // Check API keys every time widget opens
   useEffect(() => {
     if (!isOpen) return
     let cancelled = false
@@ -77,6 +58,7 @@ function AgentChatWidgetInner({ address }: { address: string }) {
         if (cancelled) return
         const activeKeys = data?.keys?.filter((k: any) => k.is_active) ?? []
         setAiConnected(activeKeys.length > 0)
+        setKeyCount(activeKeys.length)
       })
       .catch(() => {
         if (!cancelled) setAiConnected(false)
@@ -90,27 +72,13 @@ function AgentChatWidgetInner({ address }: { address: string }) {
     return () => clearTimeout(timer)
   }, [])
 
-  // Auto-scroll on new messages
-  useEffect(() => {
-    if (isOpen) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }
-  }, [messages, isOpen])
-
-  // Focus input when chat opens (only if connected)
-  useEffect(() => {
-    if (isOpen && aiConnected && inputRef.current) {
-      inputRef.current.focus()
-    }
-  }, [isOpen, aiConnected])
-
   // Click outside to close
   useEffect(() => {
     if (!isOpen) return
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement
       if (target.closest('[data-apex-bubble]')) return
-      if (chatRef.current && !chatRef.current.contains(target)) {
+      if (panelRef.current && !panelRef.current.contains(target)) {
         setIsOpen(false)
       }
     }
@@ -118,26 +86,14 @@ function AgentChatWidgetInner({ address }: { address: string }) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isOpen])
 
-  const handleSend = useCallback(() => {
-    const text = inputValue.trim()
-    if (!text || isLoading) return
-    setInputValue('')
-    sendMessage({ text })
-  }, [inputValue, isLoading, sendMessage])
-
-  const handleClear = useCallback(() => {
-    setMessages([])
-  }, [setMessages])
-
   return (
     <div className="fixed bottom-6 right-6 z-50" style={{ zIndex: 9999 }}>
 
-      {/* Chat Panel */}
+      {/* Connection Panel */}
       {isOpen && (
         <div
-          ref={chatRef}
+          ref={panelRef}
           className="absolute bottom-20 right-0 w-80 sm:w-96 rounded-2xl shadow-2xl overflow-hidden border border-gray-200/50 dark:border-gray-700/50 bg-white dark:bg-gray-900 animate-in slide-in-from-bottom-4 duration-300"
-          style={{ maxHeight: '520px' }}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-am-blue to-am-blue-light text-white">
@@ -163,15 +119,6 @@ function AgentChatWidgetInner({ address }: { address: string }) {
               >
                 <Settings2 className="w-4 h-4" />
               </Link>
-              {aiConnected && (
-                <button
-                  onClick={handleClear}
-                  className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
-                  title={t('chat.clear')}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
               <button
                 onClick={() => setIsOpen(false)}
                 className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
@@ -181,14 +128,14 @@ function AgentChatWidgetInner({ address }: { address: string }) {
             </div>
           </div>
 
-          {/* ─── STATE: Loading check ─── */}
+          {/* ─── STATE: Loading ─── */}
           {aiConnected === null && (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="w-6 h-6 animate-spin text-am-blue" />
             </div>
           )}
 
-          {/* ─── STATE: Not connected — CTA only, no input ─── */}
+          {/* ─── STATE: Not connected — Setup CTA ─── */}
           {aiConnected === false && (
             <div className="p-6 text-center">
               <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-am-blue/20 shadow-md mx-auto mb-4">
@@ -209,109 +156,65 @@ function AgentChatWidgetInner({ address }: { address: string }) {
             </div>
           )}
 
-          {/* ─── STATE: Connected — full chat ─── */}
+          {/* ─── STATE: Connected — Status Dashboard ─── */}
           {aiConnected === true && (
-            <>
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ maxHeight: '380px' }}>
-                {/* Welcome state (no messages yet) */}
-                {messages.length === 0 && (
-                  <div className="text-center py-6">
-                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-am-blue/20 shadow-md mx-auto mb-3">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/apeX11.png" alt="apeX" className="w-full h-full object-cover" />
-                    </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 max-w-[260px] mx-auto">
-                      {t('chat.welcome')}
-                    </p>
-                  </div>
-                )}
-
-                {/* Message list */}
-                {messages.map(msg => (
-                  <div
-                    key={msg.id}
-                    className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    {msg.role === 'assistant' && (
-                      <div className="w-7 h-7 rounded-full overflow-hidden border border-am-blue/30 shrink-0 mt-0.5">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src="/apeX11.png" alt="apeX" className="w-full h-full object-cover" />
-                      </div>
-                    )}
-                    <div
-                      className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm ${
-                        msg.role === 'user'
-                          ? 'bg-gradient-to-r from-am-blue to-am-blue-light text-white rounded-br-md'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-md'
-                      }`}
-                    >
-                      <p className="whitespace-pre-wrap break-words">
-                        {msg.parts?.filter(p => p.type === 'text').map((part, i) => (
-                          <span key={i}>{part.type === 'text' ? part.text : ''}</span>
-                        ))}
-                      </p>
-                    </div>
-                    {msg.role === 'user' && (
-                      <div className="w-7 h-7 rounded-full bg-am-orange flex items-center justify-center shrink-0 mt-0.5">
-                        <User className="w-4 h-4 text-white" />
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                {/* Streaming indicator */}
-                {isLoading && (
-                  <div className="flex gap-2 items-center">
-                    <div className="w-7 h-7 rounded-full overflow-hidden border border-am-blue/30 shrink-0">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/apeX11.png" alt="apeX" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-bl-md px-4 py-3">
-                      <div className="flex gap-1">
-                        <div className="w-2 h-2 rounded-full bg-am-blue animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <div className="w-2 h-2 rounded-full bg-am-blue animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <div className="w-2 h-2 rounded-full bg-am-blue animate-bounce" style={{ animationDelay: '300ms' }} />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Error */}
-                {error && (
-                  <div className="text-center py-2">
-                    <p className="text-xs text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg inline-block">
-                      {t('chat.error')}
-                    </p>
-                  </div>
-                )}
-
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Input */}
-              <div className="px-3 py-3 border-t border-gray-200/50 dark:border-gray-700/50 bg-white dark:bg-gray-900">
-                <div className="flex gap-2">
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={inputValue}
-                    onChange={e => setInputValue(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
-                    placeholder={t('chat.placeholder')}
-                    className="flex-1 px-3 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-sm border border-gray-200 dark:border-gray-700 focus:border-am-blue focus:outline-none transition-colors"
-                    disabled={isLoading}
-                  />
-                  <button
-                    onClick={handleSend}
-                    disabled={!inputValue.trim() || isLoading}
-                    className="p-2.5 rounded-xl bg-gradient-to-r from-am-orange to-am-orange-light text-white hover:shadow-lg transition-all disabled:opacity-50"
-                  >
-                    <Send className="w-4 h-4" />
-                  </button>
+            <div className="p-5 space-y-4">
+              {/* Connection status */}
+              <div className="flex items-center gap-3 p-3 bg-am-green/10 rounded-xl border border-am-green/20">
+                <CheckCircle2 className="w-5 h-5 text-am-green shrink-0" />
+                <div>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">{t('hub.connected')}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {t('hub.keysActive', { count: keyCount })}
+                  </p>
                 </div>
               </div>
-            </>
+
+              {/* What your AI can do */}
+              <div>
+                <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                  {t('hub.capabilities')}
+                </p>
+                <div className="space-y-1.5">
+                  {['hub.capSearch', 'hub.capInventory', 'hub.capReferrals', 'hub.capProfile'].map(key => (
+                    <div key={key} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                      <div className="w-1.5 h-1.5 rounded-full bg-am-blue shrink-0" />
+                      {t(key)}
+                    </div>
+                  ))}
+                  <p className="text-xs text-gray-400 dark:text-gray-500 pl-3.5">
+                    {t('hub.andMore')}
+                  </p>
+                </div>
+              </div>
+
+              {/* How to use */}
+              <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  {t('hub.howToUse')}
+                </p>
+              </div>
+
+              {/* Quick actions */}
+              <div className="flex gap-2">
+                <Link
+                  href="/profile?tab=agent"
+                  onClick={() => setIsOpen(false)}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <Key className="w-3.5 h-3.5" />
+                  {t('hub.manageKeys')}
+                </Link>
+                <Link
+                  href="/profile?tab=agent"
+                  onClick={() => setIsOpen(false)}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-am-blue to-am-blue-light text-sm font-semibold text-white hover:shadow-lg transition-all"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  {t('hub.guides')}
+                </Link>
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -354,11 +257,9 @@ function AgentChatWidgetInner({ address }: { address: string }) {
         )}
 
         {!isOpen && (
-          <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-gray-900" />
-        )}
-
-        {messages.length > 0 && !isOpen && (
-          <div className="absolute inset-0 rounded-full border-2 border-am-blue/50 animate-ping pointer-events-none" />
+          <div className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white dark:border-gray-900 ${
+            aiConnected ? 'bg-green-500' : 'bg-yellow-500'
+          }`} />
         )}
       </button>
     </div>
