@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getTypedClient } from '@/lib/supabase/client';
+import { FEATURE_META_INTEGRATION } from '@/lib/config/features';
 
 const statusSchema = z.object({
   seller: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
@@ -88,6 +89,18 @@ export async function PUT(request: NextRequest, context: RouteContext) {
         { error: 'Failed to update status', success: false },
         { status: 500 }
       );
+    }
+
+    // Fire-and-forget: trigger Meta auto-publish if enabled
+    if (FEATURE_META_INTEGRATION) {
+      import('@/lib/meta/auto-publisher').then(({ handleStatusChange }) => {
+        handleStatusChange({
+          vehicleId,
+          sellerAddress: sellerAddr,
+          oldStatus: vehicle.status,
+          newStatus,
+        }).catch((err) => console.error('[MetaPublisher] Background error:', err));
+      }).catch(() => { /* Meta module not available — skip */ });
     }
 
     return NextResponse.json({ success: true, data });

@@ -62,6 +62,9 @@ export const FEATURE_CATALOG = envBool('NEXT_PUBLIC_FEATURE_CATALOG', true)
 /** Enable AI Agent Connector (MCP Gateway + Platform Chat + API Keys) */
 export const FEATURE_AI_AGENT_CONNECTOR = envBool('NEXT_PUBLIC_FEATURE_AI_AGENT_CONNECTOR', true)
 
+/** Enable Meta integration (WhatsApp Catalog Feed + Facebook Auto-Publishing) */
+export const FEATURE_META_INTEGRATION = envBool('NEXT_PUBLIC_FEATURE_META_INTEGRATION', true)
+
 // ---------------------------------------------------------------------------
 // App Identity
 // ---------------------------------------------------------------------------

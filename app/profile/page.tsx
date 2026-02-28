@@ -20,14 +20,16 @@ import { useReferralDashboard } from '@/hooks/useReferrals';
 import { MyProfileSection } from '@/components/profile/MyProfileSection';
 import { MyDealershipSection } from '@/components/profile/MyDealershipSection';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Store, User as UserIcon, Bot } from 'lucide-react';
-import { FEATURE_AI_AGENT_CONNECTOR } from '@/lib/config/features';
+import { Store, User as UserIcon, Bot, Facebook } from 'lucide-react';
+import { FEATURE_AI_AGENT_CONNECTOR, FEATURE_META_INTEGRATION } from '@/lib/config/features';
 import { AgentConnectorPanel } from '@/components/agent/AgentConnectorPanel';
+import { MetaConnectionPanel } from '@/components/meta/MetaConnectionPanel';
 
 export default function ProfilePage() {
   const t = useTranslations('profile');
   const tCommon = useTranslations('common');
   const tAgent = useTranslations('agent');
+  const tMeta = useTranslations('meta');
   const { address, isConnected } = useAccount();
   const { seller, isLoading, completionPercentage, refetch } = useSellerProfile();
   const { user, role, isDealer, isLoading: userLoading, updateRole, refetch: refetchUser } = useUser();
@@ -38,7 +40,7 @@ export default function ProfilePage() {
   // Read ?tab= from URL for deep linking (e.g. from chat widget CTA)
   const initialTab = useMemo(() => {
     const tab = searchParams.get('tab');
-    if (tab === 'agent' || tab === 'dealership' || tab === 'profile') return tab;
+    if (tab === 'agent' || tab === 'dealership' || tab === 'profile' || tab === 'meta') return tab;
     return 'profile';
   }, [searchParams]);
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -103,6 +105,7 @@ export default function ProfilePage() {
 
   const showDealerTab = isDealer && !!seller;
   const showAgentTab = FEATURE_AI_AGENT_CONNECTOR;
+  const showMetaTab = FEATURE_META_INTEGRATION && isDealer && !!seller;
 
   return (
     <>
@@ -122,7 +125,13 @@ export default function ProfilePage() {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList
               className={`glass-crystal-enhanced w-full h-14 rounded-2xl p-1.5 mb-8 grid ${
-                showDealerTab && showAgentTab ? 'grid-cols-3' : showDealerTab || showAgentTab ? 'grid-cols-2' : 'grid-cols-1'
+                (() => {
+                  const count = 1 + (showDealerTab ? 1 : 0) + (showAgentTab ? 1 : 0) + (showMetaTab ? 1 : 0);
+                  if (count >= 4) return 'grid-cols-4';
+                  if (count === 3) return 'grid-cols-3';
+                  if (count === 2) return 'grid-cols-2';
+                  return 'grid-cols-1';
+                })()
               }`}
             >
               <TabsTrigger
@@ -148,6 +157,15 @@ export default function ProfilePage() {
                 >
                   <Bot className="w-4 h-4" />
                   {tAgent('tabAiAssistant')}
+                </TabsTrigger>
+              )}
+              {showMetaTab && (
+                <TabsTrigger
+                  value="meta"
+                  className="rounded-xl h-full text-sm font-bold transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#1877F2] data-[state=active]:to-[#0E5FC7] data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=inactive]:text-gray-500 dark:data-[state=inactive]:text-gray-400 flex items-center justify-center gap-2"
+                >
+                  <Facebook className="w-4 h-4" />
+                  {tMeta('tabMeta')}
                 </TabsTrigger>
               )}
             </TabsList>
@@ -181,6 +199,12 @@ export default function ProfilePage() {
             {showAgentTab && (
               <TabsContent value="agent" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
                 <AgentConnectorPanel walletAddress={address} />
+              </TabsContent>
+            )}
+
+            {showMetaTab && (
+              <TabsContent value="meta" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
+                <MetaConnectionPanel walletAddress={address} />
               </TabsContent>
             )}
           </Tabs>
