@@ -17,11 +17,11 @@ const DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || 'autosmall.org';
 // Map DB vehicle to Meta feed item
 // ─────────────────────────────────────────────
 
-function mapCondition(condition: string): 'New' | 'Used' | 'CPO' {
+function mapCondition(condition: string): 'new' | 'used' | 'refurbished' {
   const lower = condition?.toLowerCase() || '';
-  if (lower === 'new') return 'New';
-  if (lower === 'cpo' || lower === 'certified') return 'CPO';
-  return 'Used';
+  if (lower === 'new') return 'new';
+  if (lower === 'cpo' || lower === 'certified') return 'refurbished';
+  return 'used';
 }
 
 function mapBodyStyle(bodyType: string): string {
@@ -95,38 +95,45 @@ function escapeXml(str: string): string {
     .replace(/'/g, '&apos;');
 }
 
+function optionalTag(tag: string, value: string | undefined): string {
+  if (!value) return '';
+  return `      <g:${tag}>${escapeXml(value)}</g:${tag}>\n`;
+}
+
 function itemToXml(item: MetaVehicleFeedItem): string {
   const additionalImages = item.additional_image_urls
-    .map((url) => `        <g:additional_image_link>${escapeXml(url)}</g:additional_image_link>`)
+    .filter((url) => url)
+    .map((url) => `      <g:additional_image_link>${escapeXml(url)}</g:additional_image_link>`)
     .join('\n');
 
-  return `    <item>
-      <g:id>${escapeXml(item.vehicle_id)}</g:id>
-      <g:title>${escapeXml(item.title)}</g:title>
-      <g:description>${escapeXml(item.description)}</g:description>
-      <g:link>${escapeXml(item.url)}</g:link>
-      <g:image_link>${escapeXml(item.image_url)}</g:image_link>
-${additionalImages}
-      <g:price>${item.price.toFixed(2)} ${item.currency}</g:price>
-      <g:availability>${item.availability}</g:availability>
-      <g:condition>${item.condition}</g:condition>
-      <g:brand>${escapeXml(item.make)}</g:brand>
-      <g:vehicle_id>${escapeXml(item.vehicle_id)}</g:vehicle_id>
-      <g:make>${escapeXml(item.make)}</g:make>
-      <g:model>${escapeXml(item.model)}</g:model>
-      <g:year>${item.year}</g:year>
-      <g:mileage>${item.mileage_value} ${item.mileage_unit}</g:mileage>
-      <g:body_style>${escapeXml(item.body_style)}</g:body_style>
-      <g:transmission>${escapeXml(item.transmission)}</g:transmission>
-      <g:fuel_type>${escapeXml(item.fuel_type)}</g:fuel_type>
-      <g:drivetrain>${escapeXml(item.drivetrain)}</g:drivetrain>
-      <g:exterior_color>${escapeXml(item.exterior_color)}</g:exterior_color>
-      <g:vin>${escapeXml(item.vin)}</g:vin>
-      <g:state_of_vehicle>${item.state_of_vehicle}</g:state_of_vehicle>
-      <g:latitude>${item.latitude}</g:latitude>
-      <g:longitude>${item.longitude}</g:longitude>
-      <g:address>${escapeXml(item.address)}</g:address>
-    </item>`;
+  let xml = `    <item>\n`;
+  xml += `      <g:id>${escapeXml(item.vehicle_id)}</g:id>\n`;
+  xml += `      <g:title>${escapeXml(item.title)}</g:title>\n`;
+  xml += `      <g:description>${escapeXml(item.description)}</g:description>\n`;
+  xml += `      <g:link>${escapeXml(item.url)}</g:link>\n`;
+  xml += `      <g:image_link>${escapeXml(item.image_url)}</g:image_link>\n`;
+  if (additionalImages) xml += additionalImages + '\n';
+  xml += `      <g:price>${item.price.toFixed(2)} ${item.currency}</g:price>\n`;
+  xml += `      <g:availability>${item.availability}</g:availability>\n`;
+  xml += `      <g:condition>${item.condition}</g:condition>\n`;
+  xml += `      <g:brand>${escapeXml(item.make)}</g:brand>\n`;
+  xml += `      <g:vehicle_id>${escapeXml(item.vehicle_id)}</g:vehicle_id>\n`;
+  xml += `      <g:make>${escapeXml(item.make)}</g:make>\n`;
+  xml += `      <g:model>${escapeXml(item.model)}</g:model>\n`;
+  xml += `      <g:year>${item.year}</g:year>\n`;
+  xml += `      <g:mileage>${item.mileage_value} ${item.mileage_unit}</g:mileage>\n`;
+  xml += `      <g:body_style>${escapeXml(item.body_style)}</g:body_style>\n`;
+  xml += optionalTag('transmission', item.transmission);
+  xml += optionalTag('fuel_type', item.fuel_type);
+  xml += optionalTag('drivetrain', item.drivetrain);
+  xml += optionalTag('exterior_color', item.exterior_color);
+  xml += optionalTag('vin', item.vin);
+  xml += `      <g:state_of_vehicle>${item.state_of_vehicle}</g:state_of_vehicle>\n`;
+  xml += `      <g:latitude>${item.latitude}</g:latitude>\n`;
+  xml += `      <g:longitude>${item.longitude}</g:longitude>\n`;
+  xml += `      <g:address>${escapeXml(item.address)}</g:address>\n`;
+  xml += `    </item>`;
+  return xml;
 }
 
 export function generateFeedXml(
@@ -136,11 +143,14 @@ export function generateFeedXml(
   const now = new Date().toUTCString();
   const itemsXml = items.map(itemToXml).join('\n');
 
+  const feedUrl = `https://${DOMAIN}/api/feed/meta/${seller.handle}`;
+
   return `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
+<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>${escapeXml(seller.business_name)} - Vehicle Inventory</title>
     <link>https://${seller.handle}.${DOMAIN}</link>
+    <atom:link href="${feedUrl}" rel="self" type="application/rss+xml"/>
     <description>Vehicle inventory for ${escapeXml(seller.business_name)}</description>
     <lastBuildDate>${now}</lastBuildDate>
 ${itemsXml}

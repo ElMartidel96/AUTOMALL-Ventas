@@ -19,7 +19,7 @@ export interface MetaVehicleFeedItem {
   price: number;
   currency: string;
   availability: 'in stock' | 'out of stock';
-  condition: 'New' | 'Used' | 'CPO';
+  condition: 'new' | 'used' | 'refurbished';
   make: string;
   model: string;
   year: number;
@@ -31,7 +31,7 @@ export interface MetaVehicleFeedItem {
   drivetrain: string;
   exterior_color: string;
   vin: string;
-  state_of_vehicle: 'New' | 'Used' | 'CPO';
+  state_of_vehicle: 'new' | 'used' | 'refurbished';
   latitude: number;
   longitude: number;
   address: string;

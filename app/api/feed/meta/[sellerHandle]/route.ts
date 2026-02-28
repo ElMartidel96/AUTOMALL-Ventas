@@ -100,10 +100,12 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       });
     }
 
-    // Build feed items
-    const feedItems = vehicleRows.map((v: VehicleForFeed) => {
-      return vehicleToFeedItem(v, sellerData, imagesByVehicle[v.id] || []);
-    });
+    // Build feed items — skip vehicles without images (Meta requires image_link)
+    const feedItems = vehicleRows
+      .filter((v: VehicleForFeed) => (imagesByVehicle[v.id] || []).length > 0)
+      .map((v: VehicleForFeed) => {
+        return vehicleToFeedItem(v, sellerData, imagesByVehicle[v.id]);
+      });
 
     const xml = generateFeedXml(feedItems, sellerData);
 
