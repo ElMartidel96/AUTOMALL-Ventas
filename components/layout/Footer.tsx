@@ -26,6 +26,7 @@ import { DEFAULT_LOGO_FOOTER } from '@/lib/config/defaults';
 
 export const Footer: React.FC = () => {
   const t = useTranslations('footer');
+  const tLegal = useTranslations('legal');
   const { seller, isSubdomain } = useTenant();
 
   // Seller-specific or default contact info
@@ -179,6 +180,21 @@ export const Footer: React.FC = () => {
                 >
                   {t('company.contact')}
                 </a>
+              </li>
+              <li>
+                <Link href="/privacy" className="hover:text-am-orange transition-colors">
+                  {tLegal('footerPrivacy')}
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms" className="hover:text-am-orange transition-colors">
+                  {tLegal('footerTerms')}
+                </Link>
+              </li>
+              <li>
+                <Link href="/data-deletion" className="hover:text-am-orange transition-colors">
+                  {tLegal('footerDataDeletion')}
+                </Link>
               </li>
             </ul>
           </div>
