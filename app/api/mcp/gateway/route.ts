@@ -139,6 +139,14 @@ export async function POST(req: NextRequest) {
     return jsonRpcError(rpcReq.id, -32600, 'Invalid Request')
   }
 
+  // MCP spec: notifications have NO id — the server MUST NOT reply
+  const isNotification = rpcReq.id === undefined || rpcReq.id === null
+
+  // Handle notifications silently (e.g. notifications/initialized, cancelled, progress)
+  if (isNotification) {
+    return new NextResponse(null, { status: 202 })
+  }
+
   // Resolve user role
   const role = await resolveUserRole(auth.wallet_address)
 
@@ -157,6 +165,12 @@ export async function POST(req: NextRequest) {
 
     case 'tools/call':
       return handleToolsCall(rpcReq, auth, role, req, protocolVersion)
+
+    case 'resources/list':
+      return jsonRpcSuccess(rpcReq.id, { resources: [] }, protocolVersion)
+
+    case 'prompts/list':
+      return jsonRpcSuccess(rpcReq.id, { prompts: [] }, protocolVersion)
 
     case 'ping':
       return jsonRpcSuccess(rpcReq.id, {}, protocolVersion)
