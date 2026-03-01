@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useAccount } from '@/lib/thirdweb';
-import { useCreateVehicle, useUpdateVehicle, useUploadImages, useDeleteImage, useReorderImages } from '@/hooks/useInventory';
+import { useCreateVehicle, useUpdateVehicle, useUploadImages, useDeleteImage, useReorderImages, useVehicle } from '@/hooks/useInventory';
 import { VINDecoder } from './VINDecoder';
 import { ImageUploader, type LocalImage, type UploadedImage } from './ImageUploader';
 import { POPULAR_BRANDS, getYearOptions, BODY_TYPES, EXTERIOR_COLORS, INTERIOR_COLORS, VEHICLE_FEATURES, type DecodedVIN } from '@/lib/inventory/vin-fields';
@@ -126,6 +126,48 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
   const [vehicleId, setVehicleId] = useState<string | undefined>(editVehicleId);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isPublishing, setIsPublishing] = useState(false);
+  const [prefilled, setPrefilled] = useState(false);
+
+  // Fetch existing vehicle data when editing
+  const { data: existingVehicle, isLoading: isLoadingVehicle } = useVehicle(editVehicleId);
+
+  // Prefill form with existing vehicle data
+  useEffect(() => {
+    if (existingVehicle && !prefilled) {
+      setData({
+        vin: existingVehicle.vin || '',
+        brand: existingVehicle.brand || '',
+        model: existingVehicle.model || '',
+        year: existingVehicle.year || new Date().getFullYear(),
+        trim: existingVehicle.trim || '',
+        body_type: existingVehicle.body_type || '',
+        doors: existingVehicle.doors || 4,
+        price: existingVehicle.price || 0,
+        price_negotiable: existingVehicle.price_negotiable ?? true,
+        mileage: existingVehicle.mileage || 0,
+        condition: existingVehicle.condition || 'good',
+        exterior_color: existingVehicle.exterior_color || '',
+        interior_color: existingVehicle.interior_color || '',
+        transmission: existingVehicle.transmission || 'automatic',
+        fuel_type: existingVehicle.fuel_type || 'gasoline',
+        drivetrain: existingVehicle.drivetrain || 'fwd',
+        engine: existingVehicle.engine || '',
+        description: existingVehicle.description || '',
+        features: existingVehicle.features || [],
+      });
+      // Prefill existing images
+      if (existingVehicle.images && existingVehicle.images.length > 0) {
+        setUploadedImages(
+          existingVehicle.images.map(img => ({
+            id: img.id,
+            public_url: img.public_url,
+            display_order: img.display_order,
+          }))
+        );
+      }
+      setPrefilled(true);
+    }
+  }, [existingVehicle, prefilled]);
 
   const createVehicle = useCreateVehicle();
   const updateVehicle = useUpdateVehicle();
@@ -378,6 +420,16 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
   // ===================================================
   // Render steps
   // ===================================================
+
+  // Show loading state while fetching existing vehicle data for edit
+  if (editVehicleId && isLoadingVehicle) {
+    return (
+      <div className="glass-crystal-enhanced rounded-2xl p-12 text-center">
+        <Loader2 className="w-8 h-8 animate-spin mx-auto text-am-orange mb-3" />
+        <p className="text-sm text-gray-500 dark:text-gray-400">{t('list.loading')}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
