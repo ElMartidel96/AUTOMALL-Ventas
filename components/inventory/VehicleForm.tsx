@@ -321,25 +321,32 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
 
   const goBack = () => setCurrentStep(prev => Math.max(prev - 1, 0));
 
-  // Upload local images
+  // Upload local images — only ready ones, skip errored
   const handleUploadAll = async () => {
     if (!vehicleId || !address) return;
-    const readyImages = localImages.filter(img => img.status === 'ready' || img.status === 'pending');
+    const readyImages = localImages.filter(img => img.status === 'ready');
     if (readyImages.length === 0) return;
 
+    // Use the compressed blob (always available for 'ready' images)
     const blobs = readyImages.map(img => img.compressed || img.file);
 
     try {
-      setLocalImages(prev => prev.map(img => ({ ...img, status: 'uploading' as const })));
+      // Mark only ready images as uploading
+      setLocalImages(prev => prev.map(img =>
+        img.status === 'ready' ? { ...img, status: 'uploading' as const } : img
+      ));
       const result = await uploadImages.mutateAsync({ vehicleId, seller: address, files: blobs });
 
       // Move uploaded to uploaded list
       const newUploaded = result.uploaded.map(u => ({ id: u.id, public_url: u.public_url, display_order: u.display_order }));
       setUploadedImages(prev => [...prev, ...newUploaded]);
-      setLocalImages([]);
+      // Remove successfully uploaded images, keep errored ones
+      setLocalImages(prev => prev.filter(img => img.status === 'error'));
     } catch (err) {
       console.error('[VehicleForm] Upload error:', err);
-      setLocalImages(prev => prev.map(img => ({ ...img, status: 'error' as const })));
+      setLocalImages(prev => prev.map(img =>
+        img.status === 'uploading' ? { ...img, status: 'error' as const, error: 'Upload failed' } : img
+      ));
     }
   };
 

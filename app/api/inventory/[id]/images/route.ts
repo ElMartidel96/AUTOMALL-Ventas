@@ -3,15 +3,21 @@
  *
  * POST   /api/inventory/[id]/images — Upload images (FormData, multi-file)
  * DELETE /api/inventory/[id]/images?imageId=xxx&seller=0x...
+ *
+ * Client compresses to <4MB WebP before sending.
+ * Server accepts up to 10MB as safety net.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+// App Router: use route segment config (NOT `export const config`)
+export const maxDuration = 30; // seconds — allow time for large uploads
+
 const BUCKET = 'vehicle-images';
 const MAX_IMAGES_PER_VEHICLE = 10;
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB — generous server limit (client compresses to <4MB)
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'];
 
 let supabase: ReturnType<typeof createClient> | null = null;
 
@@ -28,6 +34,13 @@ async function ensureBucket(db: ReturnType<typeof createClient>) {
   const { data: buckets } = await db.storage.listBuckets();
   if (!buckets?.some(b => b.name === BUCKET)) {
     await db.storage.createBucket(BUCKET, {
+      public: true,
+      fileSizeLimit: MAX_FILE_SIZE,
+      allowedMimeTypes: ALLOWED_TYPES,
+    });
+  } else {
+    // Bucket exists — update limits in case they changed
+    await db.storage.updateBucket(BUCKET, {
       public: true,
       fileSizeLimit: MAX_FILE_SIZE,
       allowedMimeTypes: ALLOWED_TYPES,
@@ -92,13 +105,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
 
-      // Validate type and size
-      if (!ALLOWED_TYPES.includes(file.type)) {
+      // Validate type — accept common image types
+      if (!ALLOWED_TYPES.includes(file.type) && !file.type.startsWith('image/')) {
         errors.push(`${file.name}: invalid type (${file.type})`);
         continue;
       }
+      // Size check — client should compress, but enforce a generous server limit
       if (file.size > MAX_FILE_SIZE) {
-        errors.push(`${file.name}: too large (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+        errors.push(`${file.name}: too large (${(file.size / 1024 / 1024).toFixed(1)}MB, max ${(MAX_FILE_SIZE / 1024 / 1024).toFixed(0)}MB)`);
         continue;
       }
 

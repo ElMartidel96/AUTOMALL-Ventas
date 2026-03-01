@@ -2,14 +2,15 @@
 
 import React, { useState, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { compressImage, createPreviewUrl, revokePreviewUrl, formatFileSize } from '@/lib/inventory/image-utils';
-import { Upload, X, GripVertical, Loader2, ImageIcon, Star } from 'lucide-react';
+import { compressImageSmart, createPreviewUrl, revokePreviewUrl, formatFileSize } from '@/lib/inventory/image-utils';
+import { Upload, X, GripVertical, Loader2, ImageIcon, Star, AlertCircle, RotateCcw } from 'lucide-react';
 
 export interface LocalImage {
   id: string;
   file: File;
   preview: string;
   compressed?: Blob;
+  compressedSize?: number;
   status: 'pending' | 'compressing' | 'ready' | 'uploading' | 'done' | 'error';
   error?: string;
 }
@@ -49,6 +50,34 @@ export function ImageUploader({
   const totalImages = localImages.length + uploadedImages.length;
   const canAdd = totalImages < maxImages;
 
+  // Compress a single image with retry support
+  const compressSingleImage = useCallback(async (img: LocalImage) => {
+    try {
+      const { blob } = await compressImageSmart(img.file);
+      img.compressed = blob;
+      img.compressedSize = blob.size;
+      img.status = 'ready';
+      img.error = undefined;
+    } catch (err) {
+      // Retry once — mobile browsers can fail on first attempt due to memory pressure
+      try {
+        // Small delay to let GC reclaim memory
+        await new Promise(r => setTimeout(r, 300));
+        const { blob } = await compressImageSmart(img.file, {
+          maxWidth: 1536,    // Slightly smaller on retry
+          maxHeight: 1536,
+        });
+        img.compressed = blob;
+        img.compressedSize = blob.size;
+        img.status = 'ready';
+        img.error = undefined;
+      } catch {
+        img.status = 'error';
+        img.error = err instanceof Error ? err.message : t('compressionFailed');
+      }
+    }
+  }, [t]);
+
   const processFiles = useCallback(async (files: FileList | File[]) => {
     const fileArr = Array.from(files);
     const remaining = maxImages - totalImages;
@@ -57,8 +86,8 @@ export function ImageUploader({
     const newImages: LocalImage[] = [];
 
     for (const file of toProcess) {
-      if (!file.type.startsWith('image/')) continue;
-      if (file.size > 5 * 1024 * 1024) continue;
+      // Accept any image type — no size limit, compression handles everything
+      if (!file.type.startsWith('image/') && !file.name.match(/\.(heic|heif)$/i)) continue;
 
       const id = `local-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       const preview = createPreviewUrl(file);
@@ -67,21 +96,27 @@ export function ImageUploader({
       newImages.push(img);
     }
 
+    if (newImages.length === 0) return;
     onAddFiles(newImages);
 
-    // Compress in background
+    // Compress each image sequentially (memory-safe for mobile)
     for (const img of newImages) {
-      try {
-        const compressed = await compressImage(img.file);
-        img.compressed = compressed;
-        img.status = 'ready';
-      } catch {
-        img.status = 'ready'; // Use original if compression fails
-      }
+      await compressSingleImage(img);
+      // Trigger re-render after each image completes
+      onAddFiles([]);
     }
-    // Trigger re-render with updated statuses
-    onAddFiles([]);
-  }, [maxImages, totalImages, onAddFiles]);
+  }, [maxImages, totalImages, onAddFiles, compressSingleImage]);
+
+  // Retry compression for a failed image
+  const handleRetryCompression = useCallback(async (imageId: string) => {
+    const img = localImages.find(i => i.id === imageId);
+    if (!img) return;
+    img.status = 'compressing';
+    img.error = undefined;
+    onAddFiles([]); // trigger re-render
+    await compressSingleImage(img);
+    onAddFiles([]); // trigger re-render with result
+  }, [localImages, onAddFiles, compressSingleImage]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -134,7 +169,7 @@ export function ImageUploader({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept="image/*"
           multiple
           onChange={handleFileSelect}
           className="hidden"
@@ -145,7 +180,7 @@ export function ImageUploader({
           {t('dropzone')}
         </p>
         <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-          {t('formats')} · {t('maxSize')} · {totalImages}/{maxImages}
+          {t('formats')} · {t('anySize')} · {totalImages}/{maxImages}
         </p>
       </div>
 
@@ -191,24 +226,51 @@ export function ImageUploader({
           {localImages.map((img) => (
             <div
               key={img.id}
-              className="relative group aspect-square rounded-lg overflow-hidden border-2 border-dashed border-gray-300 dark:border-gray-600"
+              className={`relative group aspect-square rounded-lg overflow-hidden border-2 border-dashed transition-colors
+                ${img.status === 'error'
+                  ? 'border-red-400 dark:border-red-500'
+                  : 'border-gray-300 dark:border-gray-600'
+                }
+              `}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={img.preview} alt="" className="w-full h-full object-cover" />
-              {/* Status overlay */}
+              {/* Status overlay — compressing */}
               {img.status === 'compressing' && (
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-1">
                   <Loader2 className="w-6 h-6 text-white animate-spin" />
+                  <span className="text-[10px] text-white/80">{t('optimizing')}</span>
                 </div>
               )}
+              {/* Status overlay — uploading */}
               {img.status === 'uploading' && (
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-1">
                   <Loader2 className="w-6 h-6 text-am-orange animate-spin" />
+                  <span className="text-[10px] text-white/80">{t('uploading')}</span>
                 </div>
               )}
-              {/* Size info */}
+              {/* Status overlay — error with retry */}
+              {img.status === 'error' && (
+                <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-1.5 p-2">
+                  <AlertCircle className="w-5 h-5 text-red-400" />
+                  <span className="text-[10px] text-white text-center leading-tight">
+                    {img.error || t('compressionFailed')}
+                  </span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleRetryCompression(img.id); }}
+                    className="flex items-center gap-1 px-2 py-1 bg-white/20 hover:bg-white/30 rounded text-[10px] text-white transition-colors"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    {t('retry')}
+                  </button>
+                </div>
+              )}
+              {/* Size info — show original → compressed */}
               <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 text-white text-[10px] rounded">
-                {formatFileSize(img.file.size)}
+                {img.compressedSize
+                  ? `${formatFileSize(img.file.size)} → ${formatFileSize(img.compressedSize)}`
+                  : formatFileSize(img.file.size)
+                }
               </div>
               {/* Delete button */}
               <button
