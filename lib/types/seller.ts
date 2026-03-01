@@ -16,6 +16,11 @@ export interface Seller {
   address?: string;
   city: string;
   state: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  service_radius_km: number;
+  geocode_status: 'pending' | 'success' | 'failed' | 'manual';
+  catalog_display_mode: 'service_area' | 'full_catalog' | 'personal_only';
   social_instagram?: string;
   social_facebook?: string;
   social_tiktok?: string;

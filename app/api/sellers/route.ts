@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/client';
 import { isValidHandle, isHandleReserved } from '@/lib/tenant/reserved-handles';
+import { geocodeAddress } from '@/lib/geo/geocode';
 import type { Seller } from '@/lib/types/seller';
 
 function getDb() {
@@ -195,6 +196,9 @@ export async function PATCH(request: NextRequest) {
 
     const db = getDb();
 
+    // If address changed, auto-geocode (fire-and-forget style — save first, geocode after)
+    const addressChanged = updates.address !== undefined;
+
     const { data, error } = await db
       .from('sellers')
       .update(updates)
@@ -215,6 +219,31 @@ export async function PATCH(request: NextRequest) {
         { error: 'Seller not found' },
         { status: 404 }
       );
+    }
+
+    // Auto-geocode when address changes (non-blocking)
+    if (addressChanged && data.address) {
+      geocodeAddress(data.address, data.city, data.state)
+        .then(async (result) => {
+          if (result) {
+            await db
+              .from('sellers')
+              .update({
+                latitude: result.latitude,
+                longitude: result.longitude,
+                geocode_status: 'success',
+              })
+              .eq('wallet_address', wallet.toLowerCase());
+          } else {
+            await db
+              .from('sellers')
+              .update({ geocode_status: 'failed' })
+              .eq('wallet_address', wallet.toLowerCase());
+          }
+        })
+        .catch((err) => {
+          console.error('[Sellers PATCH] Geocode error:', err);
+        });
     }
 
     return NextResponse.json({

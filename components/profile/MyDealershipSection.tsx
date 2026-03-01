@@ -11,7 +11,10 @@ import { APP_DOMAIN } from '@/lib/config/features';
 import { CopyPanel } from './CopyPanel';
 import { DealerPreviewCard } from './DealerPreviewCard';
 import { SellerForm } from './SellerForm';
+import { ServiceAreaSettings } from './ServiceAreaSettings';
 import { RoleChanger } from './RoleChanger';
+import { FEATURE_NEAR_ME } from '@/lib/config/features';
+import type { CatalogDisplayMode } from '@/lib/geo/types';
 
 interface MyDealershipSectionProps {
   seller: Seller;
@@ -84,6 +87,21 @@ export function MyDealershipSection({
 
       {/* Seller form */}
       <SellerForm seller={seller} address={address} refetch={refetch} />
+
+      {/* Service Area & Display Settings */}
+      {FEATURE_NEAR_ME && (
+        <ServiceAreaSettings
+          seller={seller}
+          onSave={async (updates) => {
+            await fetch('/api/sellers', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ wallet: address, ...updates }),
+            })
+            refetch()
+          }}
+        />
+      )}
 
       {/* Role changer — LAST */}
       <RoleChanger

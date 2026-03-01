@@ -40,6 +40,9 @@ const UpdateDealerProfileInput = z.object({
   social_instagram: z.string().max(100).optional().describe('Instagram handle'),
   social_facebook: z.string().max(200).optional().describe('Facebook URL'),
   social_tiktok: z.string().max(100).optional().describe('TikTok handle'),
+  service_radius_km: z.number().min(5).max(500).optional().describe('Service area radius in km'),
+  catalog_display_mode: z.enum(['service_area', 'full_catalog', 'personal_only']).optional()
+    .describe('Catalog display mode for subdomain: service_area (nearby dealers), full_catalog (all), personal_only (own inventory)'),
 })
 
 const GetProfileCompletionInput = z.object({})

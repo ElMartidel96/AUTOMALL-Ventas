@@ -28,7 +28,8 @@ import {
   Car,
   MessageCircle,
 } from 'lucide-react';
-import { FEATURE_WEB3_VISIBLE, FEATURE_CGC_TOKEN } from '@/lib/config/features';
+import { FEATURE_WEB3_VISIBLE, FEATURE_CGC_TOKEN, FEATURE_NEAR_ME } from '@/lib/config/features';
+import { MapPin } from 'lucide-react';
 import { useTenant } from '@/lib/tenant/TenantProvider';
 import { DEFAULT_LOGO_NAV } from '@/lib/config/defaults';
 import { useUser } from '@/hooks/useUser';
@@ -88,6 +89,16 @@ export const Navbar: React.FC = () => {
               <Car className="w-3.5 h-3.5" />
               {t('catalog')}
             </Link>
+
+            {FEATURE_NEAR_ME && (
+              <Link
+                href="/map"
+                className="text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors text-sm font-bold flex items-center gap-1 px-2"
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                {t('map')}
+              </Link>
+            )}
 
             {!isSubdomain && isDealer && (
               <Link
@@ -158,6 +169,17 @@ export const Navbar: React.FC = () => {
                 <Car className="w-4 h-4" />
                 {t('catalog')}
               </Link>
+
+              {FEATURE_NEAR_ME && (
+                <Link
+                  href="/map"
+                  className="block text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors px-4 py-3 font-bold text-base flex items-center gap-2"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <MapPin className="w-4 h-4" />
+                  {t('map')}
+                </Link>
+              )}
 
               {!isSubdomain && isDealer && (
                 <>

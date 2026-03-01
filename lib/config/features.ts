@@ -65,6 +65,9 @@ export const FEATURE_AI_AGENT_CONNECTOR = envBool('NEXT_PUBLIC_FEATURE_AI_AGENT_
 /** Enable Meta integration (WhatsApp Catalog Feed + Facebook Auto-Publishing) */
 export const FEATURE_META_INTEGRATION = envBool('NEXT_PUBLIC_FEATURE_META_INTEGRATION', true)
 
+/** Enable Near Me map system (dealer locations, service areas, geo-filtering) */
+export const FEATURE_NEAR_ME = envBool('NEXT_PUBLIC_FEATURE_NEAR_ME', true)
+
 // ---------------------------------------------------------------------------
 // App Identity
 // ---------------------------------------------------------------------------

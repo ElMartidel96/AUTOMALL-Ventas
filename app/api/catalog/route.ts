@@ -29,6 +29,10 @@ const querySchema = z.object({
   sort: z.enum(['newest', 'price_asc', 'price_desc', 'year_desc', 'mileage_asc']).optional(),
   page: z.coerce.number().int().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(50).optional(),
+  // Geo-filtering (Near Me)
+  lat: z.coerce.number().min(-90).max(90).optional(),
+  lng: z.coerce.number().min(-180).max(180).optional(),
+  radius: z.coerce.number().min(1).max(500).optional(),
 });
 
 function sanitizeVehicle(v: Record<string, unknown>) {
@@ -58,6 +62,7 @@ export async function GET(request: NextRequest) {
       sort = 'newest',
       page = 1,
       limit = 24,
+      lat, lng, radius,
     } = parsed.data;
 
     // Also check x-seller-handle header (set by middleware for subdomain requests)
@@ -73,8 +78,54 @@ export async function GET(request: NextRequest) {
       .select('*', { count: 'exact' })
       .eq('status', 'active');
 
-    // Filter by seller handle (subdomain or query param)
-    if (effectiveSellerHandle) query = query.eq('seller_handle', effectiveSellerHandle);
+    // ── Geo-aware seller filtering ──────────────────────────────────
+    if (effectiveSellerHandle) {
+      // Subdomain request — check seller's catalog_display_mode
+      const { data: sellerGeo } = await supabase
+        .from('sellers')
+        .select('catalog_display_mode, latitude, longitude, service_radius_km')
+        .eq('handle', effectiveSellerHandle)
+        .single();
+
+      switch (sellerGeo?.catalog_display_mode) {
+        case 'personal_only':
+          query = query.eq('seller_handle', effectiveSellerHandle);
+          break;
+        case 'full_catalog':
+          // No seller filter — show all active vehicles
+          break;
+        case 'service_area':
+        default:
+          if (sellerGeo?.latitude && sellerGeo?.longitude) {
+            const { data: nearbyHandles } = await supabase.rpc('seller_handles_in_service_area', {
+              dealer_lat: sellerGeo.latitude,
+              dealer_lng: sellerGeo.longitude,
+              dealer_radius: sellerGeo.service_radius_km || 40,
+            });
+            if (nearbyHandles && nearbyHandles.length > 0) {
+              query = query.in('seller_handle', nearbyHandles);
+            } else {
+              query = query.eq('seller_handle', effectiveSellerHandle);
+            }
+          } else {
+            // Not geocoded — fallback to personal only
+            query = query.eq('seller_handle', effectiveSellerHandle);
+          }
+          break;
+      }
+    } else if (lat !== undefined && lng !== undefined) {
+      // Near Me geo-filter (non-subdomain, user location)
+      const searchRadius = radius || 50;
+      const { data: nearbyHandles } = await supabase.rpc('seller_handles_in_service_area', {
+        dealer_lat: lat,
+        dealer_lng: lng,
+        dealer_radius: searchRadius,
+      });
+      if (nearbyHandles && nearbyHandles.length > 0) {
+        query = query.in('seller_handle', nearbyHandles);
+      }
+      // If no nearby sellers, show all (don't filter)
+    }
 
     // Filters
     if (brand) query = query.ilike('brand', brand);
