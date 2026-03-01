@@ -27,7 +27,8 @@ const TABS: Array<{ key: string; status?: VehicleStatus }> = [
 
 function InventoryContent() {
   const t = useTranslations('inventory');
-  const { address } = useAccount();
+  const { address: rawAddress } = useAccount();
+  const address = rawAddress?.toLowerCase();
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showForm, setShowForm] = useState(false);

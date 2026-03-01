@@ -30,6 +30,10 @@ const createVehicleSchema = z.object({
   engine: z.string().max(100).optional().nullable(),
   description: z.string().max(5000).optional().nullable(),
   features: z.array(z.string().max(100)).max(50).optional(),
+  contact_phone: z.string().max(20).optional().nullable(),
+  contact_whatsapp: z.string().max(20).optional().nullable(),
+  contact_city: z.string().max(100).optional().nullable(),
+  contact_state: z.string().max(50).optional().nullable(),
 });
 
 export async function GET(request: NextRequest) {
@@ -113,11 +117,11 @@ export async function POST(request: NextRequest) {
 
     const supabase = getTypedClient();
 
-    // Lookup seller_handle from seller_address
+    // Lookup seller_handle + contact defaults from seller_address
     let sellerHandle: string | undefined;
     const { data: sellerRow } = await supabase
       .from('sellers')
-      .select('handle')
+      .select('handle, phone, whatsapp, city, state')
       .eq('wallet_address', parsed.data.seller_address.toLowerCase())
       .eq('is_active', true)
       .single();
@@ -129,6 +133,10 @@ export async function POST(request: NextRequest) {
       ...parsed.data,
       seller_address: parsed.data.seller_address.toLowerCase(),
       seller_handle: sellerHandle,
+      contact_phone: parsed.data.contact_phone ?? sellerRow?.phone ?? null,
+      contact_whatsapp: parsed.data.contact_whatsapp ?? sellerRow?.whatsapp ?? null,
+      contact_city: parsed.data.contact_city ?? sellerRow?.city ?? 'Houston',
+      contact_state: parsed.data.contact_state ?? sellerRow?.state ?? 'TX',
       status: 'draft' as const,
     };
 

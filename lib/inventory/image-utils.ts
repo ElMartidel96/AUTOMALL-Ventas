@@ -17,9 +17,9 @@ export interface CompressOptions {
 }
 
 const DEFAULTS: Required<CompressOptions> = {
-  maxWidth: 2048,
-  maxHeight: 2048,
-  quality: 0.85,
+  maxWidth: 1920,
+  maxHeight: 1920,
+  quality: 0.82,
   type: 'image/webp',
 };
 
@@ -138,13 +138,13 @@ export async function hasTransparency(file: File): Promise<boolean> {
 }
 
 export interface SmartCompressOptions {
-  /** Max output width in pixels (default: 2048 — sharp for car photos) */
+  /** Max output width in pixels (default: 1920 — Full HD, excellent for car photos) */
   maxWidth?: number;
-  /** Max output height in pixels (default: 2048) */
+  /** Max output height in pixels (default: 1920) */
   maxHeight?: number;
-  /** Starting quality 0-1 (default: 0.88 — high fidelity) */
+  /** Starting quality 0-1 (default: 0.82 — high fidelity, efficient) */
   initialQuality?: number;
-  /** Target max file size in bytes (default: 4MB — safe under server limit) */
+  /** Target max file size in bytes (default: 1.5MB — safe for per-image upload) */
   maxOutputBytes?: number;
   /** Try to preserve PNG transparency (default: true) */
   preserveTransparency?: boolean;
@@ -163,8 +163,8 @@ export interface SmartCompressOptions {
  * 7. Never rejects — always produces a usable output
  *
  * Quality preservation strategy:
- * - 2048px max dimension = excellent for car listing photos (covers 2K displays)
- * - WebP at 0.88 quality = virtually indistinguishable from original
+ * - 1920px max dimension = Full HD, excellent for car listing photos
+ * - WebP at 0.82 quality = excellent visual quality, efficient file size
  * - Only reduces quality/dimensions as last resort for truly enormous files
  */
 export async function compressImageSmart(
@@ -172,10 +172,10 @@ export async function compressImageSmart(
   options: SmartCompressOptions = {},
 ): Promise<{ blob: Blob; format: string; finalQuality: number; originalSize: number }> {
   const {
-    maxWidth = 2048,
-    maxHeight = 2048,
-    initialQuality = 0.88,
-    maxOutputBytes = 4 * 1024 * 1024, // 4MB — safe headroom under server limit
+    maxWidth = 1920,
+    maxHeight = 1920,
+    initialQuality = 0.82,
+    maxOutputBytes = 1.5 * 1024 * 1024, // 1.5MB — ensures safe per-image upload under Vercel limit
     preserveTransparency = true,
   } = options;
 

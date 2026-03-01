@@ -2407,7 +2407,13 @@
       "description": "Description",
       "descriptionPlaceholder": "Describe this vehicle — maintenance history, notable features, reason for selling...",
       "required": "This field is required",
-      "select": "Select..."
+      "select": "Select...",
+      "contactPhone": "Contact Phone",
+      "contactWhatsApp": "WhatsApp Number",
+      "contactCity": "City",
+      "contactState": "State",
+      "contactSection": "Contact Information",
+      "contactHint": "Prefilled from your dealer profile. Edit if different for this vehicle."
     },
     "steps": {
       "vehicle": "Vehicle",
@@ -2614,7 +2620,8 @@
       "email": "Email",
       "schedule": "Schedule Visit",
       "sellerName": "Sold by {name}",
-      "noContact": "Request Info"
+      "noContact": "Request Info",
+      "noContactAvailable": "Contact the seller through the platform"
     },
     "related": {
       "title": "Similar Vehicles",

@@ -31,6 +31,10 @@ const updateVehicleSchema = z.object({
   engine: z.string().max(100).optional().nullable(),
   description: z.string().max(5000).optional().nullable(),
   features: z.array(z.string().max(100)).max(50).optional(),
+  contact_phone: z.string().max(20).optional().nullable(),
+  contact_whatsapp: z.string().max(20).optional().nullable(),
+  contact_city: z.string().max(100).optional().nullable(),
+  contact_state: z.string().max(50).optional().nullable(),
 });
 
 type RouteContext = { params: Promise<{ id: string }> };

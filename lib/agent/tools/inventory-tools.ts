@@ -45,6 +45,10 @@ const AddVehicleInput = z.object({
   features: z.array(z.string()).optional().describe('List of features (e.g. ["Bluetooth", "Backup Camera", "Sunroof"])'),
   vin: z.string().max(17).optional().describe('VIN number'),
   price_negotiable: z.boolean().optional().describe('Whether the price is negotiable'),
+  contact_phone: z.string().max(20).optional().describe('Contact phone for this vehicle'),
+  contact_whatsapp: z.string().max(20).optional().describe('WhatsApp number for this vehicle'),
+  contact_city: z.string().max(100).optional().describe('City where the vehicle is located'),
+  contact_state: z.string().max(50).optional().describe('State where the vehicle is located'),
 })
 
 const UpdateVehicleInput = z.object({
@@ -63,6 +67,10 @@ const UpdateVehicleInput = z.object({
   drivetrain: z.enum(['fwd', 'rwd', 'awd', '4wd']).optional(),
   features: z.array(z.string()).optional().describe('Updated features list'),
   price_negotiable: z.boolean().optional(),
+  contact_phone: z.string().max(20).optional().describe('Contact phone for this vehicle'),
+  contact_whatsapp: z.string().max(20).optional().describe('WhatsApp number for this vehicle'),
+  contact_city: z.string().max(100).optional().describe('City where the vehicle is located'),
+  contact_state: z.string().max(50).optional().describe('State where the vehicle is located'),
 })
 
 const UpdateVehicleStatusInput = z.object({
@@ -83,6 +91,12 @@ const DecodeVinInput = z.object({
 })
 
 // ===================================================
+// HELPERS
+// ===================================================
+
+const norm = (a: string) => a.toLowerCase()
+
+// ===================================================
 // HANDLERS
 // ===================================================
 
@@ -92,7 +106,7 @@ async function listMyVehicles(input: z.infer<typeof ListMyVehiclesInput>, ctx: T
   let query = supabaseAdmin
     .from('vehicles')
     .select('id, brand, model, year, price, condition, mileage, status, exterior_color, body_type, primary_image_url, image_count, views_count, inquiries_count, created_at, published_at', { count: 'exact' })
-    .eq('seller_address', ctx.walletAddress)
+    .eq('seller_address', norm(ctx.walletAddress))
     .order('created_at', { ascending: false })
 
   if (input.status) query = query.eq('status', input.status)
@@ -111,10 +125,25 @@ async function listMyVehicles(input: z.infer<typeof ListMyVehiclesInput>, ctx: T
 async function addVehicle(input: z.infer<typeof AddVehicleInput>, ctx: ToolContext) {
   if (!supabaseAdmin) throw new Error('Database not configured')
 
+  // Lookup seller_handle from wallet address
+  let sellerHandle: string | undefined
+  const { data: sellerRow } = await supabaseAdmin
+    .from('sellers')
+    .select('handle, phone, whatsapp, city, state')
+    .eq('wallet_address', norm(ctx.walletAddress))
+    .eq('is_active', true)
+    .single()
+  if (sellerRow?.handle) sellerHandle = sellerRow.handle
+
   const { data, error } = await supabaseAdmin
     .from('vehicles')
     .insert({
-      seller_address: ctx.walletAddress,
+      seller_address: norm(ctx.walletAddress),
+      seller_handle: sellerHandle,
+      contact_phone: input.contact_phone ?? sellerRow?.phone ?? null,
+      contact_whatsapp: input.contact_whatsapp ?? sellerRow?.whatsapp ?? null,
+      contact_city: input.contact_city ?? sellerRow?.city ?? 'Houston',
+      contact_state: input.contact_state ?? sellerRow?.state ?? 'TX',
       brand: input.brand,
       model: input.model,
       year: input.year,
@@ -166,7 +195,7 @@ async function updateVehicle(input: z.infer<typeof UpdateVehicleInput>, ctx: Too
     .eq('id', vehicle_id)
     .single()
 
-  if (!existing || existing.seller_address !== ctx.walletAddress) {
+  if (!existing || existing.seller_address !== norm(ctx.walletAddress)) {
     throw new Error('Vehicle not found or not owned by you')
   }
 
@@ -191,7 +220,7 @@ async function updateVehicleStatus(input: z.infer<typeof UpdateVehicleStatusInpu
     .eq('id', input.vehicle_id)
     .single()
 
-  if (!existing || existing.seller_address !== ctx.walletAddress) {
+  if (!existing || existing.seller_address !== norm(ctx.walletAddress)) {
     throw new Error('Vehicle not found or not owned by you')
   }
 
@@ -216,7 +245,7 @@ async function deleteVehicle(input: z.infer<typeof DeleteVehicleInput>, ctx: Too
     .eq('id', input.vehicle_id)
     .single()
 
-  if (!existing || existing.seller_address !== ctx.walletAddress) {
+  if (!existing || existing.seller_address !== norm(ctx.walletAddress)) {
     throw new Error('Vehicle not found or not owned by you')
   }
 
@@ -244,7 +273,7 @@ async function getVehicleImages(input: z.infer<typeof GetVehicleImagesInput>, ct
     .eq('id', input.vehicle_id)
     .single()
 
-  if (!vehicle || vehicle.seller_address !== ctx.walletAddress) {
+  if (!vehicle || vehicle.seller_address !== norm(ctx.walletAddress)) {
     throw new Error('Vehicle not found or not owned by you')
   }
 

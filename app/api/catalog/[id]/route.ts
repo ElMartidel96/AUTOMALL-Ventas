@@ -94,6 +94,10 @@ export async function GET(
       success: true,
       data: {
         ...vehicleSafe,
+        contact_phone: vehicleSafe.contact_phone ?? null,
+        contact_whatsapp: vehicleSafe.contact_whatsapp ?? null,
+        contact_city: vehicleSafe.contact_city ?? null,
+        contact_state: vehicleSafe.contact_state ?? null,
         seller_contact: sellerContact,
         images: images || [],
         related: (related || []).map(sanitizeVehicle),

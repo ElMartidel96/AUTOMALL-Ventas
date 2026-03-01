@@ -648,6 +648,7 @@ export interface Database {
         Row: {
           id: string
           seller_address: string
+          seller_handle: string | null
           vin: string | null
           brand: string
           model: string
@@ -672,6 +673,10 @@ export interface Database {
           image_count: number
           views_count: number
           inquiries_count: number
+          contact_phone: string | null
+          contact_whatsapp: string | null
+          contact_city: string | null
+          contact_state: string | null
           created_at: string
           updated_at: string
           published_at: string | null
@@ -680,6 +685,7 @@ export interface Database {
         Insert: {
           id?: string
           seller_address: string
+          seller_handle?: string | null
           vin?: string | null
           brand: string
           model: string
@@ -704,6 +710,10 @@ export interface Database {
           image_count?: number
           views_count?: number
           inquiries_count?: number
+          contact_phone?: string | null
+          contact_whatsapp?: string | null
+          contact_city?: string | null
+          contact_state?: string | null
           created_at?: string
           updated_at?: string
           published_at?: string | null
@@ -712,6 +722,7 @@ export interface Database {
         Update: {
           id?: string
           seller_address?: string
+          seller_handle?: string | null
           vin?: string | null
           brand?: string
           model?: string
@@ -736,6 +747,10 @@ export interface Database {
           image_count?: number
           views_count?: number
           inquiries_count?: number
+          contact_phone?: string | null
+          contact_whatsapp?: string | null
+          contact_city?: string | null
+          contact_state?: string | null
           created_at?: string
           updated_at?: string
           published_at?: string | null

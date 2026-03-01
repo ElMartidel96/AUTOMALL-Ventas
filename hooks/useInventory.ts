@@ -75,7 +75,7 @@ export function useVehicles(seller: string | undefined, filters: VehicleFilters 
     queryKey: ['vehicles', seller, filters],
     queryFn: async () => {
       if (!seller) throw new Error('No seller');
-      const params = new URLSearchParams({ seller });
+      const params = new URLSearchParams({ seller: seller.toLowerCase() });
       if (filters.status) params.set('status', filters.status);
       if (filters.brand) params.set('brand', filters.brand);
       if (filters.search) params.set('search', filters.search);

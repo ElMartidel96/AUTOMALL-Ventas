@@ -3,12 +3,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useAccount } from '@/lib/thirdweb';
-import { useCreateVehicle, useUpdateVehicle, useUploadImages, useDeleteImage, useReorderImages, useVehicle } from '@/hooks/useInventory';
+import { useCreateVehicle, useUpdateVehicle, useDeleteImage, useReorderImages, useVehicle } from '@/hooks/useInventory';
 import { VINDecoder } from './VINDecoder';
 import { ImageUploader, type LocalImage, type UploadedImage } from './ImageUploader';
 import { POPULAR_BRANDS, getYearOptions, BODY_TYPES, EXTERIOR_COLORS, INTERIOR_COLORS, VEHICLE_FEATURES, type DecodedVIN } from '@/lib/inventory/vin-fields';
 import type { VehicleImage } from '@/lib/supabase/types';
-import { Car, Settings, ImageIcon, DollarSign, ChevronLeft, ChevronRight, Loader2, Check } from 'lucide-react';
+import { Car, Settings, ImageIcon, DollarSign, ChevronLeft, ChevronRight, Loader2, Check, Phone, MapPin } from 'lucide-react';
 
 // =====================================================
 // Types
@@ -34,6 +34,10 @@ interface VehicleFormData {
   engine: string;
   description: string;
   features: string[];
+  contact_phone: string;
+  contact_whatsapp: string;
+  contact_city: string;
+  contact_state: string;
 }
 
 interface VehicleFormProps {
@@ -60,6 +64,7 @@ const DEFAULT_DATA: VehicleFormData = {
   condition: 'good', exterior_color: '', interior_color: '',
   transmission: 'automatic', fuel_type: 'gasoline', drivetrain: 'fwd',
   engine: '', description: '', features: [],
+  contact_phone: '', contact_whatsapp: '', contact_city: '', contact_state: '',
 };
 
 // =====================================================
@@ -116,7 +121,8 @@ function InputField({ label, field, type = 'text', placeholder, value, onChange,
 
 export function VehicleForm({ editVehicleId, initialData, existingImages, onSuccess, onCancel }: VehicleFormProps) {
   const t = useTranslations('inventory');
-  const { address } = useAccount();
+  const { address: rawAddress } = useAccount();
+  const address = rawAddress?.toLowerCase();
   const [currentStep, setCurrentStep] = useState(0);
   const [data, setData] = useState<VehicleFormData>({ ...DEFAULT_DATA, ...initialData });
   const [localImages, setLocalImages] = useState<LocalImage[]>([]);
@@ -126,10 +132,31 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
   const [vehicleId, setVehicleId] = useState<string | undefined>(editVehicleId);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
 
   // Fetch existing vehicle data when editing
   const { data: existingVehicle, isLoading: isLoadingVehicle } = useVehicle(editVehicleId);
+
+  // Fetch seller profile for contact prefill on new vehicles
+  useEffect(() => {
+    if (!editVehicleId && address && !prefilled) {
+      fetch(`/api/sellers?wallet=${address}`)
+        .then(res => res.ok ? res.json() : null)
+        .then(json => {
+          if (json?.data) {
+            setData(prev => ({
+              ...prev,
+              contact_phone: prev.contact_phone || json.data.phone || '',
+              contact_whatsapp: prev.contact_whatsapp || json.data.whatsapp || '',
+              contact_city: prev.contact_city || json.data.city || 'Houston',
+              contact_state: prev.contact_state || json.data.state || 'TX',
+            }));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [editVehicleId, address, prefilled]);
 
   // Prefill form with existing vehicle data
   useEffect(() => {
@@ -154,6 +181,10 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
         engine: existingVehicle.engine || '',
         description: existingVehicle.description || '',
         features: existingVehicle.features || [],
+        contact_phone: existingVehicle.contact_phone || '',
+        contact_whatsapp: existingVehicle.contact_whatsapp || '',
+        contact_city: existingVehicle.contact_city || '',
+        contact_state: existingVehicle.contact_state || '',
       });
       // Prefill existing images
       if (existingVehicle.images && existingVehicle.images.length > 0) {
@@ -171,7 +202,6 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
 
   const createVehicle = useCreateVehicle();
   const updateVehicle = useUpdateVehicle();
-  const uploadImages = useUploadImages();
   const deleteImage = useDeleteImage();
   const reorderImgs = useReorderImages();
 
@@ -268,6 +298,10 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
           engine: data.engine || null,
           description: data.description || null,
           features: data.features,
+          contact_phone: data.contact_phone || null,
+          contact_whatsapp: data.contact_whatsapp || null,
+          contact_city: data.contact_city || null,
+          contact_state: data.contact_state || null,
         });
         return vehicleId;
       } else {
@@ -292,6 +326,10 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
           engine: data.engine || null,
           description: data.description || null,
           features: data.features,
+          contact_phone: data.contact_phone || null,
+          contact_whatsapp: data.contact_whatsapp || null,
+          contact_city: data.contact_city || null,
+          contact_state: data.contact_state || null,
         });
         setVehicleId(result.id);
         return result.id;
@@ -306,13 +344,35 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
   const goNext = async () => {
     if (!validateStep()) return;
 
-    // Try auto-save but don't block navigation if it fails (e.g. Supabase not configured)
+    // Auto-save draft on steps 0 and 1
     if (currentStep <= 1) {
       try {
         await saveDraft();
       } catch {
-        // Save failed — allow advancing anyway so user can fill the full form
         console.warn('[VehicleForm] Auto-save failed, continuing to next step');
+      }
+    }
+
+    // On photos step (2): auto-upload pending images before advancing
+    if (currentStep === 2) {
+      // Wait if images are still compressing
+      if (localImages.some(img => img.status === 'compressing')) {
+        return; // User sees "Optimizing" overlay — they'll click Next again after
+      }
+
+      const readyImages = localImages.filter(img => img.status === 'ready');
+      if (readyImages.length > 0) {
+        // Ensure we have a vehicleId (auto-save if needed)
+        let vId = vehicleId;
+        if (!vId) {
+          try {
+            vId = await saveDraft() ?? undefined;
+            if (!vId) return;
+          } catch {
+            return;
+          }
+        }
+        await handleUploadAll(vId);
       }
     }
 
@@ -321,33 +381,57 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
 
   const goBack = () => setCurrentStep(prev => Math.max(prev - 1, 0));
 
-  // Upload local images — only ready ones, skip errored
-  const handleUploadAll = async () => {
-    if (!vehicleId || !address) return;
+  // Upload local images — ONE AT A TIME for reliability (stays under Vercel ~4.5MB body limit)
+  const handleUploadAll = async (overrideVehicleId?: string) => {
+    const vId = overrideVehicleId || vehicleId;
+    if (!vId || !address) return;
     const readyImages = localImages.filter(img => img.status === 'ready');
     if (readyImages.length === 0) return;
 
-    // Use the compressed blob (always available for 'ready' images)
-    const blobs = readyImages.map(img => img.compressed || img.file);
+    setIsUploading(true);
 
-    try {
-      // Mark only ready images as uploading
-      setLocalImages(prev => prev.map(img =>
-        img.status === 'ready' ? { ...img, status: 'uploading' as const } : img
-      ));
-      const result = await uploadImages.mutateAsync({ vehicleId, seller: address, files: blobs });
+    // Mark all ready images as uploading
+    setLocalImages(prev => prev.map(img =>
+      img.status === 'ready' ? { ...img, status: 'uploading' as const } : img
+    ));
 
-      // Move uploaded to uploaded list
-      const newUploaded = result.uploaded.map(u => ({ id: u.id, public_url: u.public_url, display_order: u.display_order }));
-      setUploadedImages(prev => [...prev, ...newUploaded]);
-      // Remove successfully uploaded images, keep errored ones
-      setLocalImages(prev => prev.filter(img => img.status === 'error'));
-    } catch (err) {
-      console.error('[VehicleForm] Upload error:', err);
-      setLocalImages(prev => prev.map(img =>
-        img.status === 'uploading' ? { ...img, status: 'error' as const, error: 'Upload failed' } : img
-      ));
+    // Upload each image individually — never exceeds body limit
+    for (const img of readyImages) {
+      try {
+        const blob = img.compressed || img.file;
+        const formData = new FormData();
+        formData.append('seller', address);
+        formData.append('images', blob);
+
+        const res = await fetch(`/api/inventory/${vId}/images`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        const json = await res.json();
+
+        if (res.ok && json.success && json.data?.uploaded?.length > 0) {
+          const newUploaded = json.data.uploaded.map((u: { id: string; public_url: string; display_order: number }) => ({
+            id: u.id,
+            public_url: u.public_url,
+            display_order: u.display_order,
+          }));
+          // Move from local → uploaded (real-time visual feedback)
+          setLocalImages(prev => prev.filter(i => i.id !== img.id));
+          setUploadedImages(prev => [...prev, ...newUploaded]);
+        } else {
+          setLocalImages(prev => prev.map(i =>
+            i.id === img.id ? { ...i, status: 'error' as const, error: json.error || 'Upload failed' } : i
+          ));
+        }
+      } catch {
+        setLocalImages(prev => prev.map(i =>
+          i.id === img.id ? { ...i, status: 'error' as const, error: 'Upload failed' } : i
+        ));
+      }
     }
+
+    setIsUploading(false);
   };
 
   // Publish
@@ -356,13 +440,12 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
 
     setIsPublishing(true);
     try {
-      // Save final data
       const id = await saveDraft();
       if (!id) return;
 
-      // Upload remaining images
-      if (localImages.length > 0) {
-        await handleUploadAll();
+      // Upload remaining ready images (pass id to avoid stale state)
+      if (localImages.some(img => img.status === 'ready')) {
+        await handleUploadAll(id);
       }
 
       // Change status to active
@@ -392,14 +475,14 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
     try {
       const id = await saveDraft();
       if (!id) return;
-      if (localImages.length > 0) await handleUploadAll();
+      if (localImages.some(img => img.status === 'ready')) await handleUploadAll(id);
       onSuccess(id);
     } finally {
       setIsPublishing(false);
     }
   };
 
-  const isSaving = createVehicle.isPending || updateVehicle.isPending || isPublishing;
+  const isSaving = createVehicle.isPending || updateVehicle.isPending || isPublishing || isUploading;
 
   // Helper to create props for SelectField
   const selectProps = (field: keyof VehicleFormData) => ({
@@ -550,12 +633,12 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
             />
             {localImages.length > 0 && (
               <button
-                onClick={handleUploadAll}
-                disabled={uploadImages.isPending}
+                onClick={() => handleUploadAll()}
+                disabled={isUploading || !localImages.some(img => img.status === 'ready')}
                 className="w-full py-2 bg-am-blue hover:bg-am-blue-light text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {uploadImages.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                {t('images.upload')} ({localImages.length})
+                {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {t('images.upload')} ({localImages.filter(img => img.status === 'ready').length})
               </button>
             )}
           </div>
@@ -604,6 +687,27 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
                 className="w-full px-3 py-2 bg-white/50 dark:bg-am-dark/50 border border-gray-200 dark:border-am-blue/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-am-orange/50 resize-none"
               />
             </div>
+            {/* Contact Information */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Phone className="w-4 h-4 text-am-orange" />
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('form.contactSection')}</h3>
+              </div>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">{t('form.contactHint')}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <InputField label={t('form.contactPhone')} field="contact_phone" value={data.contact_phone} onChange={(v) => setField('contact_phone', String(v))} placeholder="+1 832 000 0000" />
+                <InputField label={t('form.contactWhatsApp')} field="contact_whatsapp" value={data.contact_whatsapp} onChange={(v) => setField('contact_whatsapp', String(v))} placeholder="18320000000" />
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <InputField label={t('form.contactCity')} field="contact_city" value={data.contact_city} onChange={(v) => setField('contact_city', String(v))} placeholder="Houston" />
+                  </div>
+                  <div className="w-24">
+                    <InputField label={t('form.contactState')} field="contact_state" value={data.contact_state} onChange={(v) => setField('contact_state', String(v))} placeholder="TX" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Summary */}
             <div className="glass-crystal rounded-xl p-4 space-y-2">
               <h3 className="font-medium text-gray-900 dark:text-white text-sm">{t('steps.summary')}</h3>

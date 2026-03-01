@@ -2407,7 +2407,13 @@
       "description": "Descripción",
       "descriptionPlaceholder": "Describe este vehículo — historial de mantenimiento, características destacadas, razón de venta...",
       "required": "Este campo es requerido",
-      "select": "Seleccionar..."
+      "select": "Seleccionar...",
+      "contactPhone": "Teléfono de Contacto",
+      "contactWhatsApp": "Número de WhatsApp",
+      "contactCity": "Ciudad",
+      "contactState": "Estado",
+      "contactSection": "Información de Contacto",
+      "contactHint": "Prellenado desde tu perfil de dealer. Edita si es diferente para este vehículo."
     },
     "steps": {
       "vehicle": "Vehículo",
@@ -2614,7 +2620,8 @@
       "email": "Email",
       "schedule": "Agendar Visita",
       "sellerName": "Vendido por {name}",
-      "noContact": "Solicitar Info"
+      "noContact": "Solicitar Info",
+      "noContactAvailable": "Contacta al vendedor a través de la plataforma"
     },
     "related": {
       "title": "Vehiculos Similares",

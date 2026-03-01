@@ -50,13 +50,15 @@ export default function VehicleDetailPage({ params }: { params: { id: string } }
   const { data: vehicle, isLoading, error } = useCatalogVehicle(id);
   const { seller, isSubdomain } = useTenant();
 
-  // Priority: subdomain tenant > per-vehicle seller_contact > default fallback
+  // Priority: subdomain tenant > per-vehicle contact > seller_contact fallback > null
   const contactPhone = (isSubdomain && seller?.phone)
+    || vehicle?.contact_phone
     || vehicle?.seller_contact?.phone
     || null;
   const contactWhatsApp = (isSubdomain && seller?.whatsapp)
+    || vehicle?.contact_whatsapp
     || vehicle?.seller_contact?.whatsapp
-    || '18320000000';
+    || null;
   const sellerName = (isSubdomain && seller?.business_name)
     || vehicle?.seller_contact?.business_name
     || null;
@@ -184,23 +186,13 @@ export default function VehicleDetailPage({ params }: { params: { id: string } }
                   </p>
                 )}
                 <div className="flex flex-col sm:flex-row gap-3">
-                  {contactPhone ? (
+                  {contactPhone && (
                     <a
                       href={`tel:${contactPhone}`}
                       className="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-am-orange to-am-orange-light text-white px-5 py-3 rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"
                     >
                       <Phone className="w-4 h-4" />
                       {t('contact.call')}
-                    </a>
-                  ) : (
-                    <a
-                      href={`https://wa.me/${contactWhatsApp}?text=${encodeURIComponent(`Hola! Me interesa el ${title}${vehicle.year ? ` ${vehicle.year}` : ''}${vehicle.mileage ? `, ${Number(vehicle.mileage).toLocaleString()} mi` : ''}${vehicle.price ? `, $${Number(vehicle.price).toLocaleString()}` : ''}. Necesito más información. Gracias!`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-am-blue to-am-blue-light text-white px-5 py-3 rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      {t('contact.noContact')}
                     </a>
                   )}
                   {contactWhatsApp && (
@@ -213,6 +205,12 @@ export default function VehicleDetailPage({ params }: { params: { id: string } }
                       <MessageCircle className="w-4 h-4" />
                       {t('contact.whatsapp')}
                     </a>
+                  )}
+                  {!contactPhone && !contactWhatsApp && (
+                    <div className="flex-1 text-center py-3 px-5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-sm">
+                      <Mail className="w-4 h-4 inline mr-2" />
+                      {t('contact.noContactAvailable')}
+                    </div>
                   )}
                 </div>
               </div>

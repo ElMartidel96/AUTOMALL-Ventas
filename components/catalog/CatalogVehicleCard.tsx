@@ -8,7 +8,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
-import { Car, Camera, Gauge } from 'lucide-react';
+import { Car, Camera, Gauge, Phone } from 'lucide-react';
 import type { CatalogVehicle } from '@/hooks/useCatalog';
 
 interface Props {
@@ -73,11 +73,18 @@ export default function CatalogVehicleCard({ vehicle }: Props) {
           )}
         </p>
 
-        {vehicle.seller_contact?.business_name && (
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-            {t('contact.sellerName', { name: vehicle.seller_contact.business_name })}
-          </p>
-        )}
+        <div className="flex items-center gap-2 mt-0.5">
+          {vehicle.seller_contact?.business_name && (
+            <p className="text-xs text-gray-400 dark:text-gray-500">
+              {t('contact.sellerName', { name: vehicle.seller_contact.business_name })}
+            </p>
+          )}
+          {(vehicle.contact_phone || vehicle.contact_whatsapp) && (
+            <span className="inline-flex items-center gap-0.5 text-xs text-am-green">
+              <Phone className="w-3 h-3" />
+            </span>
+          )}
+        </div>
 
         <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 dark:text-gray-400">
           <span className="flex items-center gap-1">
