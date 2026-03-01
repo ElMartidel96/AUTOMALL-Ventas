@@ -131,6 +131,7 @@ jobs:
       with:
         format: cyclonedx-json
         output-file: sbom.json
+        path: .
       continue-on-error: true
         
     - name: 📜 License Check
