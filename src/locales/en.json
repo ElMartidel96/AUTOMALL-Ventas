@@ -2546,6 +2546,9 @@
     "title": "Vehicle Catalog",
     "subtitle": "Browse our selection of quality vehicles",
     "searchPlaceholder": "Search by brand or model...",
+    "viewGrid": "Grid",
+    "viewMap": "Map",
+    "noVehiclesOnMap": "No vehicles with location data available yet.",
     "noResults": "No Vehicles Found",
     "empty": "Try adjusting your filters or search terms.",
     "photos": "photos",
@@ -3061,6 +3064,32 @@
     "serviceAreaSettings": "Service Area & Display Settings",
     "saved": "Settings saved",
     "dealersNearYou": "Dealers Near You",
-    "exploreMap": "Explore Map"
+    "exploreMap": "Explore Map",
+    "locationBanner": {
+      "title": "Find Dealers & Vehicles Near You",
+      "description": "Enable location to see dealers and vehicles closest to you, with distances and directions.",
+      "privacy": "Your location is never stored or shared",
+      "enable": "Enable Location",
+      "searchManually": "Search by Address",
+      "deniedTitle": "Location Access Blocked",
+      "deniedHint": "You can search by city, zip code, or address below instead.",
+      "errorHint": "Could not detect your location. Try searching by address instead.",
+      "located": "Location detected"
+    },
+    "addressSearch": {
+      "placeholder": "Search by city, zip code, or address..."
+    },
+    "viewMode": {
+      "all": "All",
+      "dealers": "Dealers",
+      "vehicles": "Vehicles"
+    },
+    "vehiclePopup": {
+      "viewDetails": "View Details"
+    },
+    "emptyState": {
+      "hint": "Try expanding the radius or search by a different address.",
+      "trySearch": "Search by Address"
+    }
   }
 }

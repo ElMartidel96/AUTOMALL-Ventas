@@ -2546,6 +2546,9 @@
     "title": "Catalogo de Vehiculos",
     "subtitle": "Explora nuestra seleccion de vehiculos de calidad",
     "searchPlaceholder": "Buscar por marca o modelo...",
+    "viewGrid": "Cuadrícula",
+    "viewMap": "Mapa",
+    "noVehiclesOnMap": "Aún no hay vehículos con datos de ubicación disponibles.",
     "noResults": "No Se Encontraron Vehiculos",
     "empty": "Intenta ajustar tus filtros o terminos de busqueda.",
     "photos": "fotos",
@@ -3061,6 +3064,32 @@
     "serviceAreaSettings": "Area de Servicio y Configuracion",
     "saved": "Configuracion guardada",
     "dealersNearYou": "Dealers Cerca de Ti",
-    "exploreMap": "Explorar Mapa"
+    "exploreMap": "Explorar Mapa",
+    "locationBanner": {
+      "title": "Encuentra Dealers y Vehículos Cerca de Ti",
+      "description": "Activa tu ubicación para ver dealers y vehículos más cercanos, con distancias y direcciones.",
+      "privacy": "Tu ubicación nunca se almacena ni se comparte",
+      "enable": "Activar Ubicación",
+      "searchManually": "Buscar por Dirección",
+      "deniedTitle": "Acceso a Ubicación Bloqueado",
+      "deniedHint": "Puedes buscar por ciudad, código postal o dirección a continuación.",
+      "errorHint": "No se pudo detectar tu ubicación. Intenta buscar por dirección.",
+      "located": "Ubicación detectada"
+    },
+    "addressSearch": {
+      "placeholder": "Buscar por ciudad, código postal o dirección..."
+    },
+    "viewMode": {
+      "all": "Todos",
+      "dealers": "Dealers",
+      "vehicles": "Vehículos"
+    },
+    "vehiclePopup": {
+      "viewDetails": "Ver Detalles"
+    },
+    "emptyState": {
+      "hint": "Intenta ampliar el radio o buscar por otra dirección.",
+      "trySearch": "Buscar por Dirección"
+    }
   }
 }
