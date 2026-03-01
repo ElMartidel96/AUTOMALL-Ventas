@@ -38,6 +38,11 @@ export interface SellerContact {
   phone: string | null;
   whatsapp: string | null;
   logo_url: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface TenantContext {

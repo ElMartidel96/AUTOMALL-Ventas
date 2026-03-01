@@ -132,17 +132,17 @@ export async function POST(request: NextRequest) {
       sellerHandle = sellerRow.handle;
     }
 
+    // Build vehicle data — strip location fields that may not exist in DB yet
+    // (migration 20260301_vehicle_location_fields.sql must be applied separately)
+    const { latitude: _lat, longitude: _lng, location_source: _ls, ...parsedWithoutGeo } = parsed.data;
     const vehicleData = {
-      ...parsed.data,
+      ...parsedWithoutGeo,
       seller_address: parsed.data.seller_address.toLowerCase(),
       seller_handle: sellerHandle,
       contact_phone: parsed.data.contact_phone ?? sellerRow?.phone ?? null,
       contact_whatsapp: parsed.data.contact_whatsapp ?? sellerRow?.whatsapp ?? null,
       contact_city: parsed.data.contact_city ?? sellerRow?.city ?? 'Houston',
       contact_state: parsed.data.contact_state ?? sellerRow?.state ?? 'TX',
-      latitude: parsed.data.latitude ?? sellerRow?.latitude ?? null,
-      longitude: parsed.data.longitude ?? sellerRow?.longitude ?? null,
-      location_source: parsed.data.location_source ?? (sellerRow?.latitude ? 'dealer' : null),
       status: 'draft' as const,
     };
 

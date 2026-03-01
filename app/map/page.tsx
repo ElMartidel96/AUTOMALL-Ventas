@@ -68,19 +68,25 @@ export default function MapPage() {
 
   const isLoading = dealersLoading || vehiclesLoading
 
-  // Auto-request location on mount (only once)
-  useEffect(() => {
-    if (geoStatus === 'idle') {
-      requestLocation()
-    }
-  }, [geoStatus, requestLocation])
+  // DON'T auto-request location — let the user read the banner first
+  // and consciously tap "Activar Ubicación". Auto-requesting causes
+  // browsers (especially mobile) to block the permission silently.
 
-  // When geo is denied, show manual search automatically
+  // When geo is denied/error, auto-show address search
   useEffect(() => {
     if (geoStatus === 'denied' || geoStatus === 'error') {
       setShowManualSearch(true)
     }
   }, [geoStatus])
+
+  // Always show address search on mobile as a visible fallback
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 768)
+    if (window.innerWidth < 768) {
+      setShowManualSearch(true)
+    }
+  }, [])
 
   const handleManualLocation = useCallback((lat: number, lng: number, label: string) => {
     setManualCenter({ latitude: lat, longitude: lng })
