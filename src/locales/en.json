@@ -2436,11 +2436,16 @@
     },
     "images": {
       "dropzone": "Drag & drop photos here, or click to browse",
-      "formats": "JPG, PNG, WebP",
+      "formats": "JPG, PNG, WebP, HEIC",
       "maxSize": "Max 5MB each",
+      "anySize": "Any size — auto-optimized",
       "primary": "Main",
       "upload": "Upload Photos",
-      "photos": "photos"
+      "photos": "photos",
+      "optimizing": "Optimizing...",
+      "uploading": "Uploading...",
+      "compressionFailed": "Could not process this image",
+      "retry": "Retry"
     },
     "specs": {
       "condition": {

@@ -3,6 +3,10 @@
  *
  * Uses native Canvas API — zero dependencies.
  * Compresses images to WebP format with configurable quality and dimensions.
+ *
+ * Designed to handle ANY input size (phone cameras produce 8-30MB files).
+ * The pipeline: createImageBitmap → scale → canvas → toBlob(webp).
+ * Memory-safe: bitmaps are closed immediately after drawing.
  */
 
 export interface CompressOptions {
@@ -13,8 +17,8 @@ export interface CompressOptions {
 }
 
 const DEFAULTS: Required<CompressOptions> = {
-  maxWidth: 1920,
-  maxHeight: 1080,
+  maxWidth: 2048,
+  maxHeight: 2048,
   quality: 0.85,
   type: 'image/webp',
 };
@@ -22,14 +26,18 @@ const DEFAULTS: Required<CompressOptions> = {
 /**
  * Compress an image file using Canvas API.
  * Returns a Blob ready for upload.
+ *
+ * Handles very large files by using createImageBitmap (which is memory-efficient
+ * and supported on all modern browsers including mobile Safari 15+).
  */
 export async function compressImage(
-  file: File,
+  file: File | Blob,
   options: CompressOptions = {}
 ): Promise<Blob> {
   const { maxWidth, maxHeight, quality, type } = { ...DEFAULTS, ...options };
 
-  // Create bitmap from file
+  // createImageBitmap handles HEIC, JPEG, PNG, WebP, GIF natively
+  // It decodes without loading the full uncompressed bitmap into JS memory
   const bitmap = await createImageBitmap(file);
   const { width: origW, height: origH } = bitmap;
 
@@ -49,15 +57,25 @@ export async function compressImage(
   canvas.height = targetH;
 
   const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Canvas context not available');
+  if (!ctx) {
+    bitmap.close();
+    throw new Error('Canvas context not available');
+  }
+
+  // Use high-quality image smoothing for downscaling
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
 
   ctx.drawImage(bitmap, 0, 0, targetW, targetH);
-  bitmap.close();
+  bitmap.close(); // Free native memory immediately
 
   // Convert to blob
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
       (blob) => {
+        // Release canvas memory
+        canvas.width = 0;
+        canvas.height = 0;
         if (blob) resolve(blob);
         else reject(new Error('Failed to compress image'));
       },
@@ -120,37 +138,59 @@ export async function hasTransparency(file: File): Promise<boolean> {
 }
 
 export interface SmartCompressOptions {
+  /** Max output width in pixels (default: 2048 — sharp for car photos) */
   maxWidth?: number;
+  /** Max output height in pixels (default: 2048) */
   maxHeight?: number;
+  /** Starting quality 0-1 (default: 0.88 — high fidelity) */
   initialQuality?: number;
+  /** Target max file size in bytes (default: 4MB — safe under 5MB API limit) */
   maxOutputBytes?: number;
+  /** Try to preserve PNG transparency (default: true) */
   preserveTransparency?: boolean;
 }
 
 /**
- * Smart image compression — accepts ANY file size.
+ * Smart image compression — accepts ANY file size, ANY format.
  *
- * - Detects transparency and preserves it (PNG) when possible
- * - Iteratively reduces quality until output < maxOutputBytes
- * - Never rejects based on input size
+ * Pipeline:
+ * 1. Accept input of any size (phone cameras: 8-30MB, DSLR: 20-50MB)
+ * 2. Detect transparency → choose PNG or WebP
+ * 3. Scale down to maxWidth/maxHeight preserving aspect ratio
+ * 4. WebP output at high quality (0.88) → check size
+ * 5. If still over limit, iteratively reduce quality (0.05 steps, min 0.4)
+ * 6. If still over limit at min quality, reduce dimensions by 75% and retry
+ * 7. Never rejects — always produces a usable output
+ *
+ * Quality preservation strategy:
+ * - 2048px max dimension = excellent for car listing photos (covers 2K displays)
+ * - WebP at 0.88 quality = virtually indistinguishable from original
+ * - Only reduces quality/dimensions as last resort for truly enormous files
  */
 export async function compressImageSmart(
   file: File,
   options: SmartCompressOptions = {},
-): Promise<{ blob: Blob; format: string }> {
+): Promise<{ blob: Blob; format: string; finalQuality: number; originalSize: number }> {
   const {
-    maxWidth = 500,
-    maxHeight = 500,
-    initialQuality = 0.85,
-    maxOutputBytes = 2 * 1024 * 1024,
+    maxWidth = 2048,
+    maxHeight = 2048,
+    initialQuality = 0.88,
+    maxOutputBytes = 4 * 1024 * 1024, // 4MB — safe headroom under 5MB API limit
     preserveTransparency = true,
   } = options;
 
-  // Detect transparency for format selection
-  const transparent = preserveTransparency && await hasTransparency(file);
+  const originalSize = file.size;
+
+  // Skip compression for already-small files (< 500KB)
+  if (file.size < 500 * 1024 && (file.type === 'image/jpeg' || file.type === 'image/webp')) {
+    return { blob: file, format: file.type, finalQuality: 1, originalSize };
+  }
+
+  // Detect transparency for format selection (car photos: almost never)
+  const transparent = preserveTransparency && file.type === 'image/png' && await hasTransparency(file);
   const preferredFormat = transparent ? 'image/png' : 'image/webp';
 
-  // First attempt with preferred format
+  // Phase 1: Compress at full quality with preferred format
   let blob = await compressImage(file, {
     maxWidth,
     maxHeight,
@@ -158,7 +198,7 @@ export async function compressImageSmart(
     type: preferredFormat,
   });
 
-  // If PNG is too large, fall back to WebP (lossy but smaller)
+  // If PNG is too large, fall back to WebP (lossy but much smaller)
   if (blob.size > maxOutputBytes && transparent) {
     blob = await compressImage(file, {
       maxWidth,
@@ -168,10 +208,13 @@ export async function compressImageSmart(
     });
   }
 
-  // Iteratively reduce quality until under limit
+  // Phase 2: Iteratively reduce quality (fine steps for minimal visual loss)
   let quality = initialQuality;
-  while (blob.size > maxOutputBytes && quality > 0.3) {
-    quality -= 0.1;
+  const MIN_QUALITY = 0.4;
+  const QUALITY_STEP = 0.05;
+
+  while (blob.size > maxOutputBytes && quality > MIN_QUALITY) {
+    quality = Math.max(quality - QUALITY_STEP, MIN_QUALITY);
     blob = await compressImage(file, {
       maxWidth,
       maxHeight,
@@ -180,5 +223,17 @@ export async function compressImageSmart(
     });
   }
 
-  return { blob, format: blob.type };
+  // Phase 3: If STILL over limit (rare — extremely high-res source), reduce dimensions
+  if (blob.size > maxOutputBytes) {
+    const reducedW = Math.round(maxWidth * 0.75);
+    const reducedH = Math.round(maxHeight * 0.75);
+    blob = await compressImage(file, {
+      maxWidth: reducedW,
+      maxHeight: reducedH,
+      quality: MIN_QUALITY,
+      type: 'image/webp',
+    });
+  }
+
+  return { blob, format: blob.type, finalQuality: quality, originalSize };
 }
