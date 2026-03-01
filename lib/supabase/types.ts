@@ -677,6 +677,9 @@ export interface Database {
           contact_whatsapp: string | null
           contact_city: string | null
           contact_state: string | null
+          latitude: number | null
+          longitude: number | null
+          location_source: 'dealer' | 'manual' | 'geolocated' | null
           created_at: string
           updated_at: string
           published_at: string | null
@@ -714,6 +717,9 @@ export interface Database {
           contact_whatsapp?: string | null
           contact_city?: string | null
           contact_state?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          location_source?: 'dealer' | 'manual' | 'geolocated' | null
           created_at?: string
           updated_at?: string
           published_at?: string | null
@@ -751,6 +757,9 @@ export interface Database {
           contact_whatsapp?: string | null
           contact_city?: string | null
           contact_state?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          location_source?: 'dealer' | 'manual' | 'geolocated' | null
           created_at?: string
           updated_at?: string
           published_at?: string | null

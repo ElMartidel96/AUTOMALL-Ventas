@@ -64,12 +64,22 @@ export async function GET(
       .limit(4);
 
     // Lookup seller contact if vehicle has seller_handle
-    let sellerContact: { business_name: string; phone: string | null; whatsapp: string | null; logo_url: string | null } | undefined;
+    let sellerContact: {
+      business_name: string
+      phone: string | null
+      whatsapp: string | null
+      logo_url: string | null
+      address: string | null
+      city: string | null
+      state: string | null
+      latitude: number | null
+      longitude: number | null
+    } | undefined;
     const vehicleSafe = sanitizeVehicle(vehicle);
     if (vehicleSafe.seller_handle) {
       const { data: sellerData } = await supabase
         .from('sellers')
-        .select('business_name, phone, whatsapp, logo_url')
+        .select('business_name, phone, whatsapp, logo_url, address, city, state, latitude, longitude')
         .eq('handle', vehicleSafe.seller_handle)
         .eq('is_active', true)
         .single();
@@ -79,6 +89,11 @@ export async function GET(
           phone: sellerData.phone || null,
           whatsapp: sellerData.whatsapp || null,
           logo_url: sellerData.logo_url || null,
+          address: sellerData.address || null,
+          city: sellerData.city || null,
+          state: sellerData.state || null,
+          latitude: sellerData.latitude ?? null,
+          longitude: sellerData.longitude ?? null,
         };
       }
     }

@@ -35,6 +35,9 @@ const updateVehicleSchema = z.object({
   contact_whatsapp: z.string().max(20).optional().nullable(),
   contact_city: z.string().max(100).optional().nullable(),
   contact_state: z.string().max(50).optional().nullable(),
+  latitude: z.coerce.number().min(-90).max(90).optional().nullable(),
+  longitude: z.coerce.number().min(-180).max(180).optional().nullable(),
+  location_source: z.enum(['dealer', 'manual', 'geolocated']).optional().nullable(),
 });
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -108,8 +111,9 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       );
     }
 
-    // Remove seller_address from update payload (not updatable)
-    const { seller_address: _, ...updateData } = parsed.data;
+    // Remove seller_address and location fields from update payload
+    // Location fields may not exist in DB yet (migration pending)
+    const { seller_address: _, latitude: _lat, longitude: _lng, location_source: _ls, ...updateData } = parsed.data;
 
     const { data, error } = await supabase
       .from('vehicles')

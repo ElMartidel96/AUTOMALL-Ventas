@@ -8,7 +8,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
-import { Car, Camera, Gauge, Phone } from 'lucide-react';
+import { Car, Camera, Gauge, Phone, MapPin } from 'lucide-react';
 import type { CatalogVehicle } from '@/hooks/useCatalog';
 
 interface Props {
@@ -84,6 +84,11 @@ export default function CatalogVehicleCard({ vehicle }: Props) {
               <Phone className="w-3 h-3" />
             </span>
           )}
+          {typeof vehicle.latitude === 'number' && typeof vehicle.longitude === 'number' && (
+            <span className="inline-flex items-center gap-0.5 text-xs text-am-blue dark:text-am-blue-light">
+              <MapPin className="w-3 h-3" />
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 dark:text-gray-400">
@@ -96,6 +101,12 @@ export default function CatalogVehicleCard({ vehicle }: Props) {
           )}
           {typeof vehicle.fuel_type === 'string' && vehicle.fuel_type && (
             <span className="capitalize">{vehicle.fuel_type.replace('_', ' ')}</span>
+          )}
+          {typeof vehicle.contact_city === 'string' && vehicle.contact_city && (
+            <span className="flex items-center gap-0.5">
+              <MapPin className="w-3 h-3" />
+              {vehicle.contact_city}{vehicle.contact_state ? `, ${vehicle.contact_state}` : ''}
+            </span>
           )}
         </div>
       </div>

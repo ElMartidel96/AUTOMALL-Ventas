@@ -23,7 +23,14 @@ import {
   Cog,
   Car,
   Loader2,
+  MapPin,
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const VehicleLocationMap = dynamic(
+  () => import('@/components/catalog/VehicleLocationMap'),
+  { ssr: false }
+);
 import { Navbar, NavbarSpacer } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import VehicleGallery from '@/components/catalog/VehicleGallery';
@@ -62,6 +69,20 @@ export default function VehicleDetailPage({ params }: { params: { id: string } }
   const sellerName = (isSubdomain && seller?.business_name)
     || vehicle?.seller_contact?.business_name
     || null;
+
+  // Location — use seller's geocoded address
+  const dealerLat = (isSubdomain && seller?.latitude) || vehicle?.seller_contact?.latitude;
+  const dealerLng = (isSubdomain && seller?.longitude) || vehicle?.seller_contact?.longitude;
+  const dealerCity = vehicle?.contact_city
+    || vehicle?.seller_contact?.city
+    || (isSubdomain && seller?.city)
+    || null;
+  const dealerState = vehicle?.contact_state
+    || vehicle?.seller_contact?.state
+    || (isSubdomain && seller?.state)
+    || null;
+  const dealerAddress = vehicle?.seller_contact?.address || null;
+  const hasLocation = typeof dealerLat === 'number' && typeof dealerLng === 'number';
 
   if (isLoading) {
     return (
@@ -181,10 +202,20 @@ export default function VehicleDetailPage({ params }: { params: { id: string } }
                   {t('contact.title')}
                 </h3>
                 {sellerName && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
                     {t('contact.sellerName', { name: sellerName })}
                   </p>
                 )}
+                {(dealerCity || dealerAddress) && (
+                  <p className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 mb-3">
+                    <MapPin className="w-3 h-3" />
+                    {dealerAddress
+                      ? dealerAddress
+                      : `${dealerCity || ''}${dealerState ? `, ${dealerState}` : ''}`
+                    }
+                  </p>
+                )}
+                {!sellerName && !dealerCity && !dealerAddress && <div className="mb-3" />}
                 <div className="flex flex-col sm:flex-row gap-3">
                   {contactPhone && (
                     <a
@@ -268,6 +299,43 @@ export default function VehicleDetailPage({ params }: { params: { id: string } }
                 {vehicle.description}
               </p>
             </div>
+          </div>
+        </section>
+      )}
+
+      {/* Vehicle Location Map — uses dealer's geocoded location */}
+      {hasLocation && (
+        <section className="py-6 px-4">
+          <div className="container mx-auto max-w-7xl">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-am-orange" />
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                    {t('detail.locationMap')}
+                  </h2>
+                </div>
+                {(dealerCity || dealerAddress) && (
+                  <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                    <MapPin className="w-3.5 h-3.5" />
+                    {dealerAddress
+                      ? dealerAddress
+                      : `${dealerCity || ''}${dealerState ? `, ${dealerState}` : ''}`
+                    }
+                  </div>
+                )}
+              </div>
+              <div className="glass-crystal rounded-2xl overflow-hidden">
+                <VehicleLocationMap
+                  latitude={dealerLat as number}
+                  longitude={dealerLng as number}
+                />
+              </div>
+            </motion.div>
           </div>
         </section>
       )}

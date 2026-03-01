@@ -34,6 +34,9 @@ const createVehicleSchema = z.object({
   contact_whatsapp: z.string().max(20).optional().nullable(),
   contact_city: z.string().max(100).optional().nullable(),
   contact_state: z.string().max(50).optional().nullable(),
+  latitude: z.coerce.number().min(-90).max(90).optional().nullable(),
+  longitude: z.coerce.number().min(-180).max(180).optional().nullable(),
+  location_source: z.enum(['dealer', 'manual', 'geolocated']).optional().nullable(),
 });
 
 export async function GET(request: NextRequest) {
@@ -117,11 +120,11 @@ export async function POST(request: NextRequest) {
 
     const supabase = getTypedClient();
 
-    // Lookup seller_handle + contact defaults from seller_address
+    // Lookup seller_handle + contact/location defaults from seller_address
     let sellerHandle: string | undefined;
     const { data: sellerRow } = await supabase
       .from('sellers')
-      .select('handle, phone, whatsapp, city, state')
+      .select('handle, phone, whatsapp, city, state, latitude, longitude')
       .eq('wallet_address', parsed.data.seller_address.toLowerCase())
       .eq('is_active', true)
       .single();
@@ -129,8 +132,11 @@ export async function POST(request: NextRequest) {
       sellerHandle = sellerRow.handle;
     }
 
+    // Build vehicle data — strip location fields that may not exist in DB yet
+    // (migration 20260301_vehicle_location_fields.sql must be applied separately)
+    const { latitude: _lat, longitude: _lng, location_source: _ls, ...parsedWithoutGeo } = parsed.data;
     const vehicleData = {
-      ...parsed.data,
+      ...parsedWithoutGeo,
       seller_address: parsed.data.seller_address.toLowerCase(),
       seller_handle: sellerHandle,
       contact_phone: parsed.data.contact_phone ?? sellerRow?.phone ?? null,
