@@ -2413,7 +2413,19 @@
       "contactCity": "City",
       "contactState": "State",
       "contactSection": "Contact Information",
-      "contactHint": "Prefilled from your dealer profile. Edit if different for this vehicle."
+      "contactHint": "Prefilled from your dealer profile. Edit if different for this vehicle.",
+      "locationSection": "Vehicle Location",
+      "locationHint": "Set where the vehicle is located. Buyers can see it on the map.",
+      "locationUseDealer": "Use Dealer Address",
+      "locationUseMyLocation": "Use My Location",
+      "locationDragHint": "Drag the pin to adjust the exact location",
+      "locationDetecting": "Detecting location...",
+      "locationDetected": "Location detected",
+      "locationDenied": "Location access denied. Please enable it in your browser settings.",
+      "locationError": "Could not detect location",
+      "locationFromDealer": "From dealer profile",
+      "locationManual": "Set manually",
+      "locationGeolocated": "Current location"
     },
     "steps": {
       "vehicle": "Vehicle",
@@ -2590,7 +2602,9 @@
       "notFoundDesc": "This vehicle is no longer available or does not exist.",
       "backToCatalog": "Back to Catalog",
       "views": "views",
-      "listedOn": "Listed on"
+      "listedOn": "Listed on",
+      "location": "Location",
+      "locationMap": "Vehicle Location"
     },
     "specs": {
       "vehicleInfo": "Vehicle Info",

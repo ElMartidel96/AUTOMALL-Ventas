@@ -35,6 +35,9 @@ const updateVehicleSchema = z.object({
   contact_whatsapp: z.string().max(20).optional().nullable(),
   contact_city: z.string().max(100).optional().nullable(),
   contact_state: z.string().max(50).optional().nullable(),
+  latitude: z.coerce.number().min(-90).max(90).optional().nullable(),
+  longitude: z.coerce.number().min(-180).max(180).optional().nullable(),
+  location_source: z.enum(['dealer', 'manual', 'geolocated']).optional().nullable(),
 });
 
 type RouteContext = { params: Promise<{ id: string }> };

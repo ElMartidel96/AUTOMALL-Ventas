@@ -34,6 +34,9 @@ const createVehicleSchema = z.object({
   contact_whatsapp: z.string().max(20).optional().nullable(),
   contact_city: z.string().max(100).optional().nullable(),
   contact_state: z.string().max(50).optional().nullable(),
+  latitude: z.coerce.number().min(-90).max(90).optional().nullable(),
+  longitude: z.coerce.number().min(-180).max(180).optional().nullable(),
+  location_source: z.enum(['dealer', 'manual', 'geolocated']).optional().nullable(),
 });
 
 export async function GET(request: NextRequest) {
@@ -117,11 +120,11 @@ export async function POST(request: NextRequest) {
 
     const supabase = getTypedClient();
 
-    // Lookup seller_handle + contact defaults from seller_address
+    // Lookup seller_handle + contact/location defaults from seller_address
     let sellerHandle: string | undefined;
     const { data: sellerRow } = await supabase
       .from('sellers')
-      .select('handle, phone, whatsapp, city, state')
+      .select('handle, phone, whatsapp, city, state, latitude, longitude')
       .eq('wallet_address', parsed.data.seller_address.toLowerCase())
       .eq('is_active', true)
       .single();
@@ -137,6 +140,9 @@ export async function POST(request: NextRequest) {
       contact_whatsapp: parsed.data.contact_whatsapp ?? sellerRow?.whatsapp ?? null,
       contact_city: parsed.data.contact_city ?? sellerRow?.city ?? 'Houston',
       contact_state: parsed.data.contact_state ?? sellerRow?.state ?? 'TX',
+      latitude: parsed.data.latitude ?? sellerRow?.latitude ?? null,
+      longitude: parsed.data.longitude ?? sellerRow?.longitude ?? null,
+      location_source: parsed.data.location_source ?? (sellerRow?.latitude ? 'dealer' : null),
       status: 'draft' as const,
     };
 

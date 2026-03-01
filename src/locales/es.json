@@ -2413,7 +2413,19 @@
       "contactCity": "Ciudad",
       "contactState": "Estado",
       "contactSection": "Información de Contacto",
-      "contactHint": "Prellenado desde tu perfil de dealer. Edita si es diferente para este vehículo."
+      "contactHint": "Prellenado desde tu perfil de dealer. Edita si es diferente para este vehículo.",
+      "locationSection": "Ubicación del Vehículo",
+      "locationHint": "Establece dónde se encuentra el vehículo. Los compradores lo verán en el mapa.",
+      "locationUseDealer": "Usar Dirección del Dealer",
+      "locationUseMyLocation": "Usar Mi Ubicación",
+      "locationDragHint": "Arrastra el pin para ajustar la ubicación exacta",
+      "locationDetecting": "Detectando ubicación...",
+      "locationDetected": "Ubicación detectada",
+      "locationDenied": "Acceso a ubicación denegado. Por favor habilítalo en la configuración de tu navegador.",
+      "locationError": "No se pudo detectar la ubicación",
+      "locationFromDealer": "Desde perfil del dealer",
+      "locationManual": "Establecida manualmente",
+      "locationGeolocated": "Ubicación actual"
     },
     "steps": {
       "vehicle": "Vehículo",
@@ -2590,7 +2602,9 @@
       "notFoundDesc": "Este vehiculo ya no esta disponible o no existe.",
       "backToCatalog": "Volver al Catalogo",
       "views": "vistas",
-      "listedOn": "Publicado el"
+      "listedOn": "Publicado el",
+      "location": "Ubicación",
+      "locationMap": "Ubicación del Vehículo"
     },
     "specs": {
       "vehicleInfo": "Info del Vehiculo",

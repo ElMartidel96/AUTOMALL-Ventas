@@ -23,7 +23,14 @@ import {
   Cog,
   Car,
   Loader2,
+  MapPin,
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const VehicleLocationMap = dynamic(
+  () => import('@/components/catalog/VehicleLocationMap'),
+  { ssr: false }
+);
 import { Navbar, NavbarSpacer } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import VehicleGallery from '@/components/catalog/VehicleGallery';
@@ -268,6 +275,32 @@ export default function VehicleDetailPage({ params }: { params: { id: string } }
                 {vehicle.description}
               </p>
             </div>
+          </div>
+        </section>
+      )}
+
+      {/* Vehicle Location Map */}
+      {typeof vehicle.latitude === 'number' && typeof vehicle.longitude === 'number' && (
+        <section className="py-6 px-4">
+          <div className="container mx-auto max-w-7xl">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <MapPin className="w-5 h-5 text-am-orange" />
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {t('detail.locationMap')}
+                </h2>
+              </div>
+              <div className="glass-crystal rounded-2xl overflow-hidden">
+                <VehicleLocationMap
+                  latitude={vehicle.latitude}
+                  longitude={vehicle.longitude}
+                />
+              </div>
+            </motion.div>
           </div>
         </section>
       )}

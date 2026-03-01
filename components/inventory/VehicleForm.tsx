@@ -8,7 +8,8 @@ import { VINDecoder } from './VINDecoder';
 import { ImageUploader, type LocalImage, type UploadedImage } from './ImageUploader';
 import { POPULAR_BRANDS, getYearOptions, BODY_TYPES, EXTERIOR_COLORS, INTERIOR_COLORS, VEHICLE_FEATURES, type DecodedVIN } from '@/lib/inventory/vin-fields';
 import type { VehicleImage } from '@/lib/supabase/types';
-import { Car, Settings, ImageIcon, DollarSign, ChevronLeft, ChevronRight, Loader2, Check, Phone, MapPin } from 'lucide-react';
+import { VehicleLocationPicker } from './VehicleLocationPicker';
+import { Car, Settings, ImageIcon, DollarSign, ChevronLeft, ChevronRight, Loader2, Check, Phone } from 'lucide-react';
 
 // =====================================================
 // Types
@@ -38,6 +39,9 @@ interface VehicleFormData {
   contact_whatsapp: string;
   contact_city: string;
   contact_state: string;
+  latitude: number | null;
+  longitude: number | null;
+  location_source: 'dealer' | 'manual' | 'geolocated' | null;
 }
 
 interface VehicleFormProps {
@@ -65,6 +69,7 @@ const DEFAULT_DATA: VehicleFormData = {
   transmission: 'automatic', fuel_type: 'gasoline', drivetrain: 'fwd',
   engine: '', description: '', features: [],
   contact_phone: '', contact_whatsapp: '', contact_city: '', contact_state: '',
+  latitude: null, longitude: null, location_source: null,
 };
 
 // =====================================================
@@ -134,24 +139,33 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
   const [isPublishing, setIsPublishing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
+  const [dealerCoords, setDealerCoords] = useState<{ lat: number | null; lng: number | null }>({ lat: null, lng: null });
 
   // Fetch existing vehicle data when editing
   const { data: existingVehicle, isLoading: isLoadingVehicle } = useVehicle(editVehicleId);
 
-  // Fetch seller profile for contact prefill on new vehicles
+  // Fetch seller profile for contact + location prefill
   useEffect(() => {
-    if (!editVehicleId && address && !prefilled) {
+    if (address) {
       fetch(`/api/sellers?wallet=${address}`)
         .then(res => res.ok ? res.json() : null)
         .then(json => {
           if (json?.data) {
-            setData(prev => ({
-              ...prev,
-              contact_phone: prev.contact_phone || json.data.phone || '',
-              contact_whatsapp: prev.contact_whatsapp || json.data.whatsapp || '',
-              contact_city: prev.contact_city || json.data.city || 'Houston',
-              contact_state: prev.contact_state || json.data.state || 'TX',
-            }));
+            // Always store dealer coordinates for the location picker
+            setDealerCoords({
+              lat: json.data.latitude ?? null,
+              lng: json.data.longitude ?? null,
+            });
+            // Only prefill form fields for new vehicles
+            if (!editVehicleId && !prefilled) {
+              setData(prev => ({
+                ...prev,
+                contact_phone: prev.contact_phone || json.data.phone || '',
+                contact_whatsapp: prev.contact_whatsapp || json.data.whatsapp || '',
+                contact_city: prev.contact_city || json.data.city || 'Houston',
+                contact_state: prev.contact_state || json.data.state || 'TX',
+              }));
+            }
           }
         })
         .catch(() => {});
@@ -185,6 +199,9 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
         contact_whatsapp: existingVehicle.contact_whatsapp || '',
         contact_city: existingVehicle.contact_city || '',
         contact_state: existingVehicle.contact_state || '',
+        latitude: existingVehicle.latitude ?? null,
+        longitude: existingVehicle.longitude ?? null,
+        location_source: existingVehicle.location_source ?? null,
       });
       // Prefill existing images
       if (existingVehicle.images && existingVehicle.images.length > 0) {
@@ -302,6 +319,9 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
           contact_whatsapp: data.contact_whatsapp || null,
           contact_city: data.contact_city || null,
           contact_state: data.contact_state || null,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          location_source: data.location_source,
         });
         return vehicleId;
       } else {
@@ -330,6 +350,9 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
           contact_whatsapp: data.contact_whatsapp || null,
           contact_city: data.contact_city || null,
           contact_state: data.contact_state || null,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          location_source: data.location_source,
         });
         setVehicleId(result.id);
         return result.id;
@@ -708,6 +731,25 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
               </div>
             </div>
 
+            {/* Vehicle Location */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <VehicleLocationPicker
+                latitude={data.latitude}
+                longitude={data.longitude}
+                locationSource={data.location_source}
+                dealerLatitude={dealerCoords.lat}
+                dealerLongitude={dealerCoords.lng}
+                onChange={(lat, lng, source) => {
+                  setData(prev => ({
+                    ...prev,
+                    latitude: lat,
+                    longitude: lng,
+                    location_source: source,
+                  }));
+                }}
+              />
+            </div>
+
             {/* Summary */}
             <div className="glass-crystal rounded-xl p-4 space-y-2">
               <h3 className="font-medium text-gray-900 dark:text-white text-sm">{t('steps.summary')}</h3>
@@ -718,6 +760,7 @@ export function VehicleForm({ editVehicleId, initialData, existingImages, onSucc
                 <div><span className="text-gray-500">{t('form.mileage')}: </span><span className="font-medium text-gray-900 dark:text-white">{data.mileage ? `${data.mileage.toLocaleString()} mi` : '—'}</span></div>
                 <div><span className="text-gray-500">{t('images.photos')}: </span><span className="font-medium text-gray-900 dark:text-white">{uploadedImages.length + localImages.length}</span></div>
                 <div><span className="text-gray-500">{t('form.features')}: </span><span className="font-medium text-gray-900 dark:text-white">{data.features.length}</span></div>
+                <div><span className="text-gray-500">{t('form.locationSection')}: </span><span className="font-medium text-gray-900 dark:text-white">{data.latitude ? '\u2713' : '—'}</span></div>
               </div>
             </div>
           </div>
