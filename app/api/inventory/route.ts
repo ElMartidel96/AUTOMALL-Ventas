@@ -147,11 +147,27 @@ export async function POST(request: NextRequest) {
       status: 'draft' as const,
     };
 
-    const { data, error } = await supabase
+    // First attempt: include geo fields
+    // If geo columns don't exist yet (migration not run), retry without them
+    let data;
+    let error;
+
+    ({ data, error } = await supabase
       .from('vehicles')
       .insert(vehicleData)
       .select('id')
-      .single();
+      .single());
+
+    if (error && (error.code === 'PGRST204' || error.message?.includes('latitude'))) {
+      // Geo columns not in DB yet — strip and retry
+      const { latitude: _lat, longitude: _lng, location_source: _src, ...safeData } = vehicleData;
+      console.warn('[Inventory] Geo columns missing, retrying without them');
+      ({ data, error } = await supabase
+        .from('vehicles')
+        .insert(safeData)
+        .select('id')
+        .single());
+    }
 
     if (error) {
       console.error('[Inventory] Create error:', error);

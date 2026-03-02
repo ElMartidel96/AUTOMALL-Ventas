@@ -3,8 +3,9 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import dynamic from 'next/dynamic'
-import { MapPin, Navigation, Store, Loader2, Check, AlertCircle } from 'lucide-react'
+import { MapPin, Navigation, Store, Loader2, Check, AlertCircle, Search } from 'lucide-react'
 import { HOUSTON_CENTER } from '@/lib/geo/types'
+import { MAPBOX_TOKEN, MAPBOX_GEOCODING_URL } from '@/lib/config/mapbox'
 
 const MiniMapPicker = dynamic(() => import('@/components/map/MiniMapPicker'), {
   ssr: false,
@@ -27,6 +28,7 @@ interface VehicleLocationPickerProps {
 }
 
 type GeoStatus = 'idle' | 'detecting' | 'detected' | 'denied' | 'error'
+type AddressStatus = 'idle' | 'searching' | 'found' | 'not_found'
 
 export function VehicleLocationPicker({
   latitude,
@@ -38,7 +40,9 @@ export function VehicleLocationPicker({
 }: VehicleLocationPickerProps) {
   const t = useTranslations('inventory')
   const [geoStatus, setGeoStatus] = useState<GeoStatus>('idle')
-
+  const [addressQuery, setAddressQuery] = useState('')
+  const [addressStatus, setAddressStatus] = useState<AddressStatus>('idle')
+  const [addressResult, setAddressResult] = useState<string | null>(null)
   const hasCoords = latitude != null && longitude != null
   const hasDealerCoords = dealerLatitude != null && dealerLongitude != null
 
@@ -54,12 +58,14 @@ export function VehicleLocationPicker({
   const handleUseDealer = useCallback(() => {
     if (hasDealerCoords) {
       onChange(dealerLatitude, dealerLongitude, 'dealer')
+      setAddressResult(null)
     }
   }, [hasDealerCoords, dealerLatitude, dealerLongitude, onChange])
 
   const handleUseMyLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setGeoStatus('error')
+      setTimeout(() => setGeoStatus('idle'), 4000)
       return
     }
 
@@ -70,28 +76,90 @@ export function VehicleLocationPicker({
         const { latitude: lat, longitude: lng } = position.coords
         onChange(lat, lng, 'geolocated')
         setGeoStatus('detected')
-        // Reset status after feedback
+        setAddressResult(null)
         setTimeout(() => setGeoStatus('idle'), 2000)
       },
-      (error) => {
-        if (error.code === error.PERMISSION_DENIED) {
+      (err) => {
+        console.warn('[VehicleLocationPicker] Geolocation error:', err.code, err.message)
+        if (err.code === err.PERMISSION_DENIED) {
           setGeoStatus('denied')
         } else {
           setGeoStatus('error')
         }
-        // Reset status after feedback
         setTimeout(() => setGeoStatus('idle'), 4000)
       },
       {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000,
+        enableHighAccuracy: false,
+        timeout: 15000,
+        maximumAge: 120000, // 2 minutes cache
       }
     )
   }, [onChange])
 
+  // Geocode address via Mapbox client-side
+  const geocodeAddress = useCallback(async (query: string) => {
+    if (!MAPBOX_TOKEN || query.trim().length < 3) return
+
+    setAddressStatus('searching')
+
+    try {
+      const params = new URLSearchParams({
+        q: query,
+        access_token: MAPBOX_TOKEN,
+        limit: '1',
+        language: 'en',
+        country: 'US',
+        proximity: '-95.3698,29.7604', // Bias Houston
+      })
+
+      const res = await fetch(`${MAPBOX_GEOCODING_URL}?${params}`)
+      if (!res.ok) {
+        setAddressStatus('not_found')
+        setTimeout(() => setAddressStatus('idle'), 3000)
+        return
+      }
+
+      const data = await res.json()
+      const feature = data.features?.[0]
+
+      if (!feature) {
+        setAddressStatus('not_found')
+        setTimeout(() => setAddressStatus('idle'), 3000)
+        return
+      }
+
+      const [lng, lat] = feature.geometry.coordinates
+      const formatted = feature.properties?.full_address
+        || feature.properties?.place_formatted
+        || query
+
+      onChange(lat, lng, 'manual')
+      setAddressResult(formatted)
+      setAddressStatus('found')
+      setTimeout(() => setAddressStatus('idle'), 3000)
+    } catch {
+      setAddressStatus('not_found')
+      setTimeout(() => setAddressStatus('idle'), 3000)
+    }
+  }, [onChange])
+
+  // Debounced address search on Enter or button click
+  const handleAddressSearch = useCallback(() => {
+    if (addressQuery.trim().length >= 3) {
+      geocodeAddress(addressQuery)
+    }
+  }, [addressQuery, geocodeAddress])
+
+  const handleAddressKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleAddressSearch()
+    }
+  }, [handleAddressSearch])
+
   const handleMapMove = useCallback((lat: number, lng: number) => {
     onChange(lat, lng, 'manual')
+    setAddressResult(null)
   }, [onChange])
 
   const displayLat = latitude ?? HOUSTON_CENTER.latitude
@@ -118,7 +186,53 @@ export function VehicleLocationPicker({
         {t('form.locationHint')}
       </p>
 
-      {/* Action buttons */}
+      {/* Address input */}
+      <div className="space-y-1.5">
+        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
+          {t('form.locationAddress')}
+        </label>
+        <div className="flex gap-2">
+          <div className="flex-1 relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            <input
+              type="text"
+              value={addressQuery}
+              onChange={(e) => setAddressQuery(e.target.value)}
+              onKeyDown={handleAddressKeyDown}
+              placeholder={t('form.locationAddressPlaceholder')}
+              className="w-full pl-8 pr-3 py-2 bg-white/50 dark:bg-am-dark/50 border border-gray-200 dark:border-am-blue/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-am-orange/50 placeholder:text-gray-400"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleAddressSearch}
+            disabled={addressStatus === 'searching' || addressQuery.trim().length < 3}
+            className="px-3 py-2 bg-am-orange hover:bg-am-orange-light text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1.5"
+          >
+            {addressStatus === 'searching' ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Search className="w-3.5 h-3.5" />
+            )}
+            {t('form.locationSearch')}
+          </button>
+        </div>
+        {/* Address search feedback */}
+        {addressStatus === 'found' && addressResult && (
+          <div className="flex items-center gap-1.5 text-xs text-am-green">
+            <Check className="w-3 h-3" />
+            <span className="truncate">{addressResult}</span>
+          </div>
+        )}
+        {addressStatus === 'not_found' && (
+          <div className="flex items-center gap-1.5 text-xs text-red-500">
+            <AlertCircle className="w-3 h-3" />
+            {t('form.locationAddressNotFound')}
+          </div>
+        )}
+      </div>
+
+      {/* Quick action buttons */}
       <div className="flex flex-wrap gap-2">
         {hasDealerCoords && (
           <button

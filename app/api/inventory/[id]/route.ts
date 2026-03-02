@@ -114,12 +114,29 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     // Remove seller_address from update payload (used for auth only)
     const { seller_address: _, ...updateData } = parsed.data;
 
-    const { data, error } = await supabase
+    // First attempt: include geo fields (latitude, longitude, location_source)
+    // If the columns don't exist yet (migration not run), retry without them
+    let data;
+    let error;
+
+    ({ data, error } = await supabase
       .from('vehicles')
       .update(updateData)
       .eq('id', id)
       .select()
-      .single();
+      .single());
+
+    if (error && error.code === 'PGRST204') {
+      // Column not found — likely geo columns not yet in DB. Strip them and retry.
+      const { latitude: _lat, longitude: _lng, location_source: _src, ...safeData } = updateData;
+      console.warn('[Inventory] Geo columns missing, retrying without them');
+      ({ data, error } = await supabase
+        .from('vehicles')
+        .update(safeData)
+        .eq('id', id)
+        .select()
+        .single());
+    }
 
     if (error) {
       console.error('[Inventory] Update error:', error);

@@ -36,8 +36,11 @@ export async function GET(request: NextRequest) {
 
     const { limit = 100 } = parsed.data
 
-    // Step 1: Fetch active vehicles WITH their own location fields
-    const { data: vehicles, error } = await supabaseAdmin
+    // Step 1: Fetch active vehicles — try WITH geo columns, fallback WITHOUT
+    let vehicles;
+    let error;
+
+    ({ data: vehicles, error } = await supabaseAdmin
       .from('vehicles')
       .select(`
         id,
@@ -53,7 +56,27 @@ export async function GET(request: NextRequest) {
       `)
       .eq('status', 'active')
       .limit(limit)
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: false }))
+
+    if (error && (error.code === '42703' || error.message?.includes('latitude'))) {
+      // Geo columns don't exist yet — query without them (all vehicles use seller fallback)
+      console.warn('[CatalogMap] Geo columns not in DB, falling back to seller-only coords');
+      ({ data: vehicles, error } = await supabaseAdmin
+        .from('vehicles')
+        .select(`
+          id,
+          brand,
+          model,
+          year,
+          price,
+          mileage,
+          primary_image_url,
+          seller_handle
+        `)
+        .eq('status', 'active')
+        .limit(limit)
+        .order('created_at', { ascending: false }))
+    }
 
     if (error) {
       console.error('[CatalogMap] Query error:', error)
