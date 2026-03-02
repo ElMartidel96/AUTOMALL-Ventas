@@ -49,6 +49,9 @@ const AddVehicleInput = z.object({
   contact_whatsapp: z.string().max(20).optional().describe('WhatsApp number for this vehicle'),
   contact_city: z.string().max(100).optional().describe('City where the vehicle is located'),
   contact_state: z.string().max(50).optional().describe('State where the vehicle is located'),
+  latitude: z.number().min(-90).max(90).optional().describe('Vehicle latitude'),
+  longitude: z.number().min(-180).max(180).optional().describe('Vehicle longitude'),
+  location_source: z.enum(['dealer', 'manual', 'geolocated']).optional().describe('How location was set'),
 })
 
 const UpdateVehicleInput = z.object({
@@ -71,6 +74,9 @@ const UpdateVehicleInput = z.object({
   contact_whatsapp: z.string().max(20).optional().describe('WhatsApp number for this vehicle'),
   contact_city: z.string().max(100).optional().describe('City where the vehicle is located'),
   contact_state: z.string().max(50).optional().describe('State where the vehicle is located'),
+  latitude: z.number().min(-90).max(90).optional().describe('Vehicle latitude'),
+  longitude: z.number().min(-180).max(180).optional().describe('Vehicle longitude'),
+  location_source: z.enum(['dealer', 'manual', 'geolocated']).optional().describe('How location was set'),
 })
 
 const UpdateVehicleStatusInput = z.object({
@@ -129,7 +135,7 @@ async function addVehicle(input: z.infer<typeof AddVehicleInput>, ctx: ToolConte
   let sellerHandle: string | undefined
   const { data: sellerRow } = await supabaseAdmin
     .from('sellers')
-    .select('handle, phone, whatsapp, city, state')
+    .select('handle, phone, whatsapp, city, state, latitude, longitude')
     .eq('wallet_address', norm(ctx.walletAddress))
     .eq('is_active', true)
     .single()
@@ -144,6 +150,9 @@ async function addVehicle(input: z.infer<typeof AddVehicleInput>, ctx: ToolConte
       contact_whatsapp: input.contact_whatsapp ?? sellerRow?.whatsapp ?? null,
       contact_city: input.contact_city ?? sellerRow?.city ?? 'Houston',
       contact_state: input.contact_state ?? sellerRow?.state ?? 'TX',
+      latitude: input.latitude ?? sellerRow?.latitude ?? null,
+      longitude: input.longitude ?? sellerRow?.longitude ?? null,
+      location_source: input.location_source ?? (sellerRow?.latitude != null ? 'dealer' : null),
       brand: input.brand,
       model: input.model,
       year: input.year,

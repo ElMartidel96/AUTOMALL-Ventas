@@ -111,9 +111,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       );
     }
 
-    // Remove seller_address and location fields from update payload
-    // Location fields may not exist in DB yet (migration pending)
-    const { seller_address: _, latitude: _lat, longitude: _lng, location_source: _ls, ...updateData } = parsed.data;
+    // Remove seller_address from update payload (used for auth only)
+    const { seller_address: _, ...updateData } = parsed.data;
 
     const { data, error } = await supabase
       .from('vehicles')

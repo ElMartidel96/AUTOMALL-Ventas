@@ -70,19 +70,25 @@ export default function VehicleDetailPage({ params }: { params: { id: string } }
     || vehicle?.seller_contact?.business_name
     || null;
 
-  // Location — use seller's geocoded address
-  const dealerLat = (isSubdomain && seller?.latitude) || vehicle?.seller_contact?.latitude;
-  const dealerLng = (isSubdomain && seller?.longitude) || vehicle?.seller_contact?.longitude;
-  const dealerCity = vehicle?.contact_city
+  // Location — priority: vehicle's own coords > subdomain tenant > seller_contact
+  const locationLat = vehicle?.latitude
+    ?? ((isSubdomain && seller?.latitude) || undefined)
+    ?? vehicle?.seller_contact?.latitude
+    ?? undefined;
+  const locationLng = vehicle?.longitude
+    ?? ((isSubdomain && seller?.longitude) || undefined)
+    ?? vehicle?.seller_contact?.longitude
+    ?? undefined;
+  const locationCity = vehicle?.contact_city
     || vehicle?.seller_contact?.city
     || (isSubdomain && seller?.city)
     || null;
-  const dealerState = vehicle?.contact_state
+  const locationState = vehicle?.contact_state
     || vehicle?.seller_contact?.state
     || (isSubdomain && seller?.state)
     || null;
-  const dealerAddress = vehicle?.seller_contact?.address || null;
-  const hasLocation = typeof dealerLat === 'number' && typeof dealerLng === 'number';
+  const locationAddress = vehicle?.seller_contact?.address || null;
+  const hasLocation = typeof locationLat === 'number' && typeof locationLng === 'number';
 
   if (isLoading) {
     return (
@@ -206,16 +212,16 @@ export default function VehicleDetailPage({ params }: { params: { id: string } }
                     {t('contact.sellerName', { name: sellerName })}
                   </p>
                 )}
-                {(dealerCity || dealerAddress) && (
+                {(locationCity || locationAddress) && (
                   <p className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 mb-3">
                     <MapPin className="w-3 h-3" />
-                    {dealerAddress
-                      ? dealerAddress
-                      : `${dealerCity || ''}${dealerState ? `, ${dealerState}` : ''}`
+                    {locationAddress
+                      ? locationAddress
+                      : `${locationCity || ''}${locationState ? `, ${locationState}` : ''}`
                     }
                   </p>
                 )}
-                {!sellerName && !dealerCity && !dealerAddress && <div className="mb-3" />}
+                {!sellerName && !locationCity && !locationAddress && <div className="mb-3" />}
                 <div className="flex flex-col sm:flex-row gap-3">
                   {contactPhone && (
                     <a
@@ -319,20 +325,20 @@ export default function VehicleDetailPage({ params }: { params: { id: string } }
                     {t('detail.locationMap')}
                   </h2>
                 </div>
-                {(dealerCity || dealerAddress) && (
+                {(locationCity || locationAddress) && (
                   <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
                     <MapPin className="w-3.5 h-3.5" />
-                    {dealerAddress
-                      ? dealerAddress
-                      : `${dealerCity || ''}${dealerState ? `, ${dealerState}` : ''}`
+                    {locationAddress
+                      ? locationAddress
+                      : `${locationCity || ''}${locationState ? `, ${locationState}` : ''}`
                     }
                   </div>
                 )}
               </div>
               <div className="glass-crystal rounded-2xl overflow-hidden">
                 <VehicleLocationMap
-                  latitude={dealerLat as number}
-                  longitude={dealerLng as number}
+                  latitude={locationLat as number}
+                  longitude={locationLng as number}
                 />
               </div>
             </motion.div>
