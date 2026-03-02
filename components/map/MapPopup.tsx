@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { MapPin, Phone, ExternalLink } from 'lucide-react'
 import { formatDistance } from '@/lib/geo/haversine'
+import { GetDirectionsButton } from './GetDirectionsButton'
 import type { NearbySellerResult } from '@/lib/geo/types'
 
 interface MapPopupProps {
@@ -66,15 +67,23 @@ export function MapPopup({ seller, onClose }: MapPopupProps) {
         )}
       </div>
 
-      {/* CTA */}
-      <Link
-        href={`https://${seller.handle}.autosmall.org`}
-        target="_blank"
-        className="flex items-center justify-center gap-2 w-full px-3 py-2 bg-am-blue text-white text-xs font-medium rounded-lg hover:bg-am-blue-light transition-colors"
-      >
-        <ExternalLink className="w-3.5 h-3.5" />
-        {t('viewCatalog')}
-      </Link>
+      {/* CTAs */}
+      <div className="flex gap-1.5">
+        <Link
+          href={`https://${seller.handle}.autosmall.org`}
+          target="_blank"
+          className="flex items-center justify-center gap-2 flex-1 px-3 py-2 bg-am-blue text-white text-xs font-medium rounded-lg hover:bg-am-blue-light transition-colors"
+        >
+          <ExternalLink className="w-3.5 h-3.5" />
+          {t('viewCatalog')}
+        </Link>
+        <GetDirectionsButton
+          destLat={seller.latitude}
+          destLng={seller.longitude}
+          label={seller.business_name}
+          variant="popup"
+        />
+      </div>
     </div>
   )
 }

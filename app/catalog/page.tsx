@@ -6,7 +6,7 @@
  * Includes map view toggle to see vehicles on an interactive map.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
@@ -15,9 +15,14 @@ import { Navbar, NavbarSpacer } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import CatalogFilters, { type CatalogFilterValues } from '@/components/catalog/CatalogFilters';
 import CatalogGrid from '@/components/catalog/CatalogGrid';
+import { NearMeToggle } from '@/components/map/NearMeToggle';
+import { LocationPermissionBanner } from '@/components/map/LocationPermissionBanner';
 import { useCatalogVehicles } from '@/hooks/useCatalog';
 import { useMapVehicles } from '@/hooks/useMapVehicles';
+import { useGeolocation } from '@/hooks/useGeolocation';
+import { haversineDistance } from '@/lib/geo/haversine';
 import { HOUSTON_CENTER } from '@/lib/geo/types';
+import { FEATURE_NEAR_ME } from '@/lib/config/features';
 import type { MapVehicle } from '@/components/map/VehicleMapPopup';
 
 const DealerVehicleMap = dynamic(() => import('@/components/map/DealerVehicleMap'), {
@@ -55,16 +60,36 @@ export default function CatalogPage() {
   const [view, setView] = useState<CatalogView>('grid');
   const [selectedVehicle, setSelectedVehicle] = useState<MapVehicle | null>(null);
 
+  // Geo state for Near Me
+  const [nearMeEnabled, setNearMeEnabled] = useState(false);
+  const [nearMeRadius, setNearMeRadius] = useState(50);
+  const { coordinates: userCoords, status: geoStatus, requestLocation } = useGeolocation();
+
   // Build API query from filters
   const apiFilters: Record<string, string | number> = { page, limit: 24 };
   Object.entries(filters).forEach(([key, val]) => {
     if (val !== '') apiFilters[key] = val;
   });
+  // Add geo filters when Near Me is active
+  if (nearMeEnabled && userCoords) {
+    apiFilters.lat = userCoords.latitude;
+    apiFilters.lng = userCoords.longitude;
+    apiFilters.radius = nearMeRadius;
+  }
 
   const { data, isLoading } = useCatalogVehicles(apiFilters);
   const { data: mapData } = useMapVehicles({ enabled: view === 'map' });
 
-  const mapVehicles = mapData?.data || [];
+  const rawMapVehicles = mapData?.data || [];
+
+  // Enrich map vehicles with distance when user location available
+  const mapVehicles = useMemo(() => {
+    if (!userCoords) return rawMapVehicles;
+    return rawMapVehicles.map(v => ({
+      ...v,
+      distance_km: haversineDistance(userCoords.latitude, userCoords.longitude, v.latitude, v.longitude),
+    }));
+  }, [rawMapVehicles, userCoords]);
 
   // Sync filters to URL
   useEffect(() => {
@@ -90,6 +115,14 @@ export default function CatalogPage() {
     setPage(1);
   };
 
+  // Request location when Near Me is toggled on
+  const handleNearMeToggle = (enabled: boolean) => {
+    setNearMeEnabled(enabled);
+    if (enabled && geoStatus !== 'success') {
+      requestLocation();
+    }
+  };
+
   const vehicles = data?.data || [];
   const pagination = data?.pagination;
   const availableBrands = data?.filters?.brands;
@@ -112,30 +145,44 @@ export default function CatalogPage() {
               </p>
             </div>
 
-            {/* View toggle */}
-            <div className="flex items-center gap-1 p-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-              <button
-                onClick={() => setView('grid')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
-                  view === 'grid'
-                    ? 'bg-am-blue text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
-              >
-                <LayoutGrid className="w-3.5 h-3.5" />
-                {t('viewGrid')}
-              </button>
-              <button
-                onClick={() => setView('map')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
-                  view === 'map'
-                    ? 'bg-am-blue text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
-              >
-                <MapPin className="w-3.5 h-3.5" />
-                {t('viewMap')}
-              </button>
+            {/* View toggle + Near Me */}
+            <div className="flex items-center gap-2">
+              {FEATURE_NEAR_ME && view === 'map' && (
+                <div className="w-40">
+                  <NearMeToggle
+                    enabled={nearMeEnabled}
+                    onToggle={handleNearMeToggle}
+                    radius={nearMeRadius}
+                    onRadiusChange={setNearMeRadius}
+                    isLocating={geoStatus === 'loading'}
+                    locationDenied={geoStatus === 'denied'}
+                  />
+                </div>
+              )}
+              <div className="flex items-center gap-1 p-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setView('grid')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                    view === 'grid'
+                      ? 'bg-am-blue text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  {t('viewGrid')}
+                </button>
+                <button
+                  onClick={() => setView('map')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                    view === 'map'
+                      ? 'bg-am-blue text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  {t('viewMap')}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -159,13 +206,21 @@ export default function CatalogPage() {
           {view === 'map' ? (
             /* Map view */
             <div className="space-y-4">
+              {/* Location permission banner — shown when Near Me active but no location */}
+              {FEATURE_NEAR_ME && nearMeEnabled && geoStatus !== 'success' && (
+                <LocationPermissionBanner
+                  status={geoStatus}
+                  onRequestLocation={requestLocation}
+                  onManualSearch={() => setNearMeEnabled(false)}
+                />
+              )}
               <DealerVehicleMap
                 sellers={[]}
                 vehicles={mapVehicles}
                 selectedVehicleId={selectedVehicle?.id}
                 onVehicleSelect={setSelectedVehicle}
                 height="calc(100vh - 320px)"
-                initialCenter={HOUSTON_CENTER}
+                initialCenter={userCoords || HOUSTON_CENTER}
                 className="shadow-xl"
               />
               {mapVehicles.length === 0 && !isLoading && (

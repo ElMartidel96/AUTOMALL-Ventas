@@ -3085,7 +3085,20 @@
       "vehicles": "Vehicles"
     },
     "vehiclePopup": {
-      "viewDetails": "View Details"
+      "viewDetails": "View Details",
+      "getDirections": "Directions"
+    },
+    "directions": {
+      "getDirections": "Get Directions",
+      "openIn": "Open in",
+      "googleMaps": "Google Maps",
+      "appleMaps": "Apple Maps",
+      "waze": "Waze",
+      "estimatedTime": "~{time} drive",
+      "locateMe": "Show My Location",
+      "locating": "Finding your location...",
+      "routeInfo": "{distance} — ~{time} drive",
+      "straightLineNote": "Straight-line distance. Open in navigation app for exact route."
     },
     "emptyState": {
       "hint": "Try expanding the radius or search by a different address.",

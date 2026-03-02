@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import Map, { Marker, NavigationControl } from 'react-map-gl/mapbox'
+import type { MapRef } from 'react-map-gl/mapbox'
 import { useTheme } from 'next-themes'
 import {
   MAPBOX_TOKEN,
@@ -26,7 +27,18 @@ export default function MiniMapPicker({
 }: MiniMapPickerProps) {
   const { resolvedTheme } = useTheme()
   const [markerPos, setMarkerPos] = useState({ latitude, longitude })
+  const mapRef = useRef<MapRef>(null)
   const mapStyle = resolvedTheme === 'dark' ? MAPBOX_STYLE_DARK : MAPBOX_STYLE_LIGHT
+
+  // Sync marker position when props change (e.g., async data loaded after mount)
+  useEffect(() => {
+    setMarkerPos({ latitude, longitude })
+    mapRef.current?.flyTo({
+      center: [longitude, latitude],
+      zoom: hasCoords ? 14 : 10,
+      duration: 800,
+    })
+  }, [latitude, longitude, hasCoords])
 
   const handleMarkerDragEnd = useCallback((e: { lngLat: { lng: number; lat: number } }) => {
     const { lng, lat } = e.lngLat
@@ -45,6 +57,7 @@ export default function MiniMapPicker({
   return (
     <div className="w-full h-[200px] rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
       <Map
+        ref={mapRef}
         initialViewState={{
           longitude: markerPos.longitude,
           latitude: markerPos.latitude,

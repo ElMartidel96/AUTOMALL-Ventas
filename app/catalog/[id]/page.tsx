@@ -31,6 +31,10 @@ const VehicleLocationMap = dynamic(
   () => import('@/components/catalog/VehicleLocationMap'),
   { ssr: false }
 );
+const GetDirectionsButton = dynamic(
+  () => import('@/components/map/GetDirectionsButton').then(m => ({ default: m.GetDirectionsButton })),
+  { ssr: false }
+);
 import { Navbar, NavbarSpacer } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import VehicleGallery from '@/components/catalog/VehicleGallery';
@@ -250,6 +254,16 @@ export default function VehicleDetailPage({ params }: { params: { id: string } }
                     </div>
                   )}
                 </div>
+                {hasLocation && (
+                  <div className="mt-3">
+                    <GetDirectionsButton
+                      destLat={locationLat as number}
+                      destLng={locationLng as number}
+                      label={title}
+                      variant="compact"
+                    />
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>
@@ -339,6 +353,8 @@ export default function VehicleDetailPage({ params }: { params: { id: string } }
                 <VehicleLocationMap
                   latitude={locationLat as number}
                   longitude={locationLng as number}
+                  vehicleTitle={title}
+                  address={locationAddress || (locationCity ? `${locationCity}${locationState ? `, ${locationState}` : ''}` : undefined)}
                 />
               </div>
             </motion.div>

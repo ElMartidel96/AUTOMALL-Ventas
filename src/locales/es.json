@@ -3085,7 +3085,20 @@
       "vehicles": "Vehículos"
     },
     "vehiclePopup": {
-      "viewDetails": "Ver Detalles"
+      "viewDetails": "Ver Detalles",
+      "getDirections": "Cómo Llegar"
+    },
+    "directions": {
+      "getDirections": "Obtener Direcciones",
+      "openIn": "Abrir en",
+      "googleMaps": "Google Maps",
+      "appleMaps": "Apple Maps",
+      "waze": "Waze",
+      "estimatedTime": "~{time} en auto",
+      "locateMe": "Mostrar Mi Ubicación",
+      "locating": "Buscando tu ubicación...",
+      "routeInfo": "{distance} — ~{time} en auto",
+      "straightLineNote": "Distancia en línea recta. Abre en app de navegación para la ruta exacta."
     },
     "emptyState": {
       "hint": "Intenta ampliar el radio o buscar por otra dirección.",

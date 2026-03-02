@@ -3,7 +3,9 @@
 import React from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { Gauge, Calendar, ExternalLink } from 'lucide-react'
+import { Gauge, Calendar, ExternalLink, Navigation } from 'lucide-react'
+import { formatDistance } from '@/lib/geo/haversine'
+import { GetDirectionsButton } from './GetDirectionsButton'
 
 export interface MapVehicle {
   id: string
@@ -17,6 +19,7 @@ export interface MapVehicle {
   seller_name: string | null
   latitude: number
   longitude: number
+  distance_km?: number
 }
 
 interface VehicleMapPopupProps {
@@ -73,21 +76,37 @@ export function VehicleMapPopup({ vehicle, onClose }: VehicleMapPopupProps) {
           </span>
         </div>
 
-        {/* Seller name */}
-        {vehicle.seller_name && (
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate">
-            {vehicle.seller_name}
-          </p>
-        )}
+        {/* Seller name + distance */}
+        <div className="flex items-center justify-between mt-1">
+          {vehicle.seller_name && (
+            <p className="text-xs text-gray-400 dark:text-gray-500 truncate">
+              {vehicle.seller_name}
+            </p>
+          )}
+          {typeof vehicle.distance_km === 'number' && (
+            <span className="flex items-center gap-0.5 text-[10px] text-am-blue font-medium flex-shrink-0 ml-1">
+              <Navigation className="w-2.5 h-2.5" />
+              {formatDistance(vehicle.distance_km)}
+            </span>
+          )}
+        </div>
 
-        {/* CTA */}
-        <Link
-          href={`/catalog/${vehicle.id}`}
-          className="flex items-center justify-center gap-1.5 w-full mt-2.5 px-3 py-2 bg-gradient-to-r from-am-orange to-am-orange-light text-white text-xs font-bold rounded-lg hover:shadow-md transition-all"
-        >
-          <ExternalLink className="w-3 h-3" />
-          {t('vehiclePopup.viewDetails')}
-        </Link>
+        {/* CTAs */}
+        <div className="flex gap-1.5 mt-2.5">
+          <Link
+            href={`/catalog/${vehicle.id}`}
+            className="flex items-center justify-center gap-1.5 flex-1 px-3 py-2 bg-gradient-to-r from-am-orange to-am-orange-light text-white text-xs font-bold rounded-lg hover:shadow-md transition-all"
+          >
+            <ExternalLink className="w-3 h-3" />
+            {t('vehiclePopup.viewDetails')}
+          </Link>
+          <GetDirectionsButton
+            destLat={vehicle.latitude}
+            destLng={vehicle.longitude}
+            label={title}
+            variant="popup"
+          />
+        </div>
       </div>
     </div>
   )
