@@ -68,6 +68,9 @@ export const FEATURE_META_INTEGRATION = envBool('NEXT_PUBLIC_FEATURE_META_INTEGR
 /** Enable Near Me map system (dealer locations, service areas, geo-filtering) */
 export const FEATURE_NEAR_ME = envBool('NEXT_PUBLIC_FEATURE_NEAR_ME', true)
 
+/** Enable Facebook Click-to-WhatsApp campaign system */
+export const FEATURE_CAMPAIGNS = envBool('NEXT_PUBLIC_FEATURE_CAMPAIGNS', true)
+
 // ---------------------------------------------------------------------------
 // App Identity
 // ---------------------------------------------------------------------------
