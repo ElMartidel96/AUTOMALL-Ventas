@@ -1739,7 +1739,27 @@
     "personalTiktokPlaceholder": "@yourprofile",
     "saveSocial": "Save Social Media",
     "socialSaved": "Social media saved!",
-    "socialSaveError": "Failed to save. Please try again."
+    "socialSaveError": "Failed to save. Please try again.",
+    "editProfile": "Edit Profile",
+    "editProfileHint": "Update your name, photo, and bio",
+    "displayNameLabel": "Display Name",
+    "displayNamePlaceholder": "Your name",
+    "usernameLabel": "Username",
+    "usernamePlaceholder": "your_username",
+    "usernameAvailable": "Available!",
+    "usernameTaken": "Already taken",
+    "usernameChecking": "Checking...",
+    "usernameTooShort": "At least 3 characters",
+    "bioLabel": "Bio",
+    "bioPlaceholder": "Tell us about yourself...",
+    "bioCharCount": "{count}/500",
+    "uploadAvatar": "Change Photo",
+    "avatarUploading": "Uploading...",
+    "avatarSuccess": "Photo updated!",
+    "avatarError": "Upload failed. Try again.",
+    "saveProfile": "Save Profile",
+    "profileSaved": "Profile saved!",
+    "profileSaveError": "Failed to save profile. Try again."
   },
   "specialInvite": {
     "header": {

@@ -1359,9 +1359,10 @@ export interface ProfileSettings {
 
 // Profile update request type (for API)
 export interface ProfileUpdateRequest {
-  username?: string
-  display_name?: string
-  bio?: string
+  username?: string | null
+  display_name?: string | null
+  bio?: string | null
+  avatar_url?: string | null
   twitter_handle?: string
   telegram_handle?: string
   discord_handle?: string

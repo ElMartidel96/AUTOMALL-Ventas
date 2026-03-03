@@ -1848,7 +1848,27 @@
     "personalTiktokPlaceholder": "@tuperfil",
     "saveSocial": "Guardar Redes",
     "socialSaved": "¡Redes guardadas!",
-    "socialSaveError": "Error al guardar. Intenta de nuevo."
+    "socialSaveError": "Error al guardar. Intenta de nuevo.",
+    "editProfile": "Editar Perfil",
+    "editProfileHint": "Actualiza tu nombre, foto y biografía",
+    "displayNameLabel": "Nombre",
+    "displayNamePlaceholder": "Tu nombre",
+    "usernameLabel": "Usuario",
+    "usernamePlaceholder": "tu_usuario",
+    "usernameAvailable": "¡Disponible!",
+    "usernameTaken": "Ya está en uso",
+    "usernameChecking": "Verificando...",
+    "usernameTooShort": "Mínimo 3 caracteres",
+    "bioLabel": "Biografía",
+    "bioPlaceholder": "Cuéntanos sobre ti...",
+    "bioCharCount": "{count}/500",
+    "uploadAvatar": "Cambiar Foto",
+    "avatarUploading": "Subiendo...",
+    "avatarSuccess": "¡Foto actualizada!",
+    "avatarError": "Error al subir. Intenta de nuevo.",
+    "saveProfile": "Guardar Perfil",
+    "profileSaved": "¡Perfil guardado!",
+    "profileSaveError": "Error al guardar perfil. Intenta de nuevo."
   },
   "taskData": {
     "create_web3_authentication_system": {
