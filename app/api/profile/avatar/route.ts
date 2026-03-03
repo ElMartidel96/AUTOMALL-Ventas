@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB (client compresses before upload)
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB (client compresses before upload)
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const AVATAR_BUCKET = 'avatars';
 
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: 'File too large. Maximum size: 5MB', success: false },
+        { error: 'File too large. Maximum size: 10MB', success: false },
         { status: 400 }
       );
     }

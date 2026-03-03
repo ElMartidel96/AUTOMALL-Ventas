@@ -11,6 +11,7 @@ import {
 import type { User } from '@/lib/types/user';
 import type { ReferralStats } from '@/hooks/useReferrals';
 import { useProfileManager } from '@/hooks/useProfile';
+import { compressImageSmart } from '@/lib/inventory/image-utils';
 import { InstagramIcon, FacebookIcon, TikTokIcon } from '@/components/icons/SocialIcons';
 import { CopyPanel } from './CopyPanel';
 
@@ -162,7 +163,7 @@ function PersonalInfoCard({
   // Avatar display URL — prefer user table, fallback to profile table
   const avatarUrl = user?.avatar_url || profile?.avatar_url || null;
 
-  // Avatar upload handler (from DAO profile/page.tsx — ORIGINAL)
+  // Avatar upload handler — compresses client-side before upload
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !address) return;
@@ -172,9 +173,23 @@ function PersonalInfoCard({
     setAvatarSuccess(false);
 
     try {
-      // Step 1: Upload to Supabase Storage
+      // Step 1: Compress to 800x800 WebP (avatar doesn't need 1920px)
+      const { blob } = await compressImageSmart(file, {
+        maxWidth: 800,
+        maxHeight: 800,
+        initialQuality: 0.85,
+        maxOutputBytes: 2 * 1024 * 1024, // 2MB max
+      });
+
+      const compressedFile = new File(
+        [blob],
+        file.name.replace(/\.[^.]+$/, '.webp'),
+        { type: blob.type }
+      );
+
+      // Step 2: Upload to Supabase Storage
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', compressedFile);
       formData.append('wallet', address);
 
       const response = await fetch('/api/profile/avatar', {
@@ -301,7 +316,7 @@ function PersonalInfoCard({
           <input
             ref={avatarInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/gif,image/webp"
+            accept="image/*"
             onChange={handleAvatarUpload}
             className="hidden"
           />

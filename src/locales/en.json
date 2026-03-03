@@ -149,6 +149,8 @@
     "wallet": "Wallet",
     "copyAddress": "Copy Address",
     "copied": "Copied!",
+    "referralCopied": "Link copied!",
+    "copyReferralLink": "Copy Referral Link",
     "viewOnExplorer": "View on Explorer",
     "balance": "Balance",
     "refresh": "Refresh",

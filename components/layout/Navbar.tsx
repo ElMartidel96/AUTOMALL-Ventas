@@ -33,6 +33,8 @@ import { MapPin } from 'lucide-react';
 import { useTenant } from '@/lib/tenant/TenantProvider';
 import { DEFAULT_LOGO_NAV } from '@/lib/config/defaults';
 import { useUser } from '@/hooks/useUser';
+import { useProfile } from '@/hooks/useProfile';
+import { useReferralCode, useReferralLink } from '@/hooks/useReferrals';
 import { ProfileCard } from '@/components/profile/ProfileCard';
 
 export const Navbar: React.FC = () => {
@@ -282,23 +284,36 @@ function MobileUserBadge({ address: _address }: { address: string }) {
 function UserDropdown({ fullWidth = false }: { fullWidth?: boolean }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedWallet, setCopiedWallet] = useState(false);
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const wallet = useActiveWallet();
-  const { role } = useUser();
+  const { user, role } = useUser();
+  const { profile } = useProfile(address);
+  const { code: referralCode } = useReferralCode(address);
+  const { generateLink } = useReferralLink(referralCode);
 
   const tCommon = useTranslations('common');
-  const tWallet = useTranslations('wallet');
   const tRoles = useTranslations('roles');
 
   if (!isConnected || !address) return null;
 
   const displayAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
+  const displayName = user?.display_name || profile?.display_name || displayAddress;
 
-  const handleCopy = async () => {
+  const handleCopyReferral = async () => {
+    const link = generateLink() || `${window.location.origin}?ref=${referralCode || ''}`;
+    if (link) {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleCopyWallet = async () => {
     await navigator.clipboard.writeText(address);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopiedWallet(true);
+    setTimeout(() => setCopiedWallet(false), 2000);
   };
 
   return (
@@ -317,17 +332,17 @@ function UserDropdown({ fullWidth = false }: { fullWidth?: boolean }) {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                handleCopy();
+                handleCopyReferral();
               }}
               className="font-medium text-gray-900 dark:text-white text-xs hover:text-am-orange dark:hover:text-am-orange-light transition-colors flex items-center gap-1"
             >
               {copied ? (
                 <>
                   <Check className="w-3 h-3 text-am-green" />
-                  <span className="text-am-green">{tCommon('copied')}</span>
+                  <span className="text-am-green">{tCommon('referralCopied')}</span>
                 </>
               ) : (
-                displayAddress
+                <span className="truncate max-w-[120px]">{displayName}</span>
               )}
             </button>
             <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -361,7 +376,7 @@ function UserDropdown({ fullWidth = false }: { fullWidth?: boolean }) {
                     <ProfileCard size="sm" />
                   </div>
                   <div>
-                    <div className="font-medium text-gray-900 dark:text-white">{displayAddress}</div>
+                    <div className="font-medium text-gray-900 dark:text-white">{displayName}</div>
                     <div className="text-xs text-am-green font-medium">{tCommon('connected')}</div>
                   </div>
                 </div>
@@ -378,16 +393,30 @@ function UserDropdown({ fullWidth = false }: { fullWidth?: boolean }) {
                 </Link>
 
                 <button
-                  onClick={handleCopy}
+                  onClick={handleCopyReferral}
                   className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-am-blue/10 transition-colors text-left"
                 >
                   {copied ? (
                     <Check className="w-4 h-4 text-am-green" />
                   ) : (
+                    <Users className="w-4 h-4 text-am-orange" />
+                  )}
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    {copied ? tCommon('referralCopied') : tCommon('copyReferralLink')}
+                  </span>
+                </button>
+
+                <button
+                  onClick={handleCopyWallet}
+                  className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-am-blue/10 transition-colors text-left"
+                >
+                  {copiedWallet ? (
+                    <Check className="w-4 h-4 text-am-green" />
+                  ) : (
                     <Copy className="w-4 h-4 text-gray-400" />
                   )}
                   <span className="text-sm text-gray-700 dark:text-gray-300">
-                    {copied ? tCommon('copied') : tCommon('copyAddress')}
+                    {copiedWallet ? tCommon('copied') : tCommon('copyAddress')}
                   </span>
                 </button>
 
