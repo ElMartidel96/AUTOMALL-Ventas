@@ -469,14 +469,53 @@ export async function getProfileByWallet(walletAddress: string): Promise<UserPro
     return null;
   }
 
+  const normalizedWallet = walletAddress.toLowerCase();
+
   const { data, error } = await getSupabase()
     .from('user_profiles')
     .select('*')
-    .eq('wallet_address', walletAddress.toLowerCase())
+    .eq('wallet_address', normalizedWallet)
     .single();
 
   if (error || !data) {
     return null;
+  }
+
+  // Cross-reference users table to sync missing avatar_url / display_name.
+  // Same logic as getOrCreateProfile — ensures Navbar and ProfileCard L2/L4
+  // always show the correct avatar even if user_profiles update failed silently.
+  if (!data.avatar_url || !data.display_name) {
+    try {
+      const { data: userRow } = await getSupabase()
+        .from('users')
+        .select('avatar_url, display_name')
+        .eq('wallet_address', normalizedWallet)
+        .single();
+
+      if (userRow) {
+        const syncFields: Record<string, string> = {};
+        if (!data.avatar_url && userRow.avatar_url) {
+          syncFields.avatar_url = userRow.avatar_url;
+          data.avatar_url = userRow.avatar_url;
+        }
+        if (!data.display_name && userRow.display_name) {
+          syncFields.display_name = userRow.display_name;
+          data.display_name = userRow.display_name;
+        }
+
+        // Sync back to user_profiles (fire-and-forget)
+        if (Object.keys(syncFields).length > 0) {
+          getSupabase()
+            .from('user_profiles')
+            .update({ ...syncFields, updated_at: new Date().toISOString() })
+            .eq('id', data.id)
+            .then(() => {})
+            .catch(() => {});
+        }
+      }
+    } catch {
+      // Non-critical: users table might not exist or query failed
+    }
   }
 
   return data;

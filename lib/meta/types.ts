@@ -87,7 +87,7 @@ export interface MetaConnectionSettings {
 // Publication Log
 // ─────────────────────────────────────────────
 
-export type PublicationPostType = 'new_listing' | 'sold' | 'repost';
+export type PublicationPostType = 'new_listing' | 'sold' | 'repost' | 'manual';
 export type PublicationStatus = 'pending' | 'published' | 'failed';
 
 export interface MetaPublicationLog {

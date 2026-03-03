@@ -2425,7 +2425,11 @@
       "back": "Atrás",
       "next": "Siguiente",
       "publish": "Publicar",
-      "saveDraft": "Guardar Borrador"
+      "saveDraft": "Guardar Borrador",
+      "publishFacebook": "Publicar en Facebook",
+      "publishing": "Publicando...",
+      "publishSuccess": "¡Publicado!",
+      "publishError": "Error al publicar"
     },
     "form": {
       "brand": "Marca",
@@ -2684,6 +2688,16 @@
       "sellerName": "Vendido por {name}",
       "noContact": "Solicitar Info",
       "noContactAvailable": "Contacta al vendedor a través de la plataforma"
+    },
+    "share": {
+      "button": "Compartir",
+      "copied": "¡Link copiado!",
+      "shareTitle": "¡Mira este vehículo!",
+      "shareText": "Echa un vistazo a este {title}"
+    },
+    "gallery": {
+      "fullscreen": "Ver pantalla completa",
+      "close": "Cerrar"
     },
     "related": {
       "title": "Vehiculos Similares",

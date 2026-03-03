@@ -1,21 +1,39 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import type { Vehicle } from '@/lib/supabase/types';
 import { VehicleStatusBadge } from './VehicleStatusBadge';
-import { Car, Gauge, Edit2, Trash2, CheckCircle } from 'lucide-react';
+import { Car, Gauge, Edit2, Trash2, CheckCircle, Globe, Loader2, Check } from 'lucide-react';
+import { FEATURE_META_INTEGRATION } from '@/lib/config/features';
+import { useMetaConnection } from '@/hooks/useMetaConnection';
+import { useMetaPublish } from '@/hooks/useMetaPublish';
 
 interface VehicleCardProps {
   vehicle: Vehicle;
+  sellerAddress: string;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onMarkSold: (id: string) => void;
 }
 
-export function VehicleCard({ vehicle, onEdit, onDelete, onMarkSold }: VehicleCardProps) {
+export function VehicleCard({ vehicle, sellerAddress, onEdit, onDelete, onMarkSold }: VehicleCardProps) {
   const t = useTranslations('inventory');
+  const { data: metaData } = useMetaConnection(FEATURE_META_INTEGRATION ? sellerAddress : undefined);
+  const metaPublish = useMetaPublish(sellerAddress);
+  const [publishSuccess, setPublishSuccess] = useState(false);
+
+  const showFbButton = FEATURE_META_INTEGRATION && metaData?.connected && vehicle.status === 'active';
+
+  const handlePublishFb = () => {
+    metaPublish.mutate(vehicle.id, {
+      onSuccess: () => {
+        setPublishSuccess(true);
+        setTimeout(() => setPublishSuccess(false), 2000);
+      },
+    });
+  };
 
   const title = `${vehicle.year} ${vehicle.brand} ${vehicle.model}${vehicle.trim ? ` ${vehicle.trim}` : ''}`;
   const formattedPrice = new Intl.NumberFormat('en-US', {
@@ -97,6 +115,22 @@ export function VehicleCard({ vehicle, onEdit, onDelete, onMarkSold }: VehicleCa
             >
               <CheckCircle className="w-3.5 h-3.5" />
               {t('actions.markSold')}
+            </button>
+          )}
+          {showFbButton && (
+            <button
+              onClick={handlePublishFb}
+              disabled={metaPublish.isPending}
+              className="flex items-center justify-center gap-1.5 py-1.5 px-2 text-xs font-medium text-am-blue hover:bg-am-blue/5 dark:text-am-blue-light dark:hover:bg-am-blue/10 rounded-lg transition-colors disabled:opacity-50"
+              title={t('actions.publishFacebook')}
+            >
+              {metaPublish.isPending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : publishSuccess ? (
+                <Check className="w-3.5 h-3.5 text-am-green" />
+              ) : (
+                <Globe className="w-3.5 h-3.5" />
+              )}
             </button>
           )}
           <button

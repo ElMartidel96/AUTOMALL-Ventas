@@ -2425,7 +2425,11 @@
       "back": "Back",
       "next": "Next",
       "publish": "Publish",
-      "saveDraft": "Save Draft"
+      "saveDraft": "Save Draft",
+      "publishFacebook": "Publish to Facebook",
+      "publishing": "Publishing...",
+      "publishSuccess": "Published!",
+      "publishError": "Failed to publish"
     },
     "form": {
       "brand": "Brand",
@@ -2684,6 +2688,16 @@
       "sellerName": "Sold by {name}",
       "noContact": "Request Info",
       "noContactAvailable": "Contact the seller through the platform"
+    },
+    "share": {
+      "button": "Share",
+      "copied": "Link copied!",
+      "shareTitle": "Check out this vehicle!",
+      "shareText": "Take a look at this {title}"
+    },
+    "gallery": {
+      "fullscreen": "View fullscreen",
+      "close": "Close"
     },
     "related": {
       "title": "Similar Vehicles",
