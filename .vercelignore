@@ -65,6 +65,7 @@ build
 # ══════════════════════════════════════════════════════════════════
 # Legacy CryptoGift/DAO Assets (preserved from original codebase)
 # ══════════════════════════════════════════════════════════════════
+!public/apeX-default.png
 !public/apeX.png
 !public/apeX11.png
 !public/apeX22.PNG

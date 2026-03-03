@@ -65,6 +65,8 @@ export function useUser(): UseUserResult {
         role: chosenRole,
         ...(authData.email ? { email: authData.email } : {}),
         ...(authData.phone ? { phone: authData.phone } : {}),
+        ...(authData.displayName ? { display_name: authData.displayName } : {}),
+        ...(authData.avatarUrl ? { avatar_url: authData.avatarUrl } : {}),
       }),
     });
 

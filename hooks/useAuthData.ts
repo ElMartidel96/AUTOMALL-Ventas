@@ -21,10 +21,12 @@ export interface AuthData {
   email: string | null;
   phone: string | null;
   authProvider: string | null;
+  displayName: string | null;
+  avatarUrl: string | null;
 }
 
 // Module-level cache so other hooks can access captured data imperatively
-let _authDataCache: AuthData = { email: null, phone: null, authProvider: null };
+let _authDataCache: AuthData = { email: null, phone: null, authProvider: null, displayName: null, avatarUrl: null };
 
 /** Get cached auth data captured from the last OAuth login */
 export function getAuthDataCache(): AuthData {
@@ -43,7 +45,7 @@ export function useAuthData(): AuthData {
   useEffect(() => {
     if (!isConnected || !address) {
       capturedForRef.current = null;
-      _authDataCache = { email: null, phone: null, authProvider: null };
+      _authDataCache = { email: null, phone: null, authProvider: null, displayName: null, avatarUrl: null };
       setAuthData(_authDataCache);
       return;
     }
@@ -68,6 +70,8 @@ export function useAuthData(): AuthData {
         let email: string | null = null;
         let phone: string | null = null;
         let authProvider: string | null = null;
+        let displayName: string | null = null;
+        let avatarUrl: string | null = null;
 
         for (const profile of profiles) {
           // Capture the auth provider type (google, apple, facebook, etc.)
@@ -82,20 +86,41 @@ export function useAuthData(): AuthData {
           if (!phone && profile.details.phone) {
             phone = profile.details.phone;
           }
+
+          // Runtime-safe: OAuth providers (Google, Facebook) return extra fields
+          // not declared in Thirdweb's TypeScript types (name, picture, etc.)
+          const d = profile.details as Record<string, unknown>;
+          if (!displayName && typeof d.name === 'string' && d.name) {
+            displayName = d.name;
+          }
+          if (!displayName && typeof d.displayName === 'string' && d.displayName) {
+            displayName = d.displayName;
+          }
+          if (!avatarUrl && typeof d.picture === 'string' && d.picture) {
+            avatarUrl = d.picture;
+          }
+          if (!avatarUrl && typeof d.avatar === 'string' && d.avatar) {
+            avatarUrl = d.avatar;
+          }
+          if (!avatarUrl && typeof d.avatarUrl === 'string' && d.avatarUrl) {
+            avatarUrl = d.avatarUrl;
+          }
         }
 
         if (cancelled) return;
 
-        const captured: AuthData = { email, phone, authProvider };
+        const captured: AuthData = { email, phone, authProvider, displayName, avatarUrl };
         _authDataCache = captured;
         capturedForRef.current = address!;
         setAuthData(captured);
 
         // Auto-save to users table if we captured useful data
-        if (email || phone) {
+        if (email || phone || displayName || avatarUrl) {
           const updates: Record<string, string> = {};
           if (email) updates.email = email;
           if (phone) updates.phone = phone;
+          if (displayName) updates.display_name = displayName;
+          if (avatarUrl) updates.avatar_url = avatarUrl;
 
           // Save to users table (may fail if user record doesn't exist yet — that's ok)
           fetch('/api/users', {
