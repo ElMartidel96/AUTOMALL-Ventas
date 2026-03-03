@@ -368,7 +368,9 @@ async function logActivity(
 // =====================================================
 
 /**
- * Get or create profile for wallet address
+ * Get or create profile for wallet address.
+ * Cross-references the `users` table to sync avatar_url and display_name
+ * when they are missing in user_profiles (handles silent sync failures).
  */
 export async function getOrCreateProfile(walletAddress: string): Promise<UserProfile> {
   if (!isValidWallet(walletAddress)) {
@@ -378,11 +380,13 @@ export async function getOrCreateProfile(walletAddress: string): Promise<UserPro
   const normalizedWallet = walletAddress.toLowerCase();
 
   // Try to get existing profile
-  const { data: existing, error: fetchError } = await getSupabase()
+  const { data: existing } = await getSupabase()
     .from('user_profiles')
     .select('*')
     .eq('wallet_address', normalizedWallet)
     .single();
+
+  let profile: UserProfile;
 
   if (existing) {
     // Update login stats
@@ -394,29 +398,67 @@ export async function getOrCreateProfile(walletAddress: string): Promise<UserPro
       })
       .eq('id', existing.id);
 
-    return existing;
+    profile = existing;
+  } else {
+    // Create new profile
+    const newProfile: UserProfileInsert = {
+      wallet_address: normalizedWallet,
+      last_login_at: new Date().toISOString(),
+      login_count: 1,
+    };
+
+    const { data: created, error: createError } = await getSupabase()
+      .from('user_profiles')
+      .insert(newProfile)
+      .select()
+      .single();
+
+    if (createError || !created) {
+      throw new Error(`Failed to create profile: ${createError?.message}`);
+    }
+
+    await logActivity(created.id, 'profile_created', 'New profile created');
+    profile = created;
   }
 
-  // Create new profile
-  const newProfile: UserProfileInsert = {
-    wallet_address: normalizedWallet,
-    last_login_at: new Date().toISOString(),
-    login_count: 1,
-  };
+  // Cross-reference users table to sync missing avatar_url / display_name.
+  // The avatar upload saves to both tables, but user_profiles update can fail
+  // silently. This ensures ProfileCard always shows the correct avatar.
+  if (!profile.avatar_url || !profile.display_name) {
+    try {
+      const { data: userRow } = await getSupabase()
+        .from('users')
+        .select('avatar_url, display_name')
+        .eq('wallet_address', normalizedWallet)
+        .single();
 
-  const { data: created, error: createError } = await getSupabase()
-    .from('user_profiles')
-    .insert(newProfile)
-    .select()
-    .single();
+      if (userRow) {
+        const syncFields: Record<string, string> = {};
+        if (!profile.avatar_url && userRow.avatar_url) {
+          syncFields.avatar_url = userRow.avatar_url;
+          profile.avatar_url = userRow.avatar_url;
+        }
+        if (!profile.display_name && userRow.display_name) {
+          syncFields.display_name = userRow.display_name;
+          profile.display_name = userRow.display_name;
+        }
 
-  if (createError || !created) {
-    throw new Error(`Failed to create profile: ${createError?.message}`);
+        // Sync back to user_profiles (fire-and-forget)
+        if (Object.keys(syncFields).length > 0) {
+          getSupabase()
+            .from('user_profiles')
+            .update({ ...syncFields, updated_at: new Date().toISOString() })
+            .eq('id', profile.id)
+            .then(() => {})
+            .catch(() => {});
+        }
+      }
+    } catch {
+      // Non-critical: users table might not exist or query failed
+    }
   }
 
-  await logActivity(created.id, 'profile_created', 'New profile created');
-
-  return created;
+  return profile;
 }
 
 /**
