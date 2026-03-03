@@ -1759,7 +1759,26 @@
     "avatarError": "Upload failed. Try again.",
     "saveProfile": "Save Profile",
     "profileSaved": "Profile saved!",
-    "profileSaveError": "Failed to save profile. Try again."
+    "profileSaveError": "Failed to save profile. Try again.",
+    "stats": {
+      "reputation": "Reputation",
+      "referrals": "Referrals",
+      "tasks": "Tasks",
+      "earned": "Earned"
+    },
+    "share": {
+      "button": "Share Profile",
+      "copied": "Link copied!",
+      "nfcNotSupported": "NFC not supported on this device",
+      "nfcError": "NFC failed. Try again.",
+      "shareMessage": "Check out my profile on AutoMALL!",
+      "qrTitle": "Profile QR Code",
+      "qrDescription": "Scan to view this profile",
+      "downloadQR": "Download",
+      "shareButton": "Share",
+      "nfcReady": "Tap to share",
+      "activateNfc": "Activate NFC"
+    }
   },
   "specialInvite": {
     "header": {

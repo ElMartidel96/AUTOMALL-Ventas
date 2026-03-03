@@ -185,22 +185,7 @@ function PersonalInfoCard({
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Failed to upload avatar');
 
-      const newAvatarUrl = data.data.avatar_url;
-
-      // Step 2: Save URL to users table
-      await fetch('/api/users', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wallet: address, avatar_url: newAvatarUrl }),
-      });
-
-      // Step 3: Save URL to user_profiles table
-      try {
-        updateProfile({ avatar_url: newAvatarUrl });
-      } catch {
-        // user_profiles may not exist yet — non-critical
-      }
-
+      // API auto-updates both user_profiles and users tables (like DAO)
       setAvatarSuccess(true);
       refetchUser?.();
       refetchProfile();

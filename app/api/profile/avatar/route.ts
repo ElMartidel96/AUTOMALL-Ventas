@@ -127,6 +127,30 @@ export async function POST(request: NextRequest) {
 
     const avatarUrl = urlData.publicUrl;
 
+    // Auto-update user_profiles.avatar_url (matches DAO behavior)
+    const { error: updateError } = await db
+      .from('user_profiles')
+      .update({
+        avatar_url: avatarUrl,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('wallet_address', normalizedWallet);
+
+    if (updateError) {
+      // Non-critical: profile may not exist yet, or table may not exist
+      console.warn('[Avatar] Could not update user_profiles:', updateError.message);
+    }
+
+    // Also update users.avatar_url for the AutoMALL user system
+    try {
+      await db
+        .from('users')
+        .update({ avatar_url: avatarUrl })
+        .eq('wallet_address', normalizedWallet);
+    } catch {
+      // Non-critical: users table may not have avatar_url column
+    }
+
     return NextResponse.json({
       success: true,
       data: {

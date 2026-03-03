@@ -1868,7 +1868,26 @@
     "avatarError": "Error al subir. Intenta de nuevo.",
     "saveProfile": "Guardar Perfil",
     "profileSaved": "¡Perfil guardado!",
-    "profileSaveError": "Error al guardar perfil. Intenta de nuevo."
+    "profileSaveError": "Error al guardar perfil. Intenta de nuevo.",
+    "stats": {
+      "reputation": "Reputación",
+      "referrals": "Referidos",
+      "tasks": "Tareas",
+      "earned": "Ganado"
+    },
+    "share": {
+      "button": "Compartir Perfil",
+      "copied": "¡Link copiado!",
+      "nfcNotSupported": "NFC no soportado en este dispositivo",
+      "nfcError": "Error de NFC. Intenta de nuevo.",
+      "shareMessage": "¡Mira mi perfil en AutoMALL!",
+      "qrTitle": "Código QR del Perfil",
+      "qrDescription": "Escanea para ver este perfil",
+      "downloadQR": "Descargar",
+      "shareButton": "Compartir",
+      "nfcReady": "Toca para compartir",
+      "activateNfc": "Activar NFC"
+    }
   },
   "taskData": {
     "create_web3_authentication_system": {
