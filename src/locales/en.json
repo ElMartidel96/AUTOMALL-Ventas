@@ -2699,6 +2699,12 @@
       "fullscreen": "View fullscreen",
       "close": "Close"
     },
+    "publish": {
+      "facebook": "Publish to Facebook",
+      "publishing": "Publishing...",
+      "success": "Published!",
+      "error": "Failed to publish"
+    },
     "related": {
       "title": "Similar Vehicles",
       "viewAll": "View All"

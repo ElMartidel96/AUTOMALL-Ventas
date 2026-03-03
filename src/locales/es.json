@@ -2699,6 +2699,12 @@
       "fullscreen": "Ver pantalla completa",
       "close": "Cerrar"
     },
+    "publish": {
+      "facebook": "Publicar en Facebook",
+      "publishing": "Publicando...",
+      "success": "¡Publicado!",
+      "error": "Error al publicar"
+    },
     "related": {
       "title": "Vehiculos Similares",
       "viewAll": "Ver Todos"
