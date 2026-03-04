@@ -10,7 +10,7 @@ import type { MetaConnection } from './types';
 const DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || 'autosmall.org';
 
 interface CaptionOptions {
-  postType: 'new_listing' | 'sold';
+  postType: 'new_listing' | 'sold' | 'manual' | 'repost';
   vehicle: VehicleForFeed;
   seller: SellerForFeed;
   connection: MetaConnection;
@@ -41,10 +41,10 @@ function buildEnglishCaption(opts: CaptionOptions): string {
   const { postType, vehicle, seller, connection } = opts;
   const lines: string[] = [];
 
-  if (postType === 'new_listing') {
-    lines.push('🚗 NEW LISTING');
-  } else {
+  if (postType === 'sold') {
     lines.push('🎉 SOLD!');
+  } else {
+    lines.push('🚗 NEW LISTING');
   }
 
   lines.push('');
@@ -68,7 +68,7 @@ function buildEnglishCaption(opts: CaptionOptions): string {
     lines.push(`⚙️ ${specs}`);
   }
 
-  if (postType === 'new_listing') {
+  if (postType !== 'sold') {
     lines.push('');
     if (seller.phone) lines.push(`📞 ${seller.phone}`);
     if (seller.whatsapp) lines.push(`💬 wa.me/${seller.whatsapp.replace(/\D/g, '')}`);
@@ -87,10 +87,10 @@ function buildSpanishCaption(opts: CaptionOptions): string {
   const { postType, vehicle, seller, connection } = opts;
   const lines: string[] = [];
 
-  if (postType === 'new_listing') {
-    lines.push('🚗 NUEVO EN INVENTARIO');
-  } else {
+  if (postType === 'sold') {
     lines.push('🎉 ¡VENDIDO!');
+  } else {
+    lines.push('🚗 NUEVO EN INVENTARIO');
   }
 
   lines.push('');
@@ -114,7 +114,7 @@ function buildSpanishCaption(opts: CaptionOptions): string {
     lines.push(`⚙️ ${specs}`);
   }
 
-  if (postType === 'new_listing') {
+  if (postType !== 'sold') {
     lines.push('');
     if (seller.phone) lines.push(`📞 ${seller.phone}`);
     if (seller.whatsapp) lines.push(`💬 wa.me/${seller.whatsapp.replace(/\D/g, '')}`);
@@ -133,10 +133,10 @@ function buildBilingualCaption(opts: CaptionOptions): string {
   const { postType, vehicle, seller, connection } = opts;
   const lines: string[] = [];
 
-  if (postType === 'new_listing') {
-    lines.push('🚗 NEW | NUEVO');
-  } else {
+  if (postType === 'sold') {
     lines.push('🎉 SOLD | ¡VENDIDO!');
+  } else {
+    lines.push('🚗 NEW | NUEVO');
   }
 
   lines.push('');
@@ -156,7 +156,7 @@ function buildBilingualCaption(opts: CaptionOptions): string {
     lines.push(`⚙️ ${specs}`);
   }
 
-  if (postType === 'new_listing') {
+  if (postType !== 'sold') {
     lines.push('');
     if (seller.phone) lines.push(`📞 ${seller.phone}`);
     if (seller.whatsapp) lines.push(`💬 wa.me/${seller.whatsapp.replace(/\D/g, '')}`);

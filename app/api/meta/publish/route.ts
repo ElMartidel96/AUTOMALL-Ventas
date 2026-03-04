@@ -35,11 +35,18 @@ export async function POST(req: NextRequest) {
 
   const { vehicleId, sellerAddress } = body;
 
+  // Detailed validation with logging for diagnostics
   if (!vehicleId || typeof vehicleId !== 'string') {
+    console.error('[MetaPublish] Missing vehicleId:', { vehicleId, sellerAddress: sellerAddress ? '0x...' : undefined });
     return NextResponse.json({ error: 'vehicleId is required' }, { status: 400 });
   }
-  if (!sellerAddress || typeof sellerAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(sellerAddress)) {
-    return NextResponse.json({ error: 'Valid sellerAddress is required' }, { status: 400 });
+  if (!sellerAddress || typeof sellerAddress !== 'string') {
+    console.error('[MetaPublish] Missing sellerAddress:', { vehicleId, hasAddress: !!sellerAddress, typeofAddress: typeof sellerAddress });
+    return NextResponse.json({ error: 'sellerAddress is required' }, { status: 400 });
+  }
+  if (!/^0x[a-fA-F0-9]{40}$/.test(sellerAddress)) {
+    console.error('[MetaPublish] Invalid address format:', { vehicleId, addressLength: sellerAddress.length, prefix: sellerAddress.substring(0, 4) });
+    return NextResponse.json({ error: 'sellerAddress format invalid' }, { status: 400 });
   }
 
   const supabase = getTypedClient();
@@ -115,9 +122,9 @@ export async function POST(req: NextRequest) {
     wallet_address: seller.wallet_address,
   };
 
-  // Generate caption
+  // Generate caption (manual publish type)
   const caption = generateCaption({
-    postType: 'new_listing',
+    postType: 'manual',
     vehicle: vehicleData,
     seller: sellerData,
     connection: conn,
