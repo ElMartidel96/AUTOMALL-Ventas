@@ -2429,7 +2429,9 @@
       "publishFacebook": "Publish to Facebook",
       "publishing": "Publishing...",
       "publishSuccess": "Published!",
-      "publishError": "Failed to publish"
+      "publishError": "Failed to publish",
+      "publishedFacebook": "Published",
+      "viewFacebookPost": "View"
     },
     "form": {
       "brand": "Brand",
@@ -2703,7 +2705,9 @@
       "facebook": "Publish to Facebook",
       "publishing": "Publishing...",
       "success": "Published!",
-      "error": "Failed to publish"
+      "error": "Failed to publish",
+      "published": "Published",
+      "viewPost": "View"
     },
     "related": {
       "title": "Similar Vehicles",

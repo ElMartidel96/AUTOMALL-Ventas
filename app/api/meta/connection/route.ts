@@ -43,6 +43,22 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(10);
 
+    // Build map of successfully published vehicles → fb_post_id
+    const { data: publishedRows } = await supabase
+      .from('meta_publication_log')
+      .select('vehicle_id, fb_post_id')
+      .eq('connection_id', connection.id)
+      .eq('status', 'published')
+      .not('fb_post_id', 'is', null)
+      .order('created_at', { ascending: false });
+
+    const publishedVehicles: Record<string, string> = {};
+    for (const row of (publishedRows || [])) {
+      if (!publishedVehicles[row.vehicle_id]) {
+        publishedVehicles[row.vehicle_id] = row.fb_post_id!;
+      }
+    }
+
     // Get seller handle for feed URL
     const { data: seller } = await supabase
       .from('sellers')
@@ -68,6 +84,7 @@ export async function GET(request: NextRequest) {
       },
       feedUrl,
       recentPublications: recentPubs || [],
+      publishedVehicles,
     });
   } catch (error) {
     console.error('[MetaConnection] Error:', error);

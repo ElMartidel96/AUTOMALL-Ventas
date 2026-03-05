@@ -1,8 +1,10 @@
 'use client';
 
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 export function useMetaPublish(walletAddress: string | undefined) {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async (vehicleId: string) => {
       if (!walletAddress) {
@@ -18,6 +20,9 @@ export function useMetaPublish(walletAddress: string | undefined) {
         throw new Error(err.error || 'Failed to publish');
       }
       return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['meta-connection', walletAddress] });
     },
   });
 }

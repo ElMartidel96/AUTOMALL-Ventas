@@ -2429,7 +2429,9 @@
       "publishFacebook": "Publicar en Facebook",
       "publishing": "Publicando...",
       "publishSuccess": "¡Publicado!",
-      "publishError": "Error al publicar"
+      "publishError": "Error al publicar",
+      "publishedFacebook": "Publicado",
+      "viewFacebookPost": "Ver"
     },
     "form": {
       "brand": "Marca",
@@ -2703,7 +2705,9 @@
       "facebook": "Publicar en Facebook",
       "publishing": "Publicando...",
       "success": "¡Publicado!",
-      "error": "Error al publicar"
+      "error": "Error al publicar",
+      "published": "Publicado",
+      "viewPost": "Ver"
     },
     "related": {
       "title": "Vehiculos Similares",

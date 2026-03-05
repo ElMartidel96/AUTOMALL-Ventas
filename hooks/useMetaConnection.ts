@@ -38,6 +38,7 @@ interface MetaConnectionResponse {
   connection: MetaConnectionData | null;
   feedUrl: string | null;
   recentPublications: MetaPublication[];
+  publishedVehicles: Record<string, string>;
 }
 
 interface MetaSettings {
