@@ -118,12 +118,12 @@ export async function handleStatusChange(event: StatusChangeEvent): Promise<void
     // Get vehicle images
     const { data: images } = await supabase
       .from('vehicle_images')
-      .select('id, url, position')
+      .select('id, public_url, display_order')
       .eq('vehicle_id', vehicleId)
-      .order('position', { ascending: true })
+      .order('display_order', { ascending: true })
       .limit(MAX_CAROUSEL_IMAGES);
 
-    const imageUrls = (images || []).map((img: { id: string; url: string; position: number }) => img.url);
+    const imageUrls = (images || []).map((img: { id: string; public_url: string; display_order: number }) => img.public_url);
 
     // Create pending log entry
     const { data: logEntry } = await supabase

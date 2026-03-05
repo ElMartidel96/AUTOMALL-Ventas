@@ -180,8 +180,8 @@ export interface VehicleForFeed {
 
 export interface VehicleImage {
   id: string;
-  url: string;
-  position: number;
+  public_url: string;
+  display_order: number;
 }
 
 export interface SellerForFeed {

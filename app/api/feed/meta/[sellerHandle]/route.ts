@@ -84,9 +84,9 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     const vehicleIds = vehicleRows.map((v: VehicleForFeed) => v.id);
     const { data: allImages } = await supabase
       .from('vehicle_images')
-      .select('id, url, position, vehicle_id')
+      .select('id, public_url, display_order, vehicle_id')
       .in('vehicle_id', vehicleIds)
-      .order('position', { ascending: true });
+      .order('display_order', { ascending: true });
 
     // Group images by vehicle_id
     const imagesByVehicle: Record<string, VehicleImage[]> = {};
@@ -95,8 +95,8 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       if (!imagesByVehicle[vid]) imagesByVehicle[vid] = [];
       imagesByVehicle[vid].push({
         id: img.id,
-        url: img.url,
-        position: img.position,
+        public_url: img.public_url,
+        display_order: img.display_order,
       });
     }
 

@@ -133,12 +133,12 @@ export async function POST(req: NextRequest) {
   // Get vehicle images
   const { data: images } = await supabase
     .from('vehicle_images')
-    .select('id, url, position')
+    .select('id, public_url, display_order')
     .eq('vehicle_id', vehicleId)
-    .order('position', { ascending: true })
+    .order('display_order', { ascending: true })
     .limit(MAX_CAROUSEL_IMAGES);
 
-  const imageUrls = (images || []).map((img: { id: string; url: string; position: number }) => img.url);
+  const imageUrls = (images || []).map((img: { id: string; public_url: string; display_order: number }) => img.public_url);
 
   if (imageUrls.length === 0) {
     return NextResponse.json({ error: 'Vehicle has no images' }, { status: 400 });
