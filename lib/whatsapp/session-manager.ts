@@ -278,21 +278,19 @@ async function runExtraction(
   const supabase = getTypedClient();
 
   try {
-    // Download images and get public URLs for AI analysis
-    const { processWhatsAppImages } = await import('./image-pipeline');
-    const tempVehicleId = `temp-${Date.now()}`;
+    // Phase 1: Download images from WA → stage in Supabase Storage (no vehicle_images records)
+    const { stageWhatsAppImages } = await import('./image-pipeline');
 
-    // First upload images to get public URLs for AI to analyze
-    const uploadedImages = await processWhatsAppImages(
+    const stagedImages = await stageWhatsAppImages(
       session.image_media_ids || [],
-      tempVehicleId,
       link.wallet_address,
       accessToken
     );
 
-    const imageUrls = uploadedImages.map(img => img.public_url);
+    const imageUrls = stagedImages.map(img => img.public_url);
+    const stagedPaths = stagedImages.map(img => img.storage_path);
 
-    // Store the uploaded image URLs
+    // Store public URLs + staged paths for later finalization
     await updateSession(session.id, { image_urls: imageUrls });
 
     // Get latest text messages
@@ -354,11 +352,20 @@ async function createVehicleFlow(
     const extracted = session.extracted_vehicle as ExtractedVehicle;
     if (!extracted) throw new Error('No extracted vehicle data');
 
+    // Reconstruct staged images from session data (URLs stored during extraction)
+    const imageUrls = session.image_urls || [];
+    const stagedImages = imageUrls.map((url: string) => ({
+      public_url: url,
+      // Extract storage_path from the public URL (after /object/public/vehicle-images/)
+      storage_path: url.includes('/vehicle-images/') ? url.split('/vehicle-images/')[1] : '',
+      file_size: 0,
+      mime_type: 'image/jpeg',
+    }));
+
     const result = await createVehicleFromExtraction(
       extracted,
       link.wallet_address,
-      session.image_media_ids || [],
-      accessToken,
+      stagedImages,
       link.auto_activate
     );
 

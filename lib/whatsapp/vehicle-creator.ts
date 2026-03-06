@@ -7,8 +7,9 @@
 
 import { getTypedClient } from '@/lib/supabase/client';
 import { handleStatusChange } from '@/lib/meta/auto-publisher';
-import { processWhatsAppImages } from './image-pipeline';
+import { finalizeVehicleImages } from './image-pipeline';
 import type { ExtractedVehicle } from './types';
+import type { StagedImage } from './image-pipeline';
 
 const APP_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || 'autosmall.org';
 
@@ -21,8 +22,7 @@ export interface VehicleCreateResult {
 export async function createVehicleFromExtraction(
   extracted: ExtractedVehicle,
   sellerAddress: string,
-  mediaIds: string[],
-  waAccessToken: string,
+  stagedImages: StagedImage[],
   autoActivate: boolean
 ): Promise<VehicleCreateResult> {
   const supabase = getTypedClient();
@@ -97,8 +97,8 @@ export async function createVehicleFromExtraction(
 
   const vehicleId = data.id;
 
-  // 3. Process images (download from WA → upload to Supabase Storage)
-  await processWhatsAppImages(mediaIds, vehicleId, walletAddr, waAccessToken);
+  // 3. Finalize staged images (move from staging → vehicle folder + create records)
+  await finalizeVehicleImages(stagedImages, vehicleId, walletAddr);
 
   // 4. Auto-activate if configured
   let publishedToFb = false;
