@@ -54,7 +54,7 @@ export const FEATURE_INVENTORY = envBool('NEXT_PUBLIC_FEATURE_INVENTORY', true)
 export const FEATURE_CRM = envBool('NEXT_PUBLIC_FEATURE_CRM', true)
 
 /** Enable WhatsApp Business integration */
-export const FEATURE_WHATSAPP = envBool('NEXT_PUBLIC_FEATURE_WHATSAPP', false)
+export const FEATURE_WHATSAPP = envBool('NEXT_PUBLIC_FEATURE_WHATSAPP', true)
 
 /** Enable public vehicle catalog */
 export const FEATURE_CATALOG = envBool('NEXT_PUBLIC_FEATURE_CATALOG', true)

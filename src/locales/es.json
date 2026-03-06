@@ -3272,5 +3272,37 @@
       "hint": "Intenta ampliar el radio o buscar por otra dirección.",
       "trySearch": "Buscar por Dirección"
     }
+  },
+  "whatsapp": {
+    "tabWhatsApp": "WhatsApp AI",
+    "title": "Asistente WhatsApp AI",
+    "subtitle": "Crea listados de vehiculos enviando fotos por WhatsApp",
+    "businessNumber": "WhatsApp Business de AutoMALL",
+    "sendPhotosHere": "Envia las fotos de tu vehiculo a este numero",
+    "howItWorks": "Como Funciona",
+    "step1": "Envia fotos del vehiculo a nuestro numero de WhatsApp Business",
+    "step2": "Escribe los detalles: marca, modelo, ano, precio, millaje",
+    "step3": "La IA analiza las fotos y extrae toda la informacion del vehiculo",
+    "step4": "Tu listado se crea y publica automaticamente",
+    "linkPhone": "Vincula Tu Numero de Telefono",
+    "phoneLinked": "Numero de telefono vinculado",
+    "phonePlaceholder": "+1 (321) 555-1234",
+    "linkBtn": "Vincular",
+    "linkError": "Error al vincular numero de telefono",
+    "language": "Idioma",
+    "autoActivate": "Auto-activar listados",
+    "autoActivateDesc": "Publicar listados automaticamente despues de crearlos (omitir estado borrador)",
+    "recentSessions": "Conversaciones Recientes",
+    "noSessions": "No hay conversaciones aun. Envia fotos a nuestro WhatsApp para comenzar!",
+    "photos": "fotos",
+    "stateIdle": "Listo",
+    "stateCollecting": "Recopilando fotos",
+    "stateExtracting": "Analizando...",
+    "stateConfirming": "Esperando confirmacion",
+    "stateCreating": "Creando listado...",
+    "stateComplete": "Completado",
+    "stateError": "Error",
+    "viewListing": "Ver Listado",
+    "retryExtraction": "Reintentar"
   }
 }
