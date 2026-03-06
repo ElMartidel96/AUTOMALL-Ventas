@@ -144,6 +144,57 @@ export interface FBErrorResponse {
 }
 
 // ─────────────────────────────────────────────
+// Engagement Tracking
+// ─────────────────────────────────────────────
+
+export interface FBEngagementData {
+  likes_count: number;
+  comments_count: number;
+  shares_count: number;
+  reactions_count: number;
+  impressions?: number;
+  reach?: number;
+  clicks?: number;
+  engaged_users?: number;
+  permalink_url?: string;
+}
+
+export interface FBEngagementSnapshot {
+  id: string;
+  publication_id: string;
+  fb_post_id: string;
+  likes_count: number;
+  comments_count: number;
+  shares_count: number;
+  reactions_count: number;
+  impressions: number | null;
+  reach: number | null;
+  clicks: number | null;
+  engaged_users: number | null;
+  fetched_at: string;
+}
+
+export interface EngagementSummary {
+  total_likes: number;
+  total_comments: number;
+  total_shares: number;
+  total_reactions: number;
+  total_posts: number;
+  best_post: {
+    fb_post_id: string;
+    vehicle_id: string;
+    likes: number;
+    comments: number;
+    shares: number;
+  } | null;
+}
+
+export interface MetaPublicationWithEngagement extends MetaPublicationLog {
+  permalink_url?: string;
+  engagement?: FBEngagementData;
+}
+
+// ─────────────────────────────────────────────
 // OAuth State
 // ─────────────────────────────────────────────
 

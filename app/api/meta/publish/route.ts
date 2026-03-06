@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Create pending log entry
-  const { data: logEntry } = await supabase
+  const { data: logEntry, error: logError } = await supabase
     .from('meta_publication_log')
     .insert({
       vehicle_id: vehicleId,
@@ -158,6 +158,14 @@ export async function POST(req: NextRequest) {
     })
     .select('id')
     .single();
+
+  if (logError) {
+    console.error('[MetaPublish] Failed to create log entry:', logError.message, logError.details);
+    return NextResponse.json(
+      { error: `Failed to create publication log: ${logError.message}` },
+      { status: 500 }
+    );
+  }
 
   const logId = logEntry?.id;
 
@@ -191,15 +199,35 @@ export async function POST(req: NextRequest) {
       fbPostId = result.id || null;
     }
 
+    // Fetch permalink from Graph API
+    let permalinkUrl: string | null = null;
+    if (fbPostId) {
+      try {
+        const plRes = await fetch(
+          `https://graph.facebook.com/v22.0/${fbPostId}?fields=permalink_url&access_token=${conn.fb_page_access_token}`
+        );
+        if (plRes.ok) {
+          const plData = await plRes.json();
+          permalinkUrl = plData.permalink_url || null;
+        }
+      } catch {
+        // Non-critical — permalink is nice-to-have
+      }
+    }
+
     // Update log as published
     if (logId) {
       await supabase
         .from('meta_publication_log')
-        .update({ status: 'published', fb_post_id: fbPostId })
+        .update({
+          status: 'published',
+          fb_post_id: fbPostId,
+          permalink_url: permalinkUrl,
+        })
         .eq('id', logId);
     }
 
-    return NextResponse.json({ success: true, fb_post_id: fbPostId });
+    return NextResponse.json({ success: true, fb_post_id: fbPostId, permalink_url: permalinkUrl });
   } catch (error) {
     // Mark log as failed
     if (logId) {

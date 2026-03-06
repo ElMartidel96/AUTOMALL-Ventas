@@ -51,7 +51,7 @@ export const FEATURE_AI_SALES_AGENT = envBool('NEXT_PUBLIC_FEATURE_AI_SALES_AGEN
 export const FEATURE_INVENTORY = envBool('NEXT_PUBLIC_FEATURE_INVENTORY', true)
 
 /** Enable CRM / client management */
-export const FEATURE_CRM = envBool('NEXT_PUBLIC_FEATURE_CRM', false)
+export const FEATURE_CRM = envBool('NEXT_PUBLIC_FEATURE_CRM', true)
 
 /** Enable WhatsApp Business integration */
 export const FEATURE_WHATSAPP = envBool('NEXT_PUBLIC_FEATURE_WHATSAPP', false)

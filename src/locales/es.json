@@ -2991,7 +2991,106 @@
     "recentTitle": "Publicaciones Recientes",
     "postTypeNew": "Nuevo listado",
     "postTypeSold": "Vendido",
-    "postTypeRepost": "Repost"
+    "postTypeRepost": "Repost",
+    "postTypeManual": "Publicacion manual",
+    "engagement": {
+      "title": "Engagement de Facebook",
+      "likes": "Likes",
+      "comments": "Comentarios",
+      "shares": "Compartidos",
+      "reactions": "Reacciones",
+      "refresh": "Actualizar",
+      "noData": "Sin datos de engagement aun",
+      "fromPosts": "De {count} publicaciones"
+    }
+  },
+  "crm": {
+    "title": "Mis Clientes",
+    "subtitle": "Gestiona tus leads, pipeline e interacciones de ventas",
+    "loginRequired": "Inicia sesion para ver tus clientes",
+    "loginRequiredDesc": "Necesitas iniciar sesion para gestionar tu CRM.",
+    "sellersOnly": "Acceso para vendedores",
+    "sellersOnlyDesc": "El CRM esta disponible para vendedores y BirdDogs.",
+    "newLead": "Nuevo Lead",
+    "editLead": "Editar Lead",
+    "listView": "Vista lista",
+    "pipelineView": "Vista pipeline",
+    "searchPlaceholder": "Buscar leads...",
+    "allStatuses": "Todos los estados",
+    "allSources": "Todas las fuentes",
+    "results": "resultados",
+    "noLeads": "Sin leads aun. Agrega tu primer lead para comenzar.",
+    "noInteractions": "Sin interacciones registradas aun.",
+    "more": "mas",
+    "pipeline": "Pipeline",
+    "timeline": "Linea de Tiempo",
+    "budget": "Presupuesto",
+    "confirmDelete": "¿Eliminar este lead?",
+    "stats": {
+      "totalLeads": "Total Leads",
+      "newThisWeek": "Nuevos Esta Semana",
+      "conversionRate": "Tasa de Conversion",
+      "hotLeads": "Leads Calientes"
+    },
+    "status": {
+      "new": "Nuevo",
+      "contacted": "Contactado",
+      "qualified": "Calificado",
+      "negotiating": "Negociando",
+      "won": "Ganado",
+      "lost": "Perdido"
+    },
+    "interest": {
+      "hot": "Caliente",
+      "warm": "Tibio",
+      "cold": "Frio",
+      "lost": "Perdido"
+    },
+    "source": {
+      "manual": "Manual",
+      "facebook": "Facebook",
+      "whatsapp": "WhatsApp",
+      "website": "Sitio Web",
+      "referral": "Referido",
+      "phone": "Telefono",
+      "walk_in": "Visita"
+    },
+    "interactionType": {
+      "call": "Llamada",
+      "whatsapp": "WhatsApp",
+      "email": "Correo",
+      "sms": "SMS",
+      "facebook_comment": "Comentario FB",
+      "facebook_message": "Mensaje FB",
+      "website_visit": "Visita Web",
+      "test_drive": "Test Drive",
+      "walk_in": "Visita",
+      "note": "Nota",
+      "status_change": "Cambio de Estado"
+    },
+    "direction": {
+      "inbound": "Entrante",
+      "outbound": "Saliente",
+      "internal": "Interno"
+    },
+    "form": {
+      "name": "Nombre",
+      "phone": "Telefono",
+      "email": "Correo",
+      "whatsapp": "WhatsApp",
+      "source": "Fuente",
+      "interestLevel": "Nivel de Interes",
+      "budgetMin": "Presupuesto Min",
+      "budgetMax": "Presupuesto Max",
+      "notes": "Notas",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "saving": "Guardando...",
+      "delete": "Eliminar",
+      "addInteraction": "Agregar Interaccion",
+      "interactionSummary": "¿Que sucedio?",
+      "interactionDetails": "Detalles (opcional)"
+    }
   },
   "legal": {
     "privacy": {
