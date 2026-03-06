@@ -4,10 +4,12 @@
  * GET  — Webhook verification (Meta sends once during setup)
  * POST — Incoming messages (text, image, interactive, etc.)
  *
- * Pattern: same as app/api/webhooks/discord/route.ts
+ * Security: HMAC-SHA256 signature verification
+ * Performance: Returns 200 immediately, processes async
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { FEATURE_WHATSAPP } from '@/lib/config/features';
 import { verifyWhatsAppSignature } from '@/lib/whatsapp/verify';
 import { handleIncomingMessage } from '@/lib/whatsapp/session-manager';
 import type { WAWebhookPayload, WAMessage } from '@/lib/whatsapp/types';
@@ -41,6 +43,11 @@ export async function GET(request: NextRequest) {
 // ─────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
+  // Feature flag check — accept webhook but don't process
+  if (!FEATURE_WHATSAPP) {
+    return NextResponse.json({ success: true });
+  }
+
   try {
     const rawBody = await request.text();
 
@@ -54,8 +61,7 @@ export async function POST(request: NextRequest) {
     // 2. Parse payload
     const payload: WAWebhookPayload = JSON.parse(rawBody);
 
-    // 3. Return 200 IMMEDIATELY (Meta requirement: <20 seconds)
-    //    Process messages in the background after returning
+    // 3. Collect messages to process (ignore status updates, read receipts, etc.)
     const messagesToProcess: Array<{
       phoneNumber: string;
       waPhoneNumberId: string;
@@ -79,7 +85,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Fire-and-forget: process each message
+    // 4. Fire-and-forget: process each message
     for (const { phoneNumber, waPhoneNumberId, message } of messagesToProcess) {
       handleIncomingMessage(phoneNumber, waPhoneNumberId, message, WA_ACCESS_TOKEN)
         .catch((err) => {
@@ -87,6 +93,7 @@ export async function POST(request: NextRequest) {
         });
     }
 
+    // 5. Return 200 immediately (Meta requirement: respond < 20 seconds)
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('[WA-Webhook] Error:', error);

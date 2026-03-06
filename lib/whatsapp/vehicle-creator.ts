@@ -2,11 +2,11 @@
  * Vehicle Creator — WhatsApp AI Pipeline
  *
  * Creates a vehicle listing from extracted AI data.
- * Reutilizes the same pattern as POST /api/inventory.
+ * Vehicle is created as 'active' (visible on catalog immediately).
+ * Facebook publishing is handled separately by session-manager after user confirmation.
  */
 
 import { getTypedClient } from '@/lib/supabase/client';
-import { handleStatusChange } from '@/lib/meta/auto-publisher';
 import { finalizeVehicleImages } from './image-pipeline';
 import type { ExtractedVehicle } from './types';
 import type { StagedImage } from './image-pipeline';
@@ -16,19 +16,17 @@ const APP_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || 'autosmall.org';
 export interface VehicleCreateResult {
   vehicleId: string;
   catalogUrl: string;
-  publishedToFb: boolean;
 }
 
 export async function createVehicleFromExtraction(
   extracted: ExtractedVehicle,
   sellerAddress: string,
   stagedImages: StagedImage[],
-  autoActivate: boolean
 ): Promise<VehicleCreateResult> {
   const supabase = getTypedClient();
   const walletAddr = sellerAddress.toLowerCase();
 
-  // 1. Lookup seller info
+  // 1. Lookup seller info (must be active)
   const { data: seller } = await supabase
     .from('sellers')
     .select('id, handle, phone, whatsapp, city, state, latitude, longitude')
@@ -37,10 +35,10 @@ export async function createVehicleFromExtraction(
     .single();
 
   if (!seller) {
-    throw new Error('Seller not found');
+    throw new Error('Seller not found or inactive');
   }
 
-  // 2. Create vehicle in draft status
+  // 2. Create vehicle as active (immediately visible on catalog)
   const vehicleData = {
     seller_address: walletAddr,
     seller_handle: seller.handle,
@@ -69,7 +67,7 @@ export async function createVehicleFromExtraction(
     latitude: seller.latitude || null,
     longitude: seller.longitude || null,
     location_source: seller.latitude != null ? 'dealer' : null,
-    status: 'draft' as const,
+    status: 'active' as const,
   };
 
   let data;
@@ -100,34 +98,7 @@ export async function createVehicleFromExtraction(
   // 3. Finalize staged images (move from staging → vehicle folder + create records)
   await finalizeVehicleImages(stagedImages, vehicleId, walletAddr);
 
-  // 4. Auto-activate if configured
-  let publishedToFb = false;
-
-  if (autoActivate) {
-    const { error: statusError } = await supabase
-      .from('vehicles')
-      .update({ status: 'active' })
-      .eq('id', vehicleId);
-
-    if (!statusError) {
-      // Fire-and-forget: trigger Facebook auto-publish
-      handleStatusChange({
-        vehicleId,
-        sellerAddress: walletAddr,
-        oldStatus: 'draft',
-        newStatus: 'active',
-      }).then(() => {
-        publishedToFb = true;
-      }).catch((err) => {
-        console.error(`[WA-Creator] FB publish error for ${vehicleId}:`, err);
-      });
-
-      // Give it a moment for the FB publish to start
-      publishedToFb = true;
-    }
-  }
-
   const catalogUrl = `https://${seller.handle}.${APP_DOMAIN}/catalog/${vehicleId}`;
 
-  return { vehicleId, catalogUrl, publishedToFb };
+  return { vehicleId, catalogUrl };
 }

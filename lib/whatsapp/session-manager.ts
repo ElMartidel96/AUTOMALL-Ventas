@@ -10,10 +10,13 @@
  *   extracting ──(AI done)──> confirming (show result)
  *   confirming ──("yes")────> creating (create vehicle)
  *   confirming ──("edit")───> collecting (re-enter)
- *   confirming ──("cancel")─> idle
- *   creating ──(success)────> complete
+ *   confirming ──("cancel")─> idle (cleanup staging)
+ *   creating ──(success)────> complete (ask about Facebook)
  *   creating ──(error)──────> error
+ *   complete ──("fb yes")───> idle (publish to FB + reset)
+ *   complete ──("fb no")────> idle (skip FB + reset)
  *   complete ──(image)──────> collecting (new vehicle)
+ *   error ──(image)─────────> collecting (retry with new vehicle)
  */
 
 import { getTypedClient } from '@/lib/supabase/client';
@@ -24,10 +27,13 @@ import {
 } from './api';
 import { extractVehicleData, findMissingFields } from './vehicle-extractor';
 import { createVehicleFromExtraction } from './vehicle-creator';
+import { cleanupStagingImages } from './image-pipeline';
 import * as templates from './reply-templates';
 import type { WAMessage, WASession, WAPhoneLink, ExtractedVehicle } from './types';
+import type { StagedImage } from './image-pipeline';
 
 const MAX_IMAGES = 10;
+const APP_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || 'autosmall.org';
 
 // ─────────────────────────────────────────────
 // Main Entry Point
@@ -52,7 +58,6 @@ export async function handleIncomingMessage(
     .single();
 
   if (!phoneLink) {
-    // Phone not linked — tell user to link in profile
     const lang = detectLanguage(message);
     await sendTextMessage(waPhoneNumberId, phoneNumber, templates.phoneNotLinkedMessage(lang), accessToken);
     await logMessage(null, message.id, 'inbound', message.type, phoneNumber, getMessageContent(message), getMediaId(message), message);
@@ -62,7 +67,14 @@ export async function handleIncomingMessage(
   const link = phoneLink as unknown as WAPhoneLink;
   const lang = link.language;
 
-  // 2. Get or create session
+  // 2. Handle unsupported message types early
+  if (!['text', 'image', 'interactive', 'button'].includes(message.type)) {
+    await sendTextMessage(waPhoneNumberId, phoneNumber, templates.unsupportedMessageType(lang), accessToken);
+    await logMessage(null, message.id, 'inbound', message.type, phoneNumber, null, null, message);
+    return;
+  }
+
+  // 3. Get or create session
   let session = await getActiveSession(phoneNumber);
 
   if (!session) {
@@ -72,11 +84,10 @@ export async function handleIncomingMessage(
   // Log inbound message
   await logMessage(session.id, message.id, 'inbound', message.type, phoneNumber, getMessageContent(message), getMediaId(message), message);
 
-  // 3. Route based on current state + message type
+  // 4. Route based on current state + message type
   try {
     switch (session.state) {
       case 'idle':
-      case 'complete':
       case 'error':
         await handleIdleState(session, message, waPhoneNumberId, accessToken, link);
         break;
@@ -86,7 +97,7 @@ export async function handleIncomingMessage(
         break;
 
       case 'extracting':
-        // AI is working — just acknowledge
+        // AI is working — acknowledge
         await sendTextMessage(waPhoneNumberId, phoneNumber, templates.extractingMessage(lang), accessToken);
         break;
 
@@ -95,8 +106,12 @@ export async function handleIncomingMessage(
         break;
 
       case 'creating':
-        // Vehicle is being created — just acknowledge
+        // Vehicle is being created — acknowledge
         await sendTextMessage(waPhoneNumberId, phoneNumber, templates.creatingMessage(lang), accessToken);
+        break;
+
+      case 'complete':
+        await handleCompleteState(session, message, waPhoneNumberId, accessToken, link);
         break;
 
       default:
@@ -123,10 +138,10 @@ async function handleIdleState(
   const lang = link.language;
 
   if (message.type === 'image') {
-    // Start collecting images for new vehicle
     const mediaId = message.image?.id;
     if (!mediaId) return;
 
+    // Start collecting images for new vehicle
     await updateSession(session.id, {
       state: 'collecting',
       image_media_ids: [mediaId],
@@ -144,7 +159,7 @@ async function handleIdleState(
 
     await sendTextMessage(waPhoneNumberId, session.phone_number, templates.photoReceived(lang, 1), accessToken);
   } else if (message.type === 'text') {
-    // Text without photos first — send welcome
+    // Text without photos — send welcome
     await sendTextMessage(waPhoneNumberId, session.phone_number, templates.welcomeMessage(lang), accessToken);
   }
 }
@@ -219,7 +234,6 @@ async function handleConfirmingState(
   } else if (message.type === 'button' && message.button?.payload) {
     action = message.button.payload;
   } else if (message.type === 'text' && message.text?.body) {
-    // Parse text as confirmation
     const text = message.text.body.toLowerCase().trim();
     if (['si', 'sí', 'yes', 'ok', 'crear', 'create', '1'].includes(text)) {
       action = 'confirm_yes';
@@ -228,7 +242,7 @@ async function handleConfirmingState(
     } else if (['cancelar', 'cancel', 'no', '3'].includes(text)) {
       action = 'confirm_cancel';
     } else {
-      // Treat as field update — re-extract with new info
+      // Treat as field update — store text and re-extract
       action = 'confirm_edit';
       await appendTextMessage(session.id, message.text.body);
     }
@@ -245,22 +259,66 @@ async function handleConfirmingState(
       break;
 
     case 'confirm_cancel':
-      await updateSession(session.id, {
-        state: 'idle',
-        image_media_ids: [],
-        raw_text_messages: [],
-        extracted_vehicle: null,
-      });
+      // Cleanup staging images before resetting
+      await cleanupStagingImages(session.image_urls || []);
+      await resetSession(session.id);
       await sendTextMessage(waPhoneNumberId, session.phone_number, templates.welcomeMessage(lang), accessToken);
       break;
 
     default:
       // Re-send confirmation
       if (session.extracted_vehicle) {
+        const vehicleData = session.extracted_vehicle as unknown as Record<string, unknown>;
+        const { _staged_images: _, ...extractedFields } = vehicleData;
         const sellerHandle = await getSellerHandle(link.wallet_address);
-        const { text, buttons } = templates.confirmationMessage(lang, session.extracted_vehicle as ExtractedVehicle, sellerHandle);
+        const { text, buttons } = templates.confirmationMessage(lang, extractedFields as unknown as ExtractedVehicle, sellerHandle);
         await sendInteractiveMessage(waPhoneNumberId, session.phone_number, text, buttons, accessToken);
       }
+  }
+}
+
+/**
+ * Handle messages in 'complete' state — Facebook publish confirmation.
+ * Vehicle has been created and user was asked "Want to publish to Facebook?"
+ */
+async function handleCompleteState(
+  session: WASession,
+  message: WAMessage,
+  waPhoneNumberId: string,
+  accessToken: string,
+  link: WAPhoneLink
+): Promise<void> {
+  const lang = link.language;
+
+  // If user sends a new image, start new vehicle
+  if (message.type === 'image') {
+    await handleIdleState(session, message, waPhoneNumberId, accessToken, link);
+    return;
+  }
+
+  let action: string | null = null;
+
+  // Check for button reply
+  if (message.type === 'interactive' && message.interactive?.button_reply) {
+    action = message.interactive.button_reply.id;
+  } else if (message.type === 'text' && message.text?.body) {
+    const text = message.text.body.toLowerCase().trim();
+    if (['si', 'sí', 'yes', 'ok', 'publicar', 'publish', '1'].includes(text)) {
+      action = 'fb_yes';
+    } else if (['no', 'nah', 'skip', '2'].includes(text)) {
+      action = 'fb_no';
+    }
+  }
+
+  if (action === 'fb_yes') {
+    await publishToFacebook(session, waPhoneNumberId, accessToken, link);
+  } else if (action === 'fb_no') {
+    await sendTextMessage(waPhoneNumberId, session.phone_number, templates.fbSkippedMessage(lang), accessToken);
+    await resetSession(session.id);
+  } else {
+    // Unrecognized input — treat as "skip" and ready for next vehicle
+    await sendTextMessage(waPhoneNumberId, session.phone_number, templates.fbSkippedMessage(lang), accessToken);
+    await resetSession(session.id);
   }
 }
 
@@ -275,10 +333,9 @@ async function runExtraction(
   link: WAPhoneLink
 ): Promise<void> {
   const lang = link.language;
-  const supabase = getTypedClient();
 
   try {
-    // Phase 1: Download images from WA → stage in Supabase Storage (no vehicle_images records)
+    // Phase 1: Download images from WA → stage in Supabase Storage
     const { stageWhatsAppImages } = await import('./image-pipeline');
 
     const stagedImages = await stageWhatsAppImages(
@@ -287,26 +344,32 @@ async function runExtraction(
       accessToken
     );
 
-    const imageUrls = stagedImages.map(img => img.public_url);
-    const stagedPaths = stagedImages.map(img => img.storage_path);
+    if (stagedImages.length === 0) {
+      await updateSessionState(session.id, 'error');
+      await sendTextMessage(waPhoneNumberId, session.phone_number, templates.errorMessage(lang), accessToken);
+      return;
+    }
 
-    // Store public URLs + staged paths for later finalization
+    const imageUrls = stagedImages.map(img => img.public_url);
+
+    // Store public URLs for reference
     await updateSession(session.id, { image_urls: imageUrls });
 
     // Get latest text messages
     const freshSession = await getActiveSession(session.phone_number);
     const textMessages = freshSession?.raw_text_messages || session.raw_text_messages || [];
 
-    // Run AI extraction
+    // Run AI extraction (has 90s timeout internally)
     const extracted = await extractVehicleData(imageUrls, textMessages);
 
     // Check for missing required fields
     const missing = findMissingFields(extracted);
 
     if (missing.length > 0) {
+      // Store extraction + staged images data (staged images persisted for later finalization)
       await updateSession(session.id, {
         state: 'collecting',
-        extracted_vehicle: extracted,
+        extracted_vehicle: { ...extracted, _staged_images: stagedImages },
         missing_fields: missing,
       });
       await sendTextMessage(waPhoneNumberId, session.phone_number, templates.missingFieldsMessage(lang, missing), accessToken);
@@ -317,15 +380,12 @@ async function runExtraction(
     const sellerHandle = await getSellerHandle(link.wallet_address);
     await updateSession(session.id, {
       state: 'confirming',
-      extracted_vehicle: extracted,
+      extracted_vehicle: { ...extracted, _staged_images: stagedImages },
       missing_fields: [],
     });
 
     const { text, buttons } = templates.confirmationMessage(lang, extracted, sellerHandle);
     await sendInteractiveMessage(waPhoneNumberId, session.phone_number, text, buttons, accessToken);
-
-    // Clean up temp images — they'll be re-uploaded with real vehicle ID
-    // Actually, we keep them and will move/reassign when vehicle is created
   } catch (error) {
     console.error(`[WA-Session] Extraction failed:`, error);
     await updateSessionState(session.id, 'error');
@@ -349,24 +409,28 @@ async function createVehicleFlow(
   await sendTextMessage(waPhoneNumberId, session.phone_number, templates.creatingMessage(lang), accessToken);
 
   try {
-    const extracted = session.extracted_vehicle as ExtractedVehicle;
-    if (!extracted) throw new Error('No extracted vehicle data');
+    const vehicleData = session.extracted_vehicle as unknown as Record<string, unknown>;
+    if (!vehicleData) throw new Error('No extracted vehicle data');
 
-    // Reconstruct staged images from session data (URLs stored during extraction)
-    const imageUrls = session.image_urls || [];
-    const stagedImages = imageUrls.map((url: string) => ({
-      public_url: url,
-      // Extract storage_path from the public URL (after /object/public/vehicle-images/)
-      storage_path: url.includes('/vehicle-images/') ? url.split('/vehicle-images/')[1] : '',
-      file_size: 0,
-      mime_type: 'image/jpeg',
-    }));
+    // Separate staged images from extraction data
+    const stagedImages = (vehicleData._staged_images as StagedImage[]) || [];
+    const { _staged_images: _, ...extractedFields } = vehicleData;
+    const extracted = extractedFields as unknown as ExtractedVehicle;
+
+    // If no staged images in session data, reconstruct from URLs
+    const imagesToUse = stagedImages.length > 0
+      ? stagedImages
+      : (session.image_urls || []).map((url: string) => ({
+          public_url: url,
+          storage_path: url.includes('/vehicle-images/') ? url.split('/vehicle-images/')[1] : '',
+          file_size: 0,
+          mime_type: 'image/jpeg',
+        }));
 
     const result = await createVehicleFromExtraction(
       extracted,
       link.wallet_address,
-      stagedImages,
-      link.auto_activate
+      imagesToUse,
     );
 
     await updateSession(session.id, {
@@ -374,13 +438,68 @@ async function createVehicleFlow(
       vehicle_id: result.vehicleId,
     });
 
-    const message = templates.completeMessage(lang, extracted, result.catalogUrl, result.publishedToFb);
-    await sendTextMessage(waPhoneNumberId, session.phone_number, message, accessToken);
+    // Send success message + ask about Facebook
+    const { text, buttons } = templates.vehicleCreatedMessage(lang, extracted, result.catalogUrl);
+    await sendInteractiveMessage(waPhoneNumberId, session.phone_number, text, buttons, accessToken);
   } catch (error) {
     console.error(`[WA-Session] Vehicle creation failed:`, error);
     await updateSessionState(session.id, 'error');
     await sendTextMessage(waPhoneNumberId, session.phone_number, templates.errorMessage(lang), accessToken);
   }
+}
+
+// ─────────────────────────────────────────────
+// Facebook Publishing
+// ─────────────────────────────────────────────
+
+async function publishToFacebook(
+  session: WASession,
+  waPhoneNumberId: string,
+  accessToken: string,
+  link: WAPhoneLink
+): Promise<void> {
+  const lang = link.language;
+
+  if (!session.vehicle_id) {
+    await sendTextMessage(waPhoneNumberId, session.phone_number, templates.errorMessage(lang), accessToken);
+    await resetSession(session.id);
+    return;
+  }
+
+  try {
+    // Check if seller has Meta connection
+    const supabase = getTypedClient();
+    const { data: connection } = await supabase
+      .from('seller_meta_connections')
+      .select('id, is_active')
+      .eq('wallet_address', link.wallet_address.toLowerCase())
+      .eq('is_active', true)
+      .single();
+
+    if (!connection) {
+      await sendTextMessage(waPhoneNumberId, session.phone_number, templates.fbNotConnectedMessage(lang), accessToken);
+      await resetSession(session.id);
+      return;
+    }
+
+    // Publish via auto-publisher with forcePublish (bypass auto_publish_on_active check)
+    const { handleStatusChange } = await import('@/lib/meta/auto-publisher');
+
+    await handleStatusChange({
+      vehicleId: session.vehicle_id,
+      sellerAddress: link.wallet_address,
+      oldStatus: 'draft',
+      newStatus: 'active',
+      forcePublish: true,
+    });
+
+    await sendTextMessage(waPhoneNumberId, session.phone_number, templates.fbPublishedMessage(lang), accessToken);
+  } catch (error) {
+    console.error(`[WA-Session] FB publish failed for vehicle ${session.vehicle_id}:`, error);
+    await sendTextMessage(waPhoneNumberId, session.phone_number, templates.fbErrorMessage(lang), accessToken);
+  }
+
+  await resetSession(session.id);
 }
 
 // ─────────────────────────────────────────────
@@ -402,16 +521,10 @@ async function getActiveSession(phoneNumber: string): Promise<WASession | null> 
 
   // Check expiry
   if (new Date(session.expires_at) < new Date()) {
+    // Cleanup staging images from expired session
+    cleanupStagingImages(session.image_urls || []).catch(() => {});
     // Reset expired session
-    await updateSession(session.id, {
-      state: 'idle',
-      image_media_ids: [],
-      image_urls: [],
-      raw_text_messages: [],
-      extracted_vehicle: null,
-      missing_fields: [],
-      vehicle_id: null,
-    });
+    await resetSession(session.id);
     session.state = 'idle';
     session.image_media_ids = [];
     session.image_urls = [];
@@ -473,10 +586,21 @@ async function updateSessionState(sessionId: string, state: string): Promise<voi
   await updateSession(sessionId, { state });
 }
 
+async function resetSession(sessionId: string): Promise<void> {
+  await updateSession(sessionId, {
+    state: 'idle',
+    image_media_ids: [],
+    image_urls: [],
+    raw_text_messages: [],
+    extracted_vehicle: null,
+    missing_fields: [],
+    vehicle_id: null,
+  });
+}
+
 async function appendTextMessage(sessionId: string, text: string): Promise<void> {
   const supabase = getTypedClient();
 
-  // Get current messages
   const { data } = await supabase
     .from('wa_sessions')
     .select('raw_text_messages')
@@ -539,9 +663,12 @@ function getMediaId(message: WAMessage): string | null {
 
 function detectLanguage(message: WAMessage): 'en' | 'es' {
   const text = (message.text?.body || message.image?.caption || '').toLowerCase();
-  const spanishWords = ['hola', 'precio', 'ano', 'carro', 'vendo', 'fotos', 'gracias', 'quiero'];
-  const isSpanish = spanishWords.some(w => text.includes(w));
-  return isSpanish ? 'es' : 'en';
+  const spanishIndicators = ['hola', 'precio', 'año', 'carro', 'vendo', 'fotos', 'gracias', 'quiero', 'millaje', 'vehiculo'];
+  const englishIndicators = ['hello', 'price', 'car', 'sell', 'photos', 'thanks', 'want', 'mileage', 'vehicle'];
+  const spanishScore = spanishIndicators.filter(w => text.includes(w)).length;
+  const englishScore = englishIndicators.filter(w => text.includes(w)).length;
+  // Default to Spanish (Houston Hispanic market)
+  return englishScore > spanishScore ? 'en' : 'es';
 }
 
 async function getSellerHandle(walletAddress: string): Promise<string> {
