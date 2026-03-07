@@ -55,14 +55,14 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         const vIds = vehicleData.map((v: { id: string }) => v.id);
         const { data: images } = await supabase
           .from('vehicle_images')
-          .select('vehicle_id, url, position')
+          .select('vehicle_id, public_url, display_order')
           .in('vehicle_id', vIds)
-          .order('position', { ascending: true });
+          .order('display_order', { ascending: true });
 
         const imageMap: Record<string, string> = {};
-        for (const img of (images || []) as { vehicle_id: string; url: string }[]) {
+        for (const img of (images || []) as { vehicle_id: string; public_url: string }[]) {
           if (!imageMap[img.vehicle_id]) {
-            imageMap[img.vehicle_id] = img.url;
+            imageMap[img.vehicle_id] = img.public_url;
           }
         }
 

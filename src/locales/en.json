@@ -3375,6 +3375,19 @@
     "step_budget": "Budget",
     "step_preview": "Review",
     "tabDashboard": "Campaigns",
-    "tabCreate": "Create New"
+    "tabCreate": "Create New",
+    "publishToFb": "Post to FB",
+    "published": "Published",
+    "retryFb": "Retry FB",
+    "publishing": "Publishing...",
+    "fbPublishSuccess": "Published to Facebook successfully!",
+    "fbPublishError": "Error publishing to Facebook",
+    "views": "Views",
+    "waClicks": "WA Clicks",
+    "likes": "Likes",
+    "comments": "Comments",
+    "shares": "Shares",
+    "leads": "Leads",
+    "fbMetrics": "Facebook Metrics"
   }
 }

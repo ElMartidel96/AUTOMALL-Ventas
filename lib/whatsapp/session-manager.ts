@@ -28,6 +28,7 @@ import {
 import { extractVehicleData, findMissingFields } from './vehicle-extractor';
 import { createVehicleFromExtraction } from './vehicle-creator';
 import { cleanupStagingImages } from './image-pipeline';
+import { detectCampaignCommand, handleCampaignCommand } from './campaign-commands';
 import * as templates from './reply-templates';
 import type { WAMessage, WASession, WAPhoneLink, ExtractedVehicle } from './types';
 import type { StagedImage } from './image-pipeline';
@@ -172,8 +173,16 @@ async function handleIdleState(
     }
 
     await sendTextMessage(waPhoneNumberId, session.phone_number, templates.photoReceived(lang, 1), accessToken);
-  } else if (message.type === 'text') {
-    // Text without photos — send welcome
+  } else if (message.type === 'text' && message.text?.body) {
+    // Check for campaign commands before sending welcome
+    const campaignCmd = detectCampaignCommand(message.text.body);
+    if (campaignCmd) {
+      const response = await handleCampaignCommand(campaignCmd, link.wallet_address, lang);
+      await sendTextMessage(waPhoneNumberId, session.phone_number, response, accessToken);
+      return;
+    }
+
+    // Text without photos and no command — send welcome
     await sendTextMessage(waPhoneNumberId, session.phone_number, templates.welcomeMessage(lang), accessToken);
   }
 }

@@ -3343,7 +3343,20 @@
     "step_budget": "Presupuesto",
     "step_preview": "Revisar",
     "tabDashboard": "Campañas",
-    "tabCreate": "Crear Nueva"
+    "tabCreate": "Crear Nueva",
+    "publishToFb": "Publicar en FB",
+    "published": "Publicado",
+    "retryFb": "Reintentar FB",
+    "publishing": "Publicando...",
+    "fbPublishSuccess": "Publicado en Facebook exitosamente!",
+    "fbPublishError": "Error al publicar en Facebook",
+    "views": "Vistas",
+    "waClicks": "Clicks WA",
+    "likes": "Me gusta",
+    "comments": "Comentarios",
+    "shares": "Compartidos",
+    "leads": "Leads",
+    "fbMetrics": "Metricas de Facebook"
   },
   "whatsapp": {
     "tabWhatsApp": "WhatsApp AI",

@@ -27,6 +27,11 @@ import {
   DollarSign,
   Loader2,
   Megaphone,
+  Facebook,
+  ThumbsUp,
+  MessageSquare,
+  Share2,
+  Eye,
 } from 'lucide-react';
 
 interface CampaignSummary {
@@ -43,6 +48,17 @@ interface CampaignSummary {
   vehicle_ids: string[];
   lead_count: number;
   created_at: string;
+  fb_publish_status?: string | null;
+  fb_published_at?: string | null;
+  fb_post_ids?: string[];
+}
+
+interface FBMetrics {
+  likes: number;
+  comments: number;
+  shares: number;
+  page_views: number;
+  whatsapp_clicks: number;
 }
 
 interface Props {
@@ -73,6 +89,8 @@ export function CampaignDashboard({ walletAddress, lang, onCreateNew }: Props) {
   const [campaigns, setCampaigns] = useState<CampaignSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
+  const [metricsMap, setMetricsMap] = useState<Record<string, FBMetrics>>({});
 
   const domain = process.env.NEXT_PUBLIC_APP_DOMAIN || 'autosmall.org';
 
@@ -127,6 +145,75 @@ export function CampaignDashboard({ walletAddress, lang, onCreateNew }: Props) {
       // Silently fail
     }
   };
+
+  const publishToFacebook = async (campaignId: string) => {
+    setPublishingId(campaignId);
+    try {
+      const res = await fetch(`/api/campaigns/${campaignId}/publish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet_address: walletAddress }),
+      });
+      if (res.ok) {
+        setCampaigns((prev) =>
+          prev.map((c) =>
+            c.id === campaignId
+              ? { ...c, fb_publish_status: 'published', fb_published_at: new Date().toISOString() }
+              : c
+          )
+        );
+        // Load metrics for this campaign
+        loadCampaignMetrics(campaignId);
+      }
+    } catch {
+      // Silently fail
+    } finally {
+      setPublishingId(null);
+    }
+  };
+
+  const loadCampaignMetrics = async (campaignId: string) => {
+    try {
+      const res = await fetch(`/api/campaigns/${campaignId}/publications?wallet=${walletAddress}`);
+      if (res.ok) {
+        const data = await res.json();
+        const pubs = data.publications || [];
+        const events = data.events || {};
+
+        let totalLikes = 0, totalComments = 0, totalShares = 0;
+        for (const pub of pubs) {
+          if (pub.engagement) {
+            totalLikes += pub.engagement.likes || 0;
+            totalComments += pub.engagement.comments || 0;
+            totalShares += pub.engagement.shares || 0;
+          }
+        }
+
+        setMetricsMap((prev) => ({
+          ...prev,
+          [campaignId]: {
+            likes: totalLikes,
+            comments: totalComments,
+            shares: totalShares,
+            page_views: events.page_view || 0,
+            whatsapp_clicks: events.whatsapp_click || 0,
+          },
+        }));
+      }
+    } catch {
+      // Silently fail
+    }
+  };
+
+  // Load metrics for published campaigns
+  useEffect(() => {
+    for (const c of campaigns) {
+      if (c.fb_publish_status === 'published') {
+        loadCampaignMetrics(c.id);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaigns.length]);
 
   if (loading) {
     return (
@@ -245,8 +332,37 @@ export function CampaignDashboard({ walletAddress, lang, onCreateNew }: Props) {
               </div>
             )}
 
+            {/* FB Metrics Row */}
+            {metricsMap[campaign.id] && (
+              <div className="flex items-center gap-4 mb-3 text-xs text-gray-500">
+                <span className="flex items-center gap-1">
+                  <Eye className="w-3.5 h-3.5" /> {metricsMap[campaign.id].page_views}
+                  <span className="hidden sm:inline">{lang === 'es' ? 'visitas' : 'views'}</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <MessageCircle className="w-3.5 h-3.5 text-[#25D366]" /> {metricsMap[campaign.id].whatsapp_clicks}
+                  <span className="hidden sm:inline">WhatsApp</span>
+                </span>
+                {metricsMap[campaign.id].likes > 0 && (
+                  <span className="flex items-center gap-1">
+                    <ThumbsUp className="w-3.5 h-3.5 text-[#1877F2]" /> {metricsMap[campaign.id].likes}
+                  </span>
+                )}
+                {metricsMap[campaign.id].comments > 0 && (
+                  <span className="flex items-center gap-1">
+                    <MessageSquare className="w-3.5 h-3.5 text-[#1877F2]" /> {metricsMap[campaign.id].comments}
+                  </span>
+                )}
+                {metricsMap[campaign.id].shares > 0 && (
+                  <span className="flex items-center gap-1">
+                    <Share2 className="w-3.5 h-3.5 text-[#1877F2]" /> {metricsMap[campaign.id].shares}
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Actions */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {campaign.status === 'draft' && (
                 <button
                   onClick={() => updateStatus(campaign.id, 'active')}
@@ -271,6 +387,40 @@ export function CampaignDashboard({ walletAddress, lang, onCreateNew }: Props) {
                   <Play className="w-3.5 h-3.5" /> {t('resume')}
                 </button>
               )}
+
+              {/* Publish to Facebook button */}
+              {!campaign.fb_publish_status && campaign.status !== 'draft' && (
+                <button
+                  onClick={() => publishToFacebook(campaign.id)}
+                  disabled={publishingId === campaign.id}
+                  className="flex items-center gap-1 text-xs text-[#1877F2] hover:bg-blue-50 dark:hover:bg-blue-900/20 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {publishingId === campaign.id ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Facebook className="w-3.5 h-3.5" />
+                  )}
+                  {lang === 'es' ? 'Publicar en FB' : 'Post to FB'}
+                </button>
+              )}
+              {campaign.fb_publish_status === 'published' && (
+                <span className="flex items-center gap-1 text-xs text-[#1877F2] bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg">
+                  <Facebook className="w-3.5 h-3.5" />
+                  <Check className="w-3 h-3" />
+                  {lang === 'es' ? 'Publicado' : 'Published'}
+                </span>
+              )}
+              {campaign.fb_publish_status === 'failed' && (
+                <button
+                  onClick={() => publishToFacebook(campaign.id)}
+                  disabled={publishingId === campaign.id}
+                  className="flex items-center gap-1 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <Facebook className="w-3.5 h-3.5" />
+                  {lang === 'es' ? 'Reintentar FB' : 'Retry FB'}
+                </button>
+              )}
+
               {campaign.status === 'draft' && (
                 <button
                   onClick={() => deleteCampaign(campaign.id)}
