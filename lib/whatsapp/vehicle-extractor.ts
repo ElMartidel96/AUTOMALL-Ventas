@@ -201,3 +201,136 @@ export function findMissingFields(vehicle: ExtractedVehicle): string[] {
     return value === null || value === undefined;
   });
 }
+
+// ─────────────────────────────────────────────
+// Smart Auto-Fill — Intelligent field estimation
+// ─────────────────────────────────────────────
+
+/**
+ * Fills missing vehicle fields with intelligent estimates based on:
+ * - Year → mileage (12-18k miles/year average)
+ * - Model name → body type, fuel type
+ * - Year → features (CarPlay, backup cam, safety tech)
+ * - Year + mileage → condition estimate
+ * - Market defaults → transmission (automatic), drivetrain
+ *
+ * Returns the filled vehicle + list of which fields were auto-estimated.
+ */
+export function smartAutoFill(
+  extracted: ExtractedVehicle
+): { filled: ExtractedVehicle; autoFilledFields: string[] } {
+  const filled = { ...extracted, features: [...(extracted.features || [])] };
+  const autoFilledFields: string[] = [];
+  const currentYear = new Date().getFullYear();
+  const model = (filled.model || '').toLowerCase();
+  const brand = (filled.brand || '').toLowerCase();
+
+  // --- Mileage: estimate from year (avg 12-15k miles/year in Houston) ---
+  if (filled.mileage === null && filled.year) {
+    const age = Math.max(0, currentYear - filled.year);
+    if (age === 0) filled.mileage = 500;
+    else if (age <= 2) filled.mileage = Math.round(age * 12000);
+    else if (age <= 5) filled.mileage = Math.round(age * 13500);
+    else filled.mileage = Math.round(age * 15000);
+    autoFilledFields.push('mileage');
+  }
+
+  // --- Transmission: 95%+ of US market is automatic ---
+  if (!filled.transmission) {
+    filled.transmission = 'automatic';
+    autoFilledFields.push('transmission');
+  }
+
+  // --- Fuel Type: gasoline unless known EV/hybrid ---
+  if (!filled.fuel_type) {
+    const evBrands = ['tesla'];
+    const evModels = ['model 3', 'model y', 'model s', 'model x', 'bolt', 'bolt euv',
+      'leaf', 'ioniq 5', 'ioniq 6', 'id.4', 'mach-e', 'ev6', 'ev9', 'ariya',
+      'blazer ev', 'equinox ev', 'lyriq', 'hummer ev'];
+    const hybridModels = ['prius', 'rav4 hybrid', 'camry hybrid', 'accord hybrid',
+      'cr-v hybrid', 'tucson hybrid', 'santa fe hybrid', 'sorento hybrid', 'maverick hybrid'];
+
+    if (evBrands.includes(brand) || evModels.some(m => model.includes(m))) {
+      filled.fuel_type = 'electric';
+    } else if (hybridModels.some(m => model.includes(m))) {
+      filled.fuel_type = 'hybrid';
+    } else {
+      filled.fuel_type = 'gasoline';
+    }
+    autoFilledFields.push('fuel_type');
+  }
+
+  // --- Body Type: infer from model name ---
+  if (!filled.body_type) {
+    const trucks = ['f-150', 'f150', 'f-250', 'f250', 'silverado', 'sierra', 'ram',
+      'tundra', 'tacoma', 'frontier', 'ranger', 'colorado', 'canyon', 'ridgeline',
+      'maverick', 'titan', 'gladiator'];
+    const suvs = ['rav4', 'cr-v', 'crv', 'escape', 'explorer', 'highlander', 'pathfinder',
+      'pilot', 'tahoe', 'suburban', 'wrangler', 'cherokee', 'grand cherokee', 'tucson',
+      'santa fe', 'sportage', 'seltos', 'sorento', 'telluride', '4runner', 'sequoia',
+      'bronco', 'expedition', 'trailblazer', 'blazer', 'equinox', 'traverse', 'yukon',
+      'terrain', 'acadia', 'cx-5', 'cx-50', 'cx-9', 'cx-90', 'rogue', 'murano', 'kicks',
+      'outlander', 'eclipse cross', 'tiguan', 'atlas'];
+    const sedans = ['camry', 'corolla', 'civic', 'accord', 'altima', 'sentra', 'elantra',
+      'sonata', 'k4', 'k5', 'forte', 'jetta', 'passat', 'malibu', 'impala', 'maxima',
+      'versa', 'rio', 'mazda3', 'mazda 3'];
+    const coupes = ['mustang', 'camaro', 'challenger', 'supra', 'brz', 'gr86', 'miata', 'mx-5'];
+    const vans = ['odyssey', 'sienna', 'pacifica', 'grand caravan', 'transit', 'sprinter'];
+
+    if (trucks.some(k => model.includes(k))) filled.body_type = 'truck';
+    else if (suvs.some(k => model.includes(k))) filled.body_type = 'SUV';
+    else if (coupes.some(k => model.includes(k))) filled.body_type = 'coupe';
+    else if (vans.some(k => model.includes(k))) filled.body_type = 'van';
+    else if (sedans.some(k => model.includes(k))) filled.body_type = 'sedan';
+    else if (model.includes('sedan') || model.includes('4d')) filled.body_type = 'sedan';
+    else filled.body_type = 'sedan';
+    autoFilledFields.push('body_type');
+  }
+
+  // --- Condition: estimate from year + mileage ---
+  if (!filled.condition) {
+    const age = filled.year ? Math.max(0, currentYear - filled.year) : 5;
+    const miles = filled.mileage || 50000;
+    if (age <= 1 && miles < 10000) filled.condition = 'like_new';
+    else if (age <= 3 && miles < 45000) filled.condition = 'excellent';
+    else if (age <= 6 && miles < 80000) filled.condition = 'good';
+    else if (age <= 10 && miles < 130000) filled.condition = 'good';
+    else filled.condition = 'fair';
+    autoFilledFields.push('condition');
+  }
+
+  // --- Drivetrain: FWD default, RWD for trucks, AWD for Subaru ---
+  if (!filled.drivetrain) {
+    const bt = (filled.body_type || '').toLowerCase();
+    if (bt === 'truck') filled.drivetrain = 'rwd';
+    else if (brand === 'subaru') filled.drivetrain = 'awd';
+    else filled.drivetrain = 'fwd';
+    autoFilledFields.push('drivetrain');
+  }
+
+  // --- Doors: infer from body type ---
+  if (filled.doors === null) {
+    const bt = (filled.body_type || '').toLowerCase();
+    if (['coupe', 'convertible'].includes(bt)) filled.doors = 2;
+    else filled.doors = 4;
+    autoFilledFields.push('doors');
+  }
+
+  // --- Features: infer from year (Houston TX market) ---
+  if (filled.features.length === 0) {
+    const year = filled.year || currentYear;
+    const features: string[] = [];
+    if (year >= 2012) features.push('Bluetooth');
+    if (year >= 2014) features.push('USB Port');
+    if (year >= 2018) features.push('Backup Camera');
+    if (year >= 2019) features.push('Apple CarPlay', 'Android Auto');
+    if (year >= 2020) features.push('Lane Departure Warning');
+    if (year >= 2021) features.push('Forward Collision Warning');
+    if (year >= 2022) features.push('Adaptive Cruise Control');
+    if (year >= 2024) features.push('Wireless Apple CarPlay');
+    filled.features = features;
+    if (features.length > 0) autoFilledFields.push('features');
+  }
+
+  return { filled, autoFilledFields };
+}

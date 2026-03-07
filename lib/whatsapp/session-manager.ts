@@ -1,28 +1,33 @@
 /**
- * WhatsApp Session Manager — Concurrency-Safe State Machine
+ * WhatsApp Session Manager — Smart AI Vehicle Assistant
  *
  * Handles vehicle listing creation via WhatsApp photos + AI Vision.
  *
  * Design principles:
- *   - Photos are SILENTLY accumulated (no WA response per photo → no rate limiting)
- *   - wa_message_log is the source of truth for media IDs (no race-prone array updates)
- *   - Text message triggers AI extraction (user sends details after photos)
- *   - 2-second delay before extraction (allows remaining photos to arrive)
- *   - Non-destructive session creation (insert-or-fetch, never overwrites)
- *   - Dedup with 60-second window (prevents immediate retries, allows later ones)
+ *   - First photo gets acknowledgment (proof bot is alive + user guidance)
+ *   - Subsequent photos silently accumulate via message log (no rate limiting)
+ *   - Text message triggers AI extraction with photo count + text preview
+ *   - Smart auto-fill estimates missing optional fields (transmission, features, etc.)
+ *   - Missing required fields → offer AI auto-fill button
+ *   - wa_message_log is source of truth for media IDs (race-condition safe)
+ *   - Non-destructive session creation (INSERT, not UPSERT)
+ *   - Prominent error logging — token/auth issues surface immediately
  *
  * State transitions:
- *   idle ──(image)──────────> collecting (silent)
- *   idle ──(text, no photos)> idle (send welcome)
- *   collecting ──(image)────> collecting (silent accumulate)
- *   collecting ──(text)─────> extracting (trigger AI)
- *   extracting ──(AI done)──> confirming (show result)
+ *   idle ──(image)──────────> collecting (send first-photo ack)
+ *   idle ──(text, has photos)> extracting (trigger AI)
+ *   idle ──(text, no photos)─> idle (send welcome)
+ *   collecting ──(image)────> collecting (silent accumulate via log)
+ *   collecting ──(text)─────> extracting (send "analyzing...", run AI)
+ *   extracting ──(text)─────> extracting (ack "still analyzing")
+ *   confirming ──(auto_fill)> confirming (fill & show with publish options)
  *   confirming ──(publish)──> creating (create vehicle)
- *   confirming ──(text)─────> collecting (field correction)
+ *   confirming ──(text)─────> extracting (re-extract with new text)
+ *   confirming ──(image)────> collecting (new vehicle, reset)
  *   confirming ──(cancel)───> idle (cleanup)
  *   creating ──(success)────> idle (done, reset)
  *   creating ──(error)──────> error
- *   complete/error ──(any)──> idle (fresh start)
+ *   error/complete ──(any)──> idle (fresh start)
  */
 
 import { getTypedClient } from '@/lib/supabase/client';
@@ -31,12 +36,13 @@ import {
   sendInteractiveMessage,
   markAsRead,
 } from './api';
-import { extractVehicleData, findMissingFields } from './vehicle-extractor';
+import { extractVehicleData, findMissingFields, smartAutoFill } from './vehicle-extractor';
 import { createVehicleFromExtraction } from './vehicle-creator';
 import { cleanupStagingImages } from './image-pipeline';
 import * as templates from './reply-templates';
 import type { WAMessage, WASession, WAPhoneLink, ExtractedVehicle } from './types';
 import type { StagedImage } from './image-pipeline';
+import type { WAButton } from './types';
 
 const MAX_IMAGES = 10;
 const PHOTO_SETTLE_DELAY_MS = 2000;
@@ -56,8 +62,9 @@ export async function handleIncomingMessage(
   // Normalize to E.164 — webhook sends "12814680109", DB stores "+12814680109"
   const normalizedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`;
 
-  // Dedup: skip if this message was processed in the last 60 seconds
-  // (allows retries after cooldown, prevents immediate duplicates from Meta retries)
+  console.log(`[WA] ← ${message.type} from ...${normalizedPhone.slice(-4)} (id: ${message.id.slice(0, 10)})`);
+
+  // Dedup: skip if this exact message was processed in the last 60 seconds
   const { data: alreadyProcessed } = await supabase
     .from('wa_message_log')
     .select('id')
@@ -66,6 +73,7 @@ export async function handleIncomingMessage(
     .limit(1);
 
   if (alreadyProcessed && alreadyProcessed.length > 0) {
+    console.log(`[WA] Dedup: skipping ${message.id.slice(0, 10)} (already processed)`);
     return;
   }
 
@@ -73,13 +81,14 @@ export async function handleIncomingMessage(
   markAsRead(waPhoneNumberId, message.id, accessToken).catch(() => {});
 
   // 1. Lookup seller by phone number (normalized E.164)
-  const { data: phoneLink } = await supabase
+  const { data: phoneLink, error: linkError } = await supabase
     .from('wa_phone_links')
     .select('*')
     .eq('phone_number', normalizedPhone)
     .single();
 
   if (!phoneLink) {
+    console.log(`[WA] Phone not linked: ${normalizedPhone} (error: ${linkError?.message || 'not found'})`);
     const lang = detectLanguage(message);
     await safeSend(waPhoneNumberId, phoneNumber, templates.phoneNotLinkedMessage(lang), accessToken);
     await logMessage(null, message.id, 'inbound', message.type, normalizedPhone, getMessageContent(message), getMediaId(message), message);
@@ -88,6 +97,8 @@ export async function handleIncomingMessage(
 
   const link = phoneLink as unknown as WAPhoneLink;
   const lang = link.language;
+
+  console.log(`[WA] Seller found: ${link.seller_id.slice(0, 8)} lang=${lang}`);
 
   // 2. Handle unsupported message types early
   if (!['text', 'image', 'interactive', 'button'].includes(message.type)) {
@@ -98,6 +109,7 @@ export async function handleIncomingMessage(
 
   // 3. Get or create session (non-destructive — never overwrites existing)
   const session = await getOrCreateSession(normalizedPhone, link, waPhoneNumberId);
+  console.log(`[WA] Session: ${session.id.slice(0, 8)} state=${session.state}`);
 
   // 4. Log inbound message (with session_id + media_id for later retrieval)
   await logMessage(session.id, message.id, 'inbound', message.type, normalizedPhone, getMessageContent(message), getMediaId(message), message);
@@ -116,7 +128,6 @@ export async function handleIncomingMessage(
         break;
 
       case 'extracting':
-        // AI is working — acknowledge only for text (ignore photos)
         if (message.type === 'text') {
           await safeSend(waPhoneNumberId, session.phone_number, templates.extractingMessage(lang), accessToken);
         }
@@ -127,17 +138,17 @@ export async function handleIncomingMessage(
         break;
 
       case 'creating':
-        // Vehicle is being created — acknowledge only for text
         if (message.type === 'text') {
           await safeSend(waPhoneNumberId, session.phone_number, templates.creatingMessage(lang), accessToken);
         }
         break;
 
       default:
+        console.log(`[WA] Unknown state: ${session.state}, sending welcome`);
         await safeSend(waPhoneNumberId, session.phone_number, templates.welcomeMessage(lang), accessToken);
     }
   } catch (error) {
-    console.error(`[WA-Session] Error handling message for ${normalizedPhone}:`, error);
+    console.error(`[WA] Error handling message for ${normalizedPhone}:`, error);
     await updateSessionState(session.id, 'error');
     await safeSend(waPhoneNumberId, phoneNumber, templates.errorMessage(lang), accessToken);
   }
@@ -157,9 +168,7 @@ async function handleIdleState(
   const lang = link.language;
 
   if (message.type === 'image') {
-    // Transition to collecting — photos accumulate silently via message log.
-    // No WA response sent (avoids rate limiting with multiple concurrent photos).
-    // If session is already in error/complete, reset it first.
+    // First photo → transition to collecting + send acknowledgment
     if (session.state === 'error' || session.state === 'complete') {
       await resetSession(session.id);
     }
@@ -170,12 +179,16 @@ async function handleIdleState(
       missing_fields: [],
       vehicle_id: null,
     });
+
+    // Send first-photo acknowledgment (ONE message, not per-photo)
+    console.log(`[WA] → First photo ack (idle → collecting)`);
+    await safeSend(waPhoneNumberId, session.phone_number, templates.firstPhotoAck(lang), accessToken);
   } else if (message.type === 'text') {
-    // Text in idle — check if photos were already accumulated (from concurrent photo handlers)
+    // Text in idle — check if photos were already accumulated from concurrent handlers
     const mediaIds = await getSessionMediaIds(session.id);
     if (mediaIds.length > 0) {
-      // Photos exist + text arrived → trigger extraction
-      await triggerExtraction(session, mediaIds, waPhoneNumberId, accessToken, link);
+      console.log(`[WA] Text in idle but ${mediaIds.length} photos in log → triggering extraction`);
+      await triggerExtraction(session, mediaIds, message, waPhoneNumberId, accessToken, link);
     } else {
       // No photos yet → send welcome
       await safeSend(waPhoneNumberId, session.phone_number, templates.welcomeMessage(lang), accessToken);
@@ -190,26 +203,30 @@ async function handleCollectingState(
   accessToken: string,
   link: WAPhoneLink
 ): Promise<void> {
-  const lang = link.language;
-
   if (message.type === 'image') {
-    // Photos accumulate silently via message log.
-    // No response, no array update — wa_message_log is the source of truth.
+    // Photos accumulate silently via message log — no response per photo.
+    // Only send max-images notification if we hit the cap.
+    const imageCount = await getSessionMediaCount(session.id);
+    if (imageCount >= MAX_IMAGES) {
+      console.log(`[WA] Max images reached (${imageCount})`);
+      await safeSend(waPhoneNumberId, session.phone_number, templates.maxImagesReached(link.language), accessToken);
+    }
     return;
   }
 
   if (message.type === 'text' && message.text?.body) {
-    // Text triggers extraction — wait briefly for remaining photos to arrive
+    // Text triggers extraction — wait briefly for any remaining photos to arrive
     await new Promise(resolve => setTimeout(resolve, PHOTO_SETTLE_DELAY_MS));
 
     // Gather all media IDs from message log (race-condition-safe)
     const mediaIds = await getSessionMediaIds(session.id);
     if (mediaIds.length === 0) {
-      await safeSend(waPhoneNumberId, session.phone_number, templates.welcomeMessage(lang), accessToken);
+      console.log(`[WA] Text received but 0 photos in log — sending welcome`);
+      await safeSend(waPhoneNumberId, session.phone_number, templates.welcomeMessage(link.language), accessToken);
       return;
     }
 
-    await triggerExtraction(session, mediaIds, waPhoneNumberId, accessToken, link);
+    await triggerExtraction(session, mediaIds, message, waPhoneNumberId, accessToken, link);
   }
 }
 
@@ -233,31 +250,68 @@ async function handleConfirmingState(
       missing_fields: [],
       vehicle_id: null,
     });
+    console.log(`[WA] New image in confirming → reset to collecting`);
+    await safeSend(waPhoneNumberId, session.phone_number, templates.firstPhotoAck(lang), accessToken);
     return;
   }
 
   let action: string | null = null;
 
-  // Check for button reply
+  // Check for button reply (interactive or legacy button)
   if (message.type === 'interactive' && message.interactive?.button_reply) {
     action = message.interactive.button_reply.id;
   } else if (message.type === 'button' && message.button?.payload) {
     action = message.button.payload;
   } else if (message.type === 'text' && message.text?.body) {
     const text = message.text.body.toLowerCase().trim();
-    if (['si', 'sí', 'yes', 'ok', 'crear', 'create', 'catalogo', 'catalog', '1'].includes(text)) {
+    // Auto-fill keywords
+    if (['auto', 'completar', 'rellenar', 'fill', 'autofill', 'auto completar', 'auto-completar', 'automatico'].includes(text)) {
+      action = 'auto_fill';
+    }
+    // Publish keywords (catalog only)
+    else if (['si', 'sí', 'yes', 'ok', 'crear', 'create', 'catalogo', 'catalog', 'publicar', 'publica', 'publish', '1'].includes(text)) {
       action = 'publish_catalog';
-    } else if (['facebook', 'fb', 'ambos', 'both', '2'].includes(text)) {
+    }
+    // Publish + FB keywords
+    else if (['facebook', 'fb', 'ambos', 'both', '2', 'catalogo fb', 'catalog fb'].includes(text)) {
       action = 'publish_catalog_fb';
-    } else if (['cancelar', 'cancel', 'no', '3'].includes(text)) {
+    }
+    // Cancel keywords
+    else if (['cancelar', 'cancel', 'no', '3'].includes(text)) {
       action = 'confirm_cancel';
-    } else {
-      // Field correction — go back to collecting
+    }
+    // Everything else = field correction → re-extract
+    else {
       action = 'field_correction';
     }
   }
 
+  console.log(`[WA] Confirming action: ${action}`);
+
   switch (action) {
+    case 'auto_fill': {
+      // Run smart auto-fill on the extracted vehicle data
+      const vehicleData = session.extracted_vehicle as unknown as Record<string, unknown>;
+      if (!vehicleData) break;
+      const { _staged_images: stagedImgs, _auto_filled: _, ...extractedFields } = vehicleData;
+      const extracted = extractedFields as unknown as ExtractedVehicle;
+
+      const { filled, autoFilledFields } = smartAutoFill(extracted);
+      console.log(`[WA] Auto-filled ${autoFilledFields.length} fields: ${autoFilledFields.join(', ')}`);
+
+      // Update session with auto-filled data
+      await updateSession(session.id, {
+        extracted_vehicle: { ...filled, _staged_images: stagedImgs, _auto_filled: autoFilledFields },
+        missing_fields: [],
+      });
+
+      // Show smart confirmation with publish buttons
+      const sellerHandle = await getSellerHandle(link.wallet_address);
+      const { text, buttons } = templates.smartConfirmation(lang, filled, autoFilledFields, sellerHandle);
+      await safeSendInteractive(waPhoneNumberId, session.phone_number, text, buttons, accessToken);
+      break;
+    }
+
     case 'publish_catalog':
       await createVehicleFlow(session, waPhoneNumberId, accessToken, link, false);
       break;
@@ -266,10 +320,17 @@ async function handleConfirmingState(
       await createVehicleFlow(session, waPhoneNumberId, accessToken, link, true);
       break;
 
-    case 'field_correction':
-      await updateSession(session.id, { state: 'collecting' });
-      await safeSend(waPhoneNumberId, session.phone_number, templates.editInstructionsMessage(lang), accessToken);
+    case 'field_correction': {
+      // Re-extract with updated text — gather all texts including this new one
+      const mediaIds = await getSessionMediaIds(session.id);
+      if (mediaIds.length > 0) {
+        await triggerExtraction(session, mediaIds, message, waPhoneNumberId, accessToken, link);
+      } else {
+        await updateSession(session.id, { state: 'collecting' });
+        await safeSend(waPhoneNumberId, session.phone_number, templates.editInstructionsMessage(lang), accessToken);
+      }
       break;
+    }
 
     case 'confirm_cancel':
       await cleanupStagingImages(session.image_urls || []);
@@ -277,17 +338,24 @@ async function handleConfirmingState(
       await safeSend(waPhoneNumberId, session.phone_number, templates.welcomeMessage(lang), accessToken);
       break;
 
-    default:
-      // Re-send confirmation
-      if (session.extracted_vehicle) {
-        const vehicleData = session.extracted_vehicle as unknown as Record<string, unknown>;
-        const { _staged_images: _, ...extractedFields } = vehicleData;
+    default: {
+      // Re-send the current confirmation
+      const vd = session.extracted_vehicle as unknown as Record<string, unknown>;
+      if (vd) {
+        const { _staged_images: _si, _auto_filled: af, ...ef } = vd;
         const sellerHandle = await getSellerHandle(link.wallet_address);
-        const { text, buttons } = templates.confirmationMessage(lang, extractedFields as unknown as ExtractedVehicle, sellerHandle);
-        await sendInteractiveMessage(waPhoneNumberId, session.phone_number, text, buttons, accessToken).catch(err => {
-          console.error('[WA-Session] Failed to resend confirmation:', err);
-        });
+        const autoFilled = (af as string[]) || [];
+        const missing = session.missing_fields || [];
+
+        if (missing.length > 0) {
+          const { text, buttons } = templates.missingRequiredMessage(lang, ef as unknown as ExtractedVehicle, missing);
+          await safeSendInteractive(waPhoneNumberId, session.phone_number, text, buttons, accessToken);
+        } else {
+          const { text, buttons } = templates.smartConfirmation(lang, ef as unknown as ExtractedVehicle, autoFilled, sellerHandle);
+          await safeSendInteractive(waPhoneNumberId, session.phone_number, text, buttons, accessToken);
+        }
       }
+    }
   }
 }
 
@@ -296,12 +364,13 @@ async function handleConfirmingState(
 // ─────────────────────────────────────────────
 
 /**
- * Trigger extraction: send acknowledgment, then run AI pipeline.
- * Uses media IDs from wa_message_log (not session array) for race-safety.
+ * Trigger extraction: send smart acknowledgment with photo count + text preview,
+ * then run AI pipeline in the background.
  */
 async function triggerExtraction(
   session: WASession,
   mediaIds: string[],
+  textMessage: WAMessage | null,
   waPhoneNumberId: string,
   accessToken: string,
   link: WAPhoneLink
@@ -311,15 +380,14 @@ async function triggerExtraction(
 
   await updateSessionState(session.id, 'extracting');
 
-  // Send single acknowledgment with photo count
-  const ackMsg = lang === 'es'
-    ? `Recibi ${count} ${count === 1 ? 'foto' : 'fotos'}. Analizando... Un momento.`
-    : `Received ${count} ${count === 1 ? 'photo' : 'photos'}. Analyzing... One moment.`;
+  // Get text preview for the acknowledgment
+  const textContent = textMessage?.text?.body || '';
+  const ackMsg = templates.extractionStartMessage(lang, count, textContent);
   await safeSend(waPhoneNumberId, session.phone_number, ackMsg, accessToken);
 
   // Fire-and-forget: run AI extraction
   runExtraction(session, mediaIds.slice(0, MAX_IMAGES), waPhoneNumberId, accessToken, link).catch((err) => {
-    console.error(`[WA-Session] Extraction error:`, err);
+    console.error(`[WA] Extraction pipeline error:`, err);
   });
 }
 
@@ -334,6 +402,7 @@ async function runExtraction(
 
   try {
     // Phase 1: Download images from WA → stage in Supabase Storage
+    console.log(`[WA] Staging ${mediaIds.length} images from WhatsApp CDN...`);
     const { stageWhatsAppImages } = await import('./image-pipeline');
 
     const stagedImages = await stageWhatsAppImages(
@@ -343,47 +412,57 @@ async function runExtraction(
     );
 
     if (stagedImages.length === 0) {
+      console.error(`[WA] All image downloads failed — likely bad WHATSAPP_ACCESS_TOKEN`);
       await updateSessionState(session.id, 'error');
       await safeSend(waPhoneNumberId, session.phone_number, templates.errorMessage(lang), accessToken);
       return;
     }
 
+    console.log(`[WA] Staged ${stagedImages.length}/${mediaIds.length} images successfully`);
     const imageUrls = stagedImages.map(img => img.public_url);
 
     // Store public URLs for reference
     await updateSession(session.id, { image_urls: imageUrls });
 
-    // Get all text messages from the message log (race-condition-safe)
+    // Get all text messages from the message log
     const textMessages = await getSessionTexts(session.id);
+    console.log(`[WA] Running AI extraction with ${imageUrls.length} images + ${textMessages.length} texts`);
 
-    // Run AI extraction (has 90s timeout internally)
+    // Run AI extraction (90s timeout)
     const extracted = await extractVehicleData(imageUrls, textMessages);
+    console.log(`[WA] AI extracted: ${extracted.brand} ${extracted.model} ${extracted.year} $${extracted.price} ${extracted.mileage}mi`);
 
     // Check for missing required fields
-    const missing = findMissingFields(extracted);
+    const missingRequired = findMissingFields(extracted);
 
-    if (missing.length > 0) {
+    if (missingRequired.length > 0) {
+      // Missing required fields → show what was found + offer auto-fill
+      console.log(`[WA] Missing required: ${missingRequired.join(', ')}`);
       await updateSession(session.id, {
-        state: 'collecting',
+        state: 'confirming',
         extracted_vehicle: { ...extracted, _staged_images: stagedImages },
-        missing_fields: missing,
+        missing_fields: missingRequired,
       });
-      await safeSend(waPhoneNumberId, session.phone_number, templates.missingFieldsMessage(lang, missing), accessToken);
+      const { text, buttons } = templates.missingRequiredMessage(lang, extracted, missingRequired);
+      await safeSendInteractive(waPhoneNumberId, session.phone_number, text, buttons, accessToken);
       return;
     }
 
-    // All fields present — ask for confirmation with publish destination buttons
+    // All required fields present → auto-fill optional fields → show smart confirmation
+    const { filled, autoFilledFields } = smartAutoFill(extracted);
+    console.log(`[WA] Auto-filled ${autoFilledFields.length} optional fields: ${autoFilledFields.join(', ')}`);
+
     const sellerHandle = await getSellerHandle(link.wallet_address);
     await updateSession(session.id, {
       state: 'confirming',
-      extracted_vehicle: { ...extracted, _staged_images: stagedImages },
+      extracted_vehicle: { ...filled, _staged_images: stagedImages, _auto_filled: autoFilledFields },
       missing_fields: [],
     });
 
-    const { text, buttons } = templates.confirmationMessage(lang, extracted, sellerHandle);
-    await sendInteractiveMessage(waPhoneNumberId, session.phone_number, text, buttons, accessToken);
+    const { text, buttons } = templates.smartConfirmation(lang, filled, autoFilledFields, sellerHandle);
+    await safeSendInteractive(waPhoneNumberId, session.phone_number, text, buttons, accessToken);
   } catch (error) {
-    console.error(`[WA-Session] Extraction failed:`, error);
+    console.error(`[WA] Extraction failed:`, error);
     await updateSessionState(session.id, 'error');
     await safeSend(waPhoneNumberId, session.phone_number, templates.errorMessage(lang), accessToken);
   }
@@ -409,9 +488,9 @@ async function createVehicleFlow(
     const vehicleData = session.extracted_vehicle as unknown as Record<string, unknown>;
     if (!vehicleData) throw new Error('No extracted vehicle data');
 
-    // Separate staged images from extraction data
+    // Separate staged images and auto-fill metadata from extraction data
     const stagedImages = (vehicleData._staged_images as StagedImage[]) || [];
-    const { _staged_images: _, ...extractedFields } = vehicleData;
+    const { _staged_images: _, _auto_filled: _af, ...extractedFields } = vehicleData;
     const extracted = extractedFields as unknown as ExtractedVehicle;
 
     // If no staged images in session data, reconstruct from URLs
@@ -424,19 +503,24 @@ async function createVehicleFlow(
           mime_type: 'image/jpeg',
         }));
 
+    console.log(`[WA] Creating vehicle: ${extracted.brand} ${extracted.model} ${extracted.year} with ${imagesToUse.length} images`);
+
     const result = await createVehicleFromExtraction(
       extracted,
       link.wallet_address,
       imagesToUse,
     );
 
+    console.log(`[WA] Vehicle created: ${result.vehicleId} → ${result.catalogUrl}`);
+
     // Publish to Facebook if requested
     let fbPublished = false;
     if (publishToFb) {
       try {
         fbPublished = await tryPublishToFacebook(result.vehicleId, link);
+        console.log(`[WA] FB publish: ${fbPublished ? 'success' : 'skipped (no connection)'}`);
       } catch (err) {
-        console.error(`[WA-Session] FB publish failed for vehicle ${result.vehicleId}:`, err);
+        console.error(`[WA] FB publish failed:`, err);
       }
     }
 
@@ -447,7 +531,7 @@ async function createVehicleFlow(
     // Reset session — ready for next vehicle
     await resetSession(session.id);
   } catch (error) {
-    console.error(`[WA-Session] Vehicle creation failed:`, error);
+    console.error(`[WA] Vehicle creation failed:`, error);
     await updateSessionState(session.id, 'error');
     await safeSend(waPhoneNumberId, session.phone_number, templates.errorMessage(lang), accessToken);
   }
@@ -485,10 +569,6 @@ async function tryPublishToFacebook(vehicleId: string, link: WAPhoneLink): Promi
 // Session CRUD (Concurrency-Safe)
 // ─────────────────────────────────────────────
 
-/**
- * Get or create a session. Non-destructive: never overwrites an existing session.
- * Handles race conditions where multiple concurrent handlers try to create.
- */
 async function getOrCreateSession(
   phone: string,
   link: WAPhoneLink,
@@ -508,6 +588,7 @@ async function getOrCreateSession(
 
     // Check expiry
     if (new Date(session.expires_at) < new Date()) {
+      console.log(`[WA] Session expired, resetting`);
       cleanupStagingImages(session.image_urls || []).catch(() => {});
       await resetSession(session.id);
       session.state = 'idle';
@@ -526,7 +607,7 @@ async function getOrCreateSession(
     return session;
   }
 
-  // No session exists — create new one (INSERT, not UPSERT, to avoid overwriting)
+  // No session exists — create new one (INSERT, not UPSERT)
   const { data: newData, error } = await supabase
     .from('wa_sessions')
     .insert({
@@ -547,6 +628,7 @@ async function getOrCreateSession(
 
   if (error) {
     // Race condition: another handler created the session concurrently
+    console.log(`[WA] Session insert race — fetching existing`);
     const { data: raceData } = await supabase
       .from('wa_sessions')
       .select('*')
@@ -557,6 +639,7 @@ async function getOrCreateSession(
     throw new Error(`Failed to create session: ${error.message}`);
   }
 
+  console.log(`[WA] New session created: ${newData.id}`);
   return newData as unknown as WASession;
 }
 
@@ -591,11 +674,6 @@ async function resetSession(sessionId: string): Promise<void> {
 // Message Log Queries (Source of Truth for Media)
 // ─────────────────────────────────────────────
 
-/**
- * Get all media IDs for a session from the message log.
- * This is race-condition-safe: each handler INSERTs to the log independently,
- * and we SELECT all at query time. No read-modify-write on arrays.
- */
 async function getSessionMediaIds(sessionId: string): Promise<string[]> {
   const supabase = getTypedClient();
   const { data } = await supabase
@@ -610,10 +688,18 @@ async function getSessionMediaIds(sessionId: string): Promise<string[]> {
   return (data || []).map((row: { media_id: string }) => row.media_id);
 }
 
-/**
- * Get all text content for a session from the message log.
- * Includes both standalone text messages and image captions.
- */
+async function getSessionMediaCount(sessionId: string): Promise<number> {
+  const supabase = getTypedClient();
+  const { count } = await supabase
+    .from('wa_message_log')
+    .select('id', { count: 'exact', head: true })
+    .eq('session_id', sessionId)
+    .eq('direction', 'inbound')
+    .not('media_id', 'is', null);
+
+  return count || 0;
+}
+
 async function getSessionTexts(sessionId: string): Promise<string[]> {
   const supabase = getTypedClient();
   const { data } = await supabase
@@ -656,30 +742,68 @@ async function logMessage(
         raw_payload: rawPayload,
       });
   } catch (error) {
-    console.error('[WA-Log] Failed to log message:', error);
+    console.error('[WA] Failed to log message:', error);
   }
 }
 
 // ─────────────────────────────────────────────
-// Helpers
+// Send Helpers (with diagnostic logging)
 // ─────────────────────────────────────────────
 
 /**
- * Send a text message, swallowing errors (rate limits, etc.).
- * Prevents cascading failures when WhatsApp rate-limits us.
+ * Send a text message with prominent error logging.
+ * Does NOT throw — prevents cascading failures from rate limits.
+ * BUT logs errors prominently so token issues are immediately visible in Vercel.
  */
 async function safeSend(
   phoneNumberId: string,
   to: string,
   text: string,
   token: string
-): Promise<void> {
+): Promise<boolean> {
   try {
     await sendTextMessage(phoneNumberId, to, text, token);
+    console.log(`[WA] → ...${to.slice(-4)}: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
+    return true;
   } catch (err) {
-    console.error('[WA-Session] Send failed (rate limited?):', err);
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[WA] SEND FAILED to ${to}: ${errMsg}`);
+    if (errMsg.includes('190') || errMsg.includes('auth') || errMsg.includes('token') || errMsg.includes('OAuthException')) {
+      console.error(`[WA] TOKEN ISSUE — Check WHATSAPP_ACCESS_TOKEN env var in Vercel`);
+    }
+    return false;
   }
 }
+
+/**
+ * Send an interactive message (with buttons) with diagnostic logging.
+ */
+async function safeSendInteractive(
+  phoneNumberId: string,
+  to: string,
+  bodyText: string,
+  buttons: WAButton[],
+  token: string
+): Promise<boolean> {
+  try {
+    await sendInteractiveMessage(phoneNumberId, to, bodyText, buttons, token);
+    console.log(`[WA] → ...${to.slice(-4)}: [buttons] "${bodyText.substring(0, 50)}..."`);
+    return true;
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[WA] INTERACTIVE SEND FAILED to ${to}: ${errMsg}`);
+    if (errMsg.includes('190') || errMsg.includes('auth') || errMsg.includes('token') || errMsg.includes('OAuthException')) {
+      console.error(`[WA] TOKEN ISSUE — Check WHATSAPP_ACCESS_TOKEN env var in Vercel`);
+    }
+    // Fallback: try sending as plain text
+    console.log(`[WA] Falling back to plain text...`);
+    return safeSend(phoneNumberId, to, bodyText, token);
+  }
+}
+
+// ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
 
 function getMessageContent(message: WAMessage): string | null {
   if (message.text?.body) return message.text.body;

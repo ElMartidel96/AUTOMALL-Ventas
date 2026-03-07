@@ -180,6 +180,100 @@ export function fbNotConnectedMessage(lang: Lang): string {
 }
 
 // ─────────────────────────────────────────────
+// Smart System — Photo Ack + Extraction Summary
+// ─────────────────────────────────────────────
+
+/** First photo acknowledgment — sent ONCE when first photo arrives (idle → collecting) */
+export function firstPhotoAck(lang: Lang): string {
+  return lang === 'es'
+    ? `Foto recibida! Sigue enviando mas fotos del vehiculo.\n\nCuando termines, escribe los detalles:\n*Marca, modelo, ano, precio, millaje*\n\nYo me encargo del resto!`
+    : `Photo received! Keep sending more photos of the vehicle.\n\nWhen done, write the details:\n*Brand, model, year, price, mileage*\n\nI'll take care of the rest!`;
+}
+
+/** Sent when text triggers extraction — shows photo count + text preview */
+export function extractionStartMessage(lang: Lang, photoCount: number, textPreview: string): string {
+  const truncated = textPreview.length > 80 ? textPreview.substring(0, 80) + '...' : textPreview;
+  return lang === 'es'
+    ? `Recibi ${photoCount} ${photoCount === 1 ? 'foto' : 'fotos'} y tu mensaje:\n"${truncated}"\n\nAnalizando con IA... Un momento.`
+    : `Received ${photoCount} ${photoCount === 1 ? 'photo' : 'photos'} and your message:\n"${truncated}"\n\nAnalyzing with AI... One moment.`;
+}
+
+/**
+ * Smart confirmation — vehicle card with ⚡ markers for AI-estimated fields.
+ * Shown when ALL required fields are present (auto-filled optional fields included).
+ */
+export function smartConfirmation(
+  lang: Lang,
+  vehicle: ExtractedVehicle,
+  autoFilledFields: string[],
+  sellerHandle: string
+): { text: string; buttons: WAButton[] } {
+  const title = `${vehicle.year || '?'} ${vehicle.brand || '?'} ${vehicle.model || '?'}`;
+  const trim = vehicle.trim ? ` ${vehicle.trim}` : '';
+  const price = vehicle.price ? `$${vehicle.price.toLocaleString('en-US')}` : 'N/A';
+  const miles = vehicle.mileage ? `${vehicle.mileage.toLocaleString('en-US')} mi` : 'N/A';
+
+  const mark = (field: string) => autoFilledFields.includes(field) ? ' *' : '';
+
+  const color = vehicle.exterior_color ? `${vehicle.exterior_color}${mark('exterior_color')}` : '—';
+  const trans = vehicle.transmission ? `${vehicle.transmission}${mark('transmission')}` : '—';
+  const cond = vehicle.condition ? `${vehicle.condition}${mark('condition')}` : '—';
+  const bodyType = vehicle.body_type ? `${vehicle.body_type}${mark('body_type')}` : '—';
+  const fuel = vehicle.fuel_type ? `${vehicle.fuel_type}${mark('fuel_type')}` : '—';
+  const drive = vehicle.drivetrain ? `${vehicle.drivetrain.toUpperCase()}${mark('drivetrain')}` : '—';
+
+  const autoNote = autoFilledFields.length > 0
+    ? (lang === 'es' ? '\n(* = estimado por IA)' : '\n(* = AI estimate)')
+    : '';
+
+  const text = lang === 'es'
+    ? `Listado listo:\n\n*${title}${trim}*\nPrecio: ${price}${mark('price')}\nMillaje: ${miles}${mark('mileage')}\nColor: ${color}\nTipo: ${bodyType}\nTransmision: ${trans}\nCombustible: ${fuel}\nCondicion: ${cond}\nTraccion: ${drive}${autoNote}\n\nCatalogo: ${sellerHandle}.${APP_DOMAIN}\n\nDonde publicar?\n_Envia texto para corregir_`
+    : `Listing ready:\n\n*${title}${trim}*\nPrice: ${price}${mark('price')}\nMileage: ${miles}${mark('mileage')}\nColor: ${color}\nType: ${bodyType}\nTransmission: ${trans}\nFuel: ${fuel}\nCondition: ${cond}\nDrivetrain: ${drive}${autoNote}\n\nCatalog: ${sellerHandle}.${APP_DOMAIN}\n\nWhere to publish?\n_Send text to correct_`;
+
+  const buttons: WAButton[] = [
+    { type: 'reply', reply: { id: 'publish_catalog', title: lang === 'es' ? 'Solo catalogo' : 'Catalog only' } },
+    { type: 'reply', reply: { id: 'publish_catalog_fb', title: lang === 'es' ? 'Catalogo + FB' : 'Catalog + FB' } },
+    { type: 'reply', reply: { id: 'confirm_cancel', title: lang === 'es' ? 'Cancelar' : 'Cancel' } },
+  ];
+
+  return { text, buttons };
+}
+
+/**
+ * Missing required fields — shows what was detected + what's missing + auto-fill button.
+ */
+export function missingRequiredMessage(
+  lang: Lang,
+  vehicle: ExtractedVehicle,
+  missingFields: string[]
+): { text: string; buttons: WAButton[] } {
+  const title = `${vehicle.year || '?'} ${vehicle.brand || '?'} ${vehicle.model || '?'}`;
+  const trim = vehicle.trim ? ` ${vehicle.trim}` : '';
+  const price = vehicle.price ? `$${vehicle.price.toLocaleString('en-US')}` : '—';
+  const miles = vehicle.mileage ? `${vehicle.mileage.toLocaleString('en-US')} mi` : '—';
+
+  const fieldLabels: Record<string, Record<Lang, string>> = {
+    brand: { es: 'Marca', en: 'Brand' },
+    model: { es: 'Modelo', en: 'Model' },
+    year: { es: 'Ano', en: 'Year' },
+    price: { es: 'Precio', en: 'Price' },
+    mileage: { es: 'Millaje', en: 'Mileage' },
+  };
+  const missing = missingFields.map(f => fieldLabels[f]?.[lang] || f).join(', ');
+
+  const text = lang === 'es'
+    ? `Analisis completo:\n\n*${title}${trim}*\nPrecio: ${price}\nMillaje: ${miles}\n\nFalta: *${missing}*\n\nPuedo estimar automaticamente basandome en el modelo, ano y mercado de Houston, TX.\n\n_O envia la info faltante como texto_`
+    : `Analysis complete:\n\n*${title}${trim}*\nPrice: ${price}\nMileage: ${miles}\n\nMissing: *${missing}*\n\nI can estimate automatically based on model, year, and Houston, TX market.\n\n_Or send the missing info as text_`;
+
+  const buttons: WAButton[] = [
+    { type: 'reply', reply: { id: 'auto_fill', title: lang === 'es' ? 'Auto-completar IA' : 'AI Auto-fill' } },
+    { type: 'reply', reply: { id: 'confirm_cancel', title: lang === 'es' ? 'Cancelar' : 'Cancel' } },
+  ];
+
+  return { text, buttons };
+}
+
+// ─────────────────────────────────────────────
 // Errors & Edge Cases
 // ─────────────────────────────────────────────
 

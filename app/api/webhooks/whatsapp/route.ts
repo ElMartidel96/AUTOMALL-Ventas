@@ -48,6 +48,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   }
 
+  // Diagnostic: surface config issues immediately
+  if (!WA_ACCESS_TOKEN) {
+    console.error('[WA-Webhook] WHATSAPP_ACCESS_TOKEN env var is MISSING — bot cannot send messages');
+  }
+
   try {
     const rawBody = await request.text();
 
@@ -83,6 +88,11 @@ export async function POST(request: NextRequest) {
           });
         }
       }
+    }
+
+    // Diagnostic: log message count per webhook call
+    if (messagesToProcess.length > 0) {
+      console.log(`[WA-Webhook] ${messagesToProcess.length} message(s): ${messagesToProcess.map(m => `${m.message.type}:${m.message.id.slice(0,8)}`).join(', ')}`);
     }
 
     // 4. Fire-and-forget: process each message
