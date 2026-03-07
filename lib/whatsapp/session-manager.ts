@@ -1,22 +1,28 @@
 /**
- * WhatsApp Session Manager — State Machine
+ * WhatsApp Session Manager — Concurrency-Safe State Machine
  *
- * Manages the conversation flow for vehicle listing creation via WhatsApp.
+ * Handles vehicle listing creation via WhatsApp photos + AI Vision.
+ *
+ * Design principles:
+ *   - Photos are SILENTLY accumulated (no WA response per photo → no rate limiting)
+ *   - wa_message_log is the source of truth for media IDs (no race-prone array updates)
+ *   - Text message triggers AI extraction (user sends details after photos)
+ *   - 2-second delay before extraction (allows remaining photos to arrive)
+ *   - Non-destructive session creation (insert-or-fetch, never overwrites)
+ *   - Dedup with 60-second window (prevents immediate retries, allows later ones)
  *
  * State transitions:
- *   idle ──(image)──────────> collecting
- *   collecting ──(image)────> collecting (accumulate)
+ *   idle ──(image)──────────> collecting (silent)
+ *   idle ──(text, no photos)> idle (send welcome)
+ *   collecting ──(image)────> collecting (silent accumulate)
  *   collecting ──(text)─────> extracting (trigger AI)
  *   extracting ──(AI done)──> confirming (show result)
- *   confirming ──("yes")────> creating (create vehicle)
- *   confirming ──("edit")───> collecting (re-enter)
- *   confirming ──("cancel")─> idle (cleanup staging)
- *   creating ──(success)────> complete (ask about Facebook)
+ *   confirming ──(publish)──> creating (create vehicle)
+ *   confirming ──(text)─────> collecting (field correction)
+ *   confirming ──(cancel)───> idle (cleanup)
+ *   creating ──(success)────> idle (done, reset)
  *   creating ──(error)──────> error
- *   complete ──("fb yes")───> idle (publish to FB + reset)
- *   complete ──("fb no")────> idle (skip FB + reset)
- *   complete ──(image)──────> collecting (new vehicle)
- *   error ──(image)─────────> collecting (retry with new vehicle)
+ *   complete/error ──(any)──> idle (fresh start)
  */
 
 import { getTypedClient } from '@/lib/supabase/client';
@@ -33,7 +39,7 @@ import type { WAMessage, WASession, WAPhoneLink, ExtractedVehicle } from './type
 import type { StagedImage } from './image-pipeline';
 
 const MAX_IMAGES = 10;
-const APP_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || 'autosmall.org';
+const PHOTO_SETTLE_DELAY_MS = 2000;
 
 // ─────────────────────────────────────────────
 // Main Entry Point
@@ -50,11 +56,13 @@ export async function handleIncomingMessage(
   // Normalize to E.164 — webhook sends "12814680109", DB stores "+12814680109"
   const normalizedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`;
 
-  // Dedup: skip if this message was already processed (Meta retries webhooks)
+  // Dedup: skip if this message was processed in the last 60 seconds
+  // (allows retries after cooldown, prevents immediate duplicates from Meta retries)
   const { data: alreadyProcessed } = await supabase
     .from('wa_message_log')
     .select('id')
     .eq('wa_message_id', message.id)
+    .gte('created_at', new Date(Date.now() - 60_000).toISOString())
     .limit(1);
 
   if (alreadyProcessed && alreadyProcessed.length > 0) {
@@ -73,7 +81,7 @@ export async function handleIncomingMessage(
 
   if (!phoneLink) {
     const lang = detectLanguage(message);
-    await sendTextMessage(waPhoneNumberId, phoneNumber, templates.phoneNotLinkedMessage(lang), accessToken);
+    await safeSend(waPhoneNumberId, phoneNumber, templates.phoneNotLinkedMessage(lang), accessToken);
     await logMessage(null, message.id, 'inbound', message.type, normalizedPhone, getMessageContent(message), getMediaId(message), message);
     return;
   }
@@ -83,26 +91,23 @@ export async function handleIncomingMessage(
 
   // 2. Handle unsupported message types early
   if (!['text', 'image', 'interactive', 'button'].includes(message.type)) {
-    await sendTextMessage(waPhoneNumberId, phoneNumber, templates.unsupportedMessageType(lang), accessToken);
-    await logMessage(null, message.id, 'inbound', message.type, phoneNumber, null, null, message);
+    await safeSend(waPhoneNumberId, phoneNumber, templates.unsupportedMessageType(lang), accessToken);
+    await logMessage(null, message.id, 'inbound', message.type, normalizedPhone, null, null, message);
     return;
   }
 
-  // 3. Get or create session
-  let session = await getActiveSession(normalizedPhone);
+  // 3. Get or create session (non-destructive — never overwrites existing)
+  const session = await getOrCreateSession(normalizedPhone, link, waPhoneNumberId);
 
-  if (!session) {
-    session = await createSession(link, waPhoneNumberId);
-  }
-
-  // Log inbound message
+  // 4. Log inbound message (with session_id + media_id for later retrieval)
   await logMessage(session.id, message.id, 'inbound', message.type, normalizedPhone, getMessageContent(message), getMediaId(message), message);
 
-  // 4. Route based on current state + message type
+  // 5. Route based on current state + message type
   try {
     switch (session.state) {
       case 'idle':
       case 'error':
+      case 'complete':
         await handleIdleState(session, message, waPhoneNumberId, accessToken, link);
         break;
 
@@ -111,8 +116,10 @@ export async function handleIncomingMessage(
         break;
 
       case 'extracting':
-        // AI is working — acknowledge
-        await sendTextMessage(waPhoneNumberId, phoneNumber, templates.extractingMessage(lang), accessToken);
+        // AI is working — acknowledge only for text (ignore photos)
+        if (message.type === 'text') {
+          await safeSend(waPhoneNumberId, session.phone_number, templates.extractingMessage(lang), accessToken);
+        }
         break;
 
       case 'confirming':
@@ -120,21 +127,19 @@ export async function handleIncomingMessage(
         break;
 
       case 'creating':
-        // Vehicle is being created — acknowledge
-        await sendTextMessage(waPhoneNumberId, phoneNumber, templates.creatingMessage(lang), accessToken);
-        break;
-
-      case 'complete':
-        await handleCompleteState(session, message, waPhoneNumberId, accessToken, link);
+        // Vehicle is being created — acknowledge only for text
+        if (message.type === 'text') {
+          await safeSend(waPhoneNumberId, session.phone_number, templates.creatingMessage(lang), accessToken);
+        }
         break;
 
       default:
-        await sendTextMessage(waPhoneNumberId, phoneNumber, templates.welcomeMessage(lang), accessToken);
+        await safeSend(waPhoneNumberId, session.phone_number, templates.welcomeMessage(lang), accessToken);
     }
   } catch (error) {
-    console.error(`[WA-Session] Error handling message for ${phoneNumber}:`, error);
+    console.error(`[WA-Session] Error handling message for ${normalizedPhone}:`, error);
     await updateSessionState(session.id, 'error');
-    await sendTextMessage(waPhoneNumberId, phoneNumber, templates.errorMessage(lang), accessToken);
+    await safeSend(waPhoneNumberId, phoneNumber, templates.errorMessage(lang), accessToken);
   }
 }
 
@@ -152,29 +157,29 @@ async function handleIdleState(
   const lang = link.language;
 
   if (message.type === 'image') {
-    const mediaId = message.image?.id;
-    if (!mediaId) return;
-
-    // Start collecting images for new vehicle
+    // Transition to collecting — photos accumulate silently via message log.
+    // No WA response sent (avoids rate limiting with multiple concurrent photos).
+    // If session is already in error/complete, reset it first.
+    if (session.state === 'error' || session.state === 'complete') {
+      await resetSession(session.id);
+    }
     await updateSession(session.id, {
       state: 'collecting',
-      image_media_ids: [mediaId],
       image_urls: [],
-      raw_text_messages: [],
       extracted_vehicle: null,
       missing_fields: [],
       vehicle_id: null,
     });
-
-    // If there's a caption, store it as text
-    if (message.image?.caption) {
-      await appendTextMessage(session.id, message.image.caption);
-    }
-
-    await sendTextMessage(waPhoneNumberId, session.phone_number, templates.photoReceived(lang, 1), accessToken);
   } else if (message.type === 'text') {
-    // Text without photos — send welcome
-    await sendTextMessage(waPhoneNumberId, session.phone_number, templates.welcomeMessage(lang), accessToken);
+    // Text in idle — check if photos were already accumulated (from concurrent photo handlers)
+    const mediaIds = await getSessionMediaIds(session.id);
+    if (mediaIds.length > 0) {
+      // Photos exist + text arrived → trigger extraction
+      await triggerExtraction(session, mediaIds, waPhoneNumberId, accessToken, link);
+    } else {
+      // No photos yet → send welcome
+      await safeSend(waPhoneNumberId, session.phone_number, templates.welcomeMessage(lang), accessToken);
+    }
   }
 }
 
@@ -188,47 +193,23 @@ async function handleCollectingState(
   const lang = link.language;
 
   if (message.type === 'image') {
-    const mediaId = message.image?.id;
-    if (!mediaId) return;
+    // Photos accumulate silently via message log.
+    // No response, no array update — wa_message_log is the source of truth.
+    return;
+  }
 
-    const currentIds = session.image_media_ids || [];
+  if (message.type === 'text' && message.text?.body) {
+    // Text triggers extraction — wait briefly for remaining photos to arrive
+    await new Promise(resolve => setTimeout(resolve, PHOTO_SETTLE_DELAY_MS));
 
-    if (currentIds.length >= MAX_IMAGES) {
-      await sendTextMessage(waPhoneNumberId, session.phone_number, templates.maxImagesReached(lang), accessToken);
+    // Gather all media IDs from message log (race-condition-safe)
+    const mediaIds = await getSessionMediaIds(session.id);
+    if (mediaIds.length === 0) {
+      await safeSend(waPhoneNumberId, session.phone_number, templates.welcomeMessage(lang), accessToken);
       return;
     }
 
-    const newIds = [...currentIds, mediaId];
-    await updateSession(session.id, { image_media_ids: newIds });
-
-    // If there's a caption, store it as text
-    if (message.image?.caption) {
-      await appendTextMessage(session.id, message.image.caption);
-    }
-
-    if (newIds.length >= MAX_IMAGES) {
-      await sendTextMessage(waPhoneNumberId, session.phone_number, templates.maxImagesReached(lang), accessToken);
-    } else {
-      await sendTextMessage(waPhoneNumberId, session.phone_number, templates.photoReceived(lang, newIds.length), accessToken);
-    }
-  } else if (message.type === 'text' && message.text?.body) {
-    // Text message triggers AI extraction
-    await appendTextMessage(session.id, message.text.body);
-
-    // Refresh session to get latest media IDs
-    const freshSession = await getActiveSession(session.phone_number);
-    if (!freshSession || (freshSession.image_media_ids || []).length === 0) {
-      await sendTextMessage(waPhoneNumberId, session.phone_number, templates.welcomeMessage(lang), accessToken);
-      return;
-    }
-
-    await updateSessionState(session.id, 'extracting');
-    await sendTextMessage(waPhoneNumberId, session.phone_number, templates.extractingMessage(lang), accessToken);
-
-    // Fire-and-forget: run AI extraction
-    runExtraction(freshSession, waPhoneNumberId, accessToken, link).catch((err) => {
-      console.error(`[WA-Session] Extraction error:`, err);
-    });
+    await triggerExtraction(session, mediaIds, waPhoneNumberId, accessToken, link);
   }
 }
 
@@ -240,6 +221,21 @@ async function handleConfirmingState(
   link: WAPhoneLink
 ): Promise<void> {
   const lang = link.language;
+
+  // New image during confirmation → start new vehicle
+  if (message.type === 'image') {
+    await cleanupStagingImages(session.image_urls || []);
+    await resetSession(session.id);
+    await updateSession(session.id, {
+      state: 'collecting',
+      image_urls: [],
+      extracted_vehicle: null,
+      missing_fields: [],
+      vehicle_id: null,
+    });
+    return;
+  }
+
   let action: string | null = null;
 
   // Check for button reply
@@ -256,8 +252,7 @@ async function handleConfirmingState(
     } else if (['cancelar', 'cancel', 'no', '3'].includes(text)) {
       action = 'confirm_cancel';
     } else {
-      // Treat as field correction — store text and go back to collecting
-      await appendTextMessage(session.id, message.text.body);
+      // Field correction — go back to collecting
       action = 'field_correction';
     }
   }
@@ -273,14 +268,13 @@ async function handleConfirmingState(
 
     case 'field_correction':
       await updateSession(session.id, { state: 'collecting' });
-      await sendTextMessage(waPhoneNumberId, session.phone_number, templates.editInstructionsMessage(lang), accessToken);
+      await safeSend(waPhoneNumberId, session.phone_number, templates.editInstructionsMessage(lang), accessToken);
       break;
 
     case 'confirm_cancel':
-      // Cleanup staging images before resetting
       await cleanupStagingImages(session.image_urls || []);
       await resetSession(session.id);
-      await sendTextMessage(waPhoneNumberId, session.phone_number, templates.welcomeMessage(lang), accessToken);
+      await safeSend(waPhoneNumberId, session.phone_number, templates.welcomeMessage(lang), accessToken);
       break;
 
     default:
@@ -290,33 +284,48 @@ async function handleConfirmingState(
         const { _staged_images: _, ...extractedFields } = vehicleData;
         const sellerHandle = await getSellerHandle(link.wallet_address);
         const { text, buttons } = templates.confirmationMessage(lang, extractedFields as unknown as ExtractedVehicle, sellerHandle);
-        await sendInteractiveMessage(waPhoneNumberId, session.phone_number, text, buttons, accessToken);
+        await sendInteractiveMessage(waPhoneNumberId, session.phone_number, text, buttons, accessToken).catch(err => {
+          console.error('[WA-Session] Failed to resend confirmation:', err);
+        });
       }
   }
-}
-
-/**
- * Handle messages in 'complete' state — vehicle was created, session ready for reset.
- * This state is reached briefly; treat any input as start of a new flow.
- */
-async function handleCompleteState(
-  session: WASession,
-  message: WAMessage,
-  waPhoneNumberId: string,
-  accessToken: string,
-  link: WAPhoneLink
-): Promise<void> {
-  // Reset and treat as idle — ready for next vehicle
-  await resetSession(session.id);
-  await handleIdleState(session, message, waPhoneNumberId, accessToken, link);
 }
 
 // ─────────────────────────────────────────────
 // AI Extraction Pipeline
 // ─────────────────────────────────────────────
 
+/**
+ * Trigger extraction: send acknowledgment, then run AI pipeline.
+ * Uses media IDs from wa_message_log (not session array) for race-safety.
+ */
+async function triggerExtraction(
+  session: WASession,
+  mediaIds: string[],
+  waPhoneNumberId: string,
+  accessToken: string,
+  link: WAPhoneLink
+): Promise<void> {
+  const lang = link.language;
+  const count = Math.min(mediaIds.length, MAX_IMAGES);
+
+  await updateSessionState(session.id, 'extracting');
+
+  // Send single acknowledgment with photo count
+  const ackMsg = lang === 'es'
+    ? `Recibi ${count} ${count === 1 ? 'foto' : 'fotos'}. Analizando... Un momento.`
+    : `Received ${count} ${count === 1 ? 'photo' : 'photos'}. Analyzing... One moment.`;
+  await safeSend(waPhoneNumberId, session.phone_number, ackMsg, accessToken);
+
+  // Fire-and-forget: run AI extraction
+  runExtraction(session, mediaIds.slice(0, MAX_IMAGES), waPhoneNumberId, accessToken, link).catch((err) => {
+    console.error(`[WA-Session] Extraction error:`, err);
+  });
+}
+
 async function runExtraction(
   session: WASession,
+  mediaIds: string[],
   waPhoneNumberId: string,
   accessToken: string,
   link: WAPhoneLink
@@ -328,14 +337,14 @@ async function runExtraction(
     const { stageWhatsAppImages } = await import('./image-pipeline');
 
     const stagedImages = await stageWhatsAppImages(
-      session.image_media_ids || [],
+      mediaIds,
       link.wallet_address,
       accessToken
     );
 
     if (stagedImages.length === 0) {
       await updateSessionState(session.id, 'error');
-      await sendTextMessage(waPhoneNumberId, session.phone_number, templates.errorMessage(lang), accessToken);
+      await safeSend(waPhoneNumberId, session.phone_number, templates.errorMessage(lang), accessToken);
       return;
     }
 
@@ -344,9 +353,8 @@ async function runExtraction(
     // Store public URLs for reference
     await updateSession(session.id, { image_urls: imageUrls });
 
-    // Get latest text messages
-    const freshSession = await getActiveSession(session.phone_number);
-    const textMessages = freshSession?.raw_text_messages || session.raw_text_messages || [];
+    // Get all text messages from the message log (race-condition-safe)
+    const textMessages = await getSessionTexts(session.id);
 
     // Run AI extraction (has 90s timeout internally)
     const extracted = await extractVehicleData(imageUrls, textMessages);
@@ -355,17 +363,16 @@ async function runExtraction(
     const missing = findMissingFields(extracted);
 
     if (missing.length > 0) {
-      // Store extraction + staged images data (staged images persisted for later finalization)
       await updateSession(session.id, {
         state: 'collecting',
         extracted_vehicle: { ...extracted, _staged_images: stagedImages },
         missing_fields: missing,
       });
-      await sendTextMessage(waPhoneNumberId, session.phone_number, templates.missingFieldsMessage(lang, missing), accessToken);
+      await safeSend(waPhoneNumberId, session.phone_number, templates.missingFieldsMessage(lang, missing), accessToken);
       return;
     }
 
-    // All fields present — ask for confirmation
+    // All fields present — ask for confirmation with publish destination buttons
     const sellerHandle = await getSellerHandle(link.wallet_address);
     await updateSession(session.id, {
       state: 'confirming',
@@ -378,7 +385,7 @@ async function runExtraction(
   } catch (error) {
     console.error(`[WA-Session] Extraction failed:`, error);
     await updateSessionState(session.id, 'error');
-    await sendTextMessage(waPhoneNumberId, session.phone_number, templates.errorMessage(lang), accessToken);
+    await safeSend(waPhoneNumberId, session.phone_number, templates.errorMessage(lang), accessToken);
   }
 }
 
@@ -396,7 +403,7 @@ async function createVehicleFlow(
   const lang = link.language;
 
   await updateSessionState(session.id, 'creating');
-  await sendTextMessage(waPhoneNumberId, session.phone_number, templates.creatingMessage(lang), accessToken);
+  await safeSend(waPhoneNumberId, session.phone_number, templates.creatingMessage(lang), accessToken);
 
   try {
     const vehicleData = session.extracted_vehicle as unknown as Record<string, unknown>;
@@ -435,14 +442,14 @@ async function createVehicleFlow(
 
     // Send unified success message
     const successMsg = templates.vehiclePublishedMessage(lang, extracted, result.catalogUrl, publishToFb, fbPublished);
-    await sendTextMessage(waPhoneNumberId, session.phone_number, successMsg, accessToken);
+    await safeSend(waPhoneNumberId, session.phone_number, successMsg, accessToken);
 
     // Reset session — ready for next vehicle
     await resetSession(session.id);
   } catch (error) {
     console.error(`[WA-Session] Vehicle creation failed:`, error);
     await updateSessionState(session.id, 'error');
-    await sendTextMessage(waPhoneNumberId, session.phone_number, templates.errorMessage(lang), accessToken);
+    await safeSend(waPhoneNumberId, session.phone_number, templates.errorMessage(lang), accessToken);
   }
 }
 
@@ -450,9 +457,6 @@ async function createVehicleFlow(
 // Facebook Publishing
 // ─────────────────────────────────────────────
 
-/**
- * Attempt to publish vehicle to Facebook. Returns true if successful.
- */
 async function tryPublishToFacebook(vehicleId: string, link: WAPhoneLink): Promise<boolean> {
   const supabase = getTypedClient();
   const { data: connection } = await supabase
@@ -478,52 +482,54 @@ async function tryPublishToFacebook(vehicleId: string, link: WAPhoneLink): Promi
 }
 
 // ─────────────────────────────────────────────
-// Session CRUD
+// Session CRUD (Concurrency-Safe)
 // ─────────────────────────────────────────────
 
-async function getActiveSession(phoneNumber: string): Promise<WASession | null> {
+/**
+ * Get or create a session. Non-destructive: never overwrites an existing session.
+ * Handles race conditions where multiple concurrent handlers try to create.
+ */
+async function getOrCreateSession(
+  phone: string,
+  link: WAPhoneLink,
+  waPhoneNumberId: string
+): Promise<WASession> {
   const supabase = getTypedClient();
 
-  const { data } = await supabase
+  // Try to get existing session
+  const { data: existing } = await supabase
     .from('wa_sessions')
     .select('*')
-    .eq('phone_number', phoneNumber)
+    .eq('phone_number', phone)
     .single();
 
-  if (!data) return null;
+  if (existing) {
+    const session = existing as unknown as WASession;
 
-  const session = data as unknown as WASession;
+    // Check expiry
+    if (new Date(session.expires_at) < new Date()) {
+      cleanupStagingImages(session.image_urls || []).catch(() => {});
+      await resetSession(session.id);
+      session.state = 'idle';
+      session.image_urls = [];
+      session.extracted_vehicle = null;
+      session.missing_fields = [];
+      session.vehicle_id = null;
+    }
 
-  // Check expiry
-  if (new Date(session.expires_at) < new Date()) {
-    // Cleanup staging images from expired session
-    cleanupStagingImages(session.image_urls || []).catch(() => {});
-    // Reset expired session
-    await resetSession(session.id);
-    session.state = 'idle';
-    session.image_media_ids = [];
-    session.image_urls = [];
-    session.raw_text_messages = [];
-    session.extracted_vehicle = null;
-    session.missing_fields = [];
-    session.vehicle_id = null;
+    // Extend expiry
+    await supabase
+      .from('wa_sessions')
+      .update({ expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString() })
+      .eq('id', session.id);
+
+    return session;
   }
 
-  // Extend expiry
-  await supabase
+  // No session exists — create new one (INSERT, not UPSERT, to avoid overwriting)
+  const { data: newData, error } = await supabase
     .from('wa_sessions')
-    .update({ expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString() })
-    .eq('id', session.id);
-
-  return session;
-}
-
-async function createSession(link: WAPhoneLink, waPhoneNumberId: string): Promise<WASession> {
-  const supabase = getTypedClient();
-
-  const { data, error } = await supabase
-    .from('wa_sessions')
-    .upsert({
+    .insert({
       seller_id: link.seller_id,
       wallet_address: link.wallet_address,
       phone_number: link.phone_number,
@@ -535,15 +541,23 @@ async function createSession(link: WAPhoneLink, waPhoneNumberId: string): Promis
       raw_text_messages: [],
       missing_fields: [],
       expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-    }, { onConflict: 'phone_number' })
+    })
     .select('*')
     .single();
 
-  if (error || !data) {
-    throw new Error(`Failed to create session: ${error?.message}`);
+  if (error) {
+    // Race condition: another handler created the session concurrently
+    const { data: raceData } = await supabase
+      .from('wa_sessions')
+      .select('*')
+      .eq('phone_number', phone)
+      .single();
+
+    if (raceData) return raceData as unknown as WASession;
+    throw new Error(`Failed to create session: ${error.message}`);
   }
 
-  return data as unknown as WASession;
+  return newData as unknown as WASession;
 }
 
 async function updateSession(
@@ -573,17 +587,44 @@ async function resetSession(sessionId: string): Promise<void> {
   });
 }
 
-async function appendTextMessage(sessionId: string, text: string): Promise<void> {
+// ─────────────────────────────────────────────
+// Message Log Queries (Source of Truth for Media)
+// ─────────────────────────────────────────────
+
+/**
+ * Get all media IDs for a session from the message log.
+ * This is race-condition-safe: each handler INSERTs to the log independently,
+ * and we SELECT all at query time. No read-modify-write on arrays.
+ */
+async function getSessionMediaIds(sessionId: string): Promise<string[]> {
   const supabase = getTypedClient();
-
   const { data } = await supabase
-    .from('wa_sessions')
-    .select('raw_text_messages')
-    .eq('id', sessionId)
-    .single();
+    .from('wa_message_log')
+    .select('media_id')
+    .eq('session_id', sessionId)
+    .eq('direction', 'inbound')
+    .not('media_id', 'is', null)
+    .order('created_at', { ascending: true })
+    .limit(MAX_IMAGES);
 
-  const current = ((data as Record<string, unknown>)?.raw_text_messages as string[]) || [];
-  await updateSession(sessionId, { raw_text_messages: [...current, text] });
+  return (data || []).map((row: { media_id: string }) => row.media_id);
+}
+
+/**
+ * Get all text content for a session from the message log.
+ * Includes both standalone text messages and image captions.
+ */
+async function getSessionTexts(sessionId: string): Promise<string[]> {
+  const supabase = getTypedClient();
+  const { data } = await supabase
+    .from('wa_message_log')
+    .select('content')
+    .eq('session_id', sessionId)
+    .eq('direction', 'inbound')
+    .not('content', 'is', null)
+    .order('created_at', { ascending: true });
+
+  return (data || []).map((row: { content: string }) => row.content);
 }
 
 // ─────────────────────────────────────────────
@@ -615,7 +656,6 @@ async function logMessage(
         raw_payload: rawPayload,
       });
   } catch (error) {
-    // Fire-and-forget — don't break the flow
     console.error('[WA-Log] Failed to log message:', error);
   }
 }
@@ -623,6 +663,23 @@ async function logMessage(
 // ─────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────
+
+/**
+ * Send a text message, swallowing errors (rate limits, etc.).
+ * Prevents cascading failures when WhatsApp rate-limits us.
+ */
+async function safeSend(
+  phoneNumberId: string,
+  to: string,
+  text: string,
+  token: string
+): Promise<void> {
+  try {
+    await sendTextMessage(phoneNumberId, to, text, token);
+  } catch (err) {
+    console.error('[WA-Session] Send failed (rate limited?):', err);
+  }
+}
 
 function getMessageContent(message: WAMessage): string | null {
   if (message.text?.body) return message.text.body;
@@ -642,7 +699,6 @@ function detectLanguage(message: WAMessage): 'en' | 'es' {
   const englishIndicators = ['hello', 'price', 'car', 'sell', 'photos', 'thanks', 'want', 'mileage', 'vehicle'];
   const spanishScore = spanishIndicators.filter(w => text.includes(w)).length;
   const englishScore = englishIndicators.filter(w => text.includes(w)).length;
-  // Default to Spanish (Houston Hispanic market)
   return englishScore > spanishScore ? 'en' : 'es';
 }
 
