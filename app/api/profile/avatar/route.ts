@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB (client compresses before upload)
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB (client compresses before upload)
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const AVATAR_BUCKET = 'avatars';
 
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: 'File too large. Maximum size: 5MB', success: false },
+        { error: 'File too large. Maximum size: 10MB', success: false },
         { status: 400 }
       );
     }
@@ -126,6 +126,30 @@ export async function POST(request: NextRequest) {
       .getPublicUrl(filePath);
 
     const avatarUrl = urlData.publicUrl;
+
+    // Auto-update user_profiles.avatar_url (matches DAO behavior)
+    const { error: updateError } = await db
+      .from('user_profiles')
+      .update({
+        avatar_url: avatarUrl,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('wallet_address', normalizedWallet);
+
+    if (updateError) {
+      // Non-critical: profile may not exist yet, or table may not exist
+      console.warn('[Avatar] Could not update user_profiles:', updateError.message);
+    }
+
+    // Also update users.avatar_url for the AutoMALL user system
+    try {
+      await db
+        .from('users')
+        .update({ avatar_url: avatarUrl })
+        .eq('wallet_address', normalizedWallet);
+    } catch {
+      // Non-critical: users table may not have avatar_url column
+    }
 
     return NextResponse.json({
       success: true,

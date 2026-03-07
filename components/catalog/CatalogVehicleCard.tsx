@@ -10,6 +10,7 @@ import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { Car, Camera, Gauge, Phone, MapPin } from 'lucide-react';
 import type { CatalogVehicle } from '@/hooks/useCatalog';
+import VehicleShareButton from './VehicleShareButton';
 
 interface Props {
   vehicle: CatalogVehicle;
@@ -50,6 +51,11 @@ export default function CatalogVehicleCard({ vehicle }: Props) {
             {conditionLabel}
           </span>
         )}
+
+        {/* Share button */}
+        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+          <VehicleShareButton vehicleId={vehicle.id} vehicleTitle={title} />
+        </div>
 
         {/* Image count */}
         {vehicle.image_count > 0 && (

@@ -5,17 +5,33 @@ import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import type { Vehicle } from '@/lib/supabase/types';
 import { VehicleStatusBadge } from './VehicleStatusBadge';
-import { Car, Gauge, Edit2, Trash2, CheckCircle } from 'lucide-react';
+import { Car, Gauge, Edit2, Trash2, CheckCircle, Globe, Loader2, Check, ExternalLink } from 'lucide-react';
+import { FEATURE_META_INTEGRATION } from '@/lib/config/features';
+import { useMetaConnection } from '@/hooks/useMetaConnection';
+import { useMetaPublish } from '@/hooks/useMetaPublish';
 
 interface VehicleCardProps {
   vehicle: Vehicle;
+  sellerAddress: string;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onMarkSold: (id: string) => void;
 }
 
-export function VehicleCard({ vehicle, onEdit, onDelete, onMarkSold }: VehicleCardProps) {
+export function VehicleCard({ vehicle, sellerAddress, onEdit, onDelete, onMarkSold }: VehicleCardProps) {
   const t = useTranslations('inventory');
+  const { data: metaData } = useMetaConnection(FEATURE_META_INTEGRATION ? sellerAddress : undefined);
+  const metaPublish = useMetaPublish(sellerAddress);
+
+  const showFbButton = FEATURE_META_INTEGRATION && metaData?.connected && vehicle.status === 'active';
+  const fbPostId = metaData?.publishedVehicles?.[vehicle.id];
+  const isPublished = !!fbPostId;
+  const fbPostUrl = fbPostId ? `https://www.facebook.com/${fbPostId}` : null;
+
+  const handlePublishFb = () => {
+    if (isPublished) return;
+    metaPublish.mutate(vehicle.id);
+  };
 
   const title = `${vehicle.year} ${vehicle.brand} ${vehicle.model}${vehicle.trim ? ` ${vehicle.trim}` : ''}`;
   const formattedPrice = new Intl.NumberFormat('en-US', {
@@ -98,6 +114,33 @@ export function VehicleCard({ vehicle, onEdit, onDelete, onMarkSold }: VehicleCa
               <CheckCircle className="w-3.5 h-3.5" />
               {t('actions.markSold')}
             </button>
+          )}
+          {showFbButton && (
+            isPublished ? (
+              <a
+                href={fbPostUrl!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1 py-1.5 px-2 text-xs font-medium text-am-green hover:bg-am-green/5 rounded-lg transition-colors"
+                title={t('actions.viewFacebookPost')}
+              >
+                <Check className="w-3.5 h-3.5" />
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            ) : (
+              <button
+                onClick={handlePublishFb}
+                disabled={metaPublish.isPending}
+                className="flex items-center justify-center gap-1.5 py-1.5 px-2 text-xs font-medium text-am-blue hover:bg-am-blue/5 dark:text-am-blue-light dark:hover:bg-am-blue/10 rounded-lg transition-colors disabled:opacity-50"
+                title={t('actions.publishFacebook')}
+              >
+                {metaPublish.isPending ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Globe className="w-3.5 h-3.5" />
+                )}
+              </button>
+            )
           )}
           <button
             onClick={() => onDelete(vehicle.id)}

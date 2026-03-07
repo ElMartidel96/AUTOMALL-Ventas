@@ -33,11 +33,28 @@ interface MetaPublication {
   created_at: string;
 }
 
+interface EngagementSummaryData {
+  total_likes: number;
+  total_comments: number;
+  total_shares: number;
+  total_reactions: number;
+  total_posts: number;
+  best_post: {
+    fb_post_id: string;
+    vehicle_id: string;
+    likes: number;
+    comments: number;
+    shares: number;
+  } | null;
+}
+
 interface MetaConnectionResponse {
   connected: boolean;
   connection: MetaConnectionData | null;
   feedUrl: string | null;
   recentPublications: MetaPublication[];
+  publishedVehicles: Record<string, string>;
+  engagementSummary: EngagementSummaryData | null;
 }
 
 interface MetaSettings {

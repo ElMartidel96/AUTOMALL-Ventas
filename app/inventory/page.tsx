@@ -166,6 +166,7 @@ function InventoryContent() {
             <VehicleCard
               key={vehicle.id}
               vehicle={vehicle}
+              sellerAddress={address || ''}
               onEdit={handleEdit}
               onDelete={handleDelete}
               onMarkSold={handleMarkSold}

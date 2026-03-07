@@ -34,6 +34,9 @@ import { MapPin } from 'lucide-react';
 import { useTenant } from '@/lib/tenant/TenantProvider';
 import { DEFAULT_LOGO_NAV } from '@/lib/config/defaults';
 import { useUser } from '@/hooks/useUser';
+import { useProfile } from '@/hooks/useProfile';
+import { useReferralCode, useReferralLink } from '@/hooks/useReferrals';
+import { ProfileCard } from '@/components/profile/ProfileCard';
 
 export const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -292,13 +295,10 @@ export const NavbarSpacer: React.FC = () => {
   );
 };
 
-function MobileUserBadge({ address }: { address: string }) {
+function MobileUserBadge({ address: _address }: { address: string }) {
   return (
-    <div className="flex items-center space-x-2 bg-am-blue/10 dark:bg-am-blue/20 px-2 py-1 rounded-lg">
-      <div className="w-2 h-2 bg-am-green rounded-full"></div>
-      <span className="text-xs text-am-blue dark:text-am-blue-light font-medium">
-        {address.slice(0, 4)}...{address.slice(-3)}
-      </span>
+    <div onClick={(e) => e.stopPropagation()}>
+      <ProfileCard size="sm" />
     </div>
   );
 }
@@ -306,23 +306,36 @@ function MobileUserBadge({ address }: { address: string }) {
 function UserDropdown({ fullWidth = false }: { fullWidth?: boolean }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedWallet, setCopiedWallet] = useState(false);
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const wallet = useActiveWallet();
-  const { role } = useUser();
+  const { user, role } = useUser();
+  const { profile } = useProfile(address);
+  const { code: referralCode } = useReferralCode(address);
+  const { generateLink } = useReferralLink(referralCode);
 
   const tCommon = useTranslations('common');
-  const tWallet = useTranslations('wallet');
   const tRoles = useTranslations('roles');
 
   if (!isConnected || !address) return null;
 
   const displayAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
+  const displayName = user?.display_name || profile?.display_name || displayAddress;
 
-  const handleCopy = async () => {
+  const handleCopyReferral = async () => {
+    const link = generateLink() || `${window.location.origin}?ref=${referralCode || ''}`;
+    if (link) {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleCopyWallet = async () => {
     await navigator.clipboard.writeText(address);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopiedWallet(true);
+    setTimeout(() => setCopiedWallet(false), 2000);
   };
 
   return (
@@ -331,9 +344,9 @@ function UserDropdown({ fullWidth = false }: { fullWidth?: boolean }) {
         className={`flex items-center space-x-2 bg-white dark:bg-am-dark rounded-lg border border-gray-200 dark:border-am-blue/30 px-3 py-2
                  hover:border-am-orange dark:hover:border-am-orange/50 transition-all duration-300 ${fullWidth ? 'w-full' : ''}`}
       >
-        {/* User avatar placeholder */}
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-am-blue to-am-orange flex items-center justify-center">
-          <User className="w-4 h-4 text-white" />
+        {/* Profile Card L1 — Avatar with L1→L2→L4 system */}
+        <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+          <ProfileCard size="sm" />
         </div>
 
         <div className="flex items-center space-x-2 flex-1">
@@ -341,17 +354,17 @@ function UserDropdown({ fullWidth = false }: { fullWidth?: boolean }) {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                handleCopy();
+                handleCopyReferral();
               }}
               className="font-medium text-gray-900 dark:text-white text-xs hover:text-am-orange dark:hover:text-am-orange-light transition-colors flex items-center gap-1"
             >
               {copied ? (
                 <>
                   <Check className="w-3 h-3 text-am-green" />
-                  <span className="text-am-green">{tCommon('copied')}</span>
+                  <span className="text-am-green">{tCommon('referralCopied')}</span>
                 </>
               ) : (
-                displayAddress
+                <span className="truncate max-w-[120px]">{displayName}</span>
               )}
             </button>
             <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -380,12 +393,12 @@ function UserDropdown({ fullWidth = false }: { fullWidth?: boolean }) {
           <div className={`${fullWidth ? 'relative' : 'absolute top-full right-0 min-w-[280px]'} mt-2 bg-white dark:bg-am-dark rounded-lg shadow-xl border border-gray-200 dark:border-am-blue/30 z-[10001]`}>
             <div className="p-4">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-am-blue to-am-orange flex items-center justify-center">
-                    <User className="w-5 h-5 text-white" />
+                <div className="flex items-center space-x-3">
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <ProfileCard size="sm" />
                   </div>
                   <div>
-                    <div className="font-medium text-gray-900 dark:text-white">{displayAddress}</div>
+                    <div className="font-medium text-gray-900 dark:text-white">{displayName}</div>
                     <div className="text-xs text-am-green font-medium">{tCommon('connected')}</div>
                   </div>
                 </div>
@@ -397,23 +410,35 @@ function UserDropdown({ fullWidth = false }: { fullWidth?: boolean }) {
                   className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-am-orange/10 dark:hover:bg-am-orange/10 transition-colors text-left"
                   onClick={() => setShowDropdown(false)}
                 >
-                  <div className="w-4 h-4 rounded-full bg-gradient-to-br from-am-blue to-am-orange flex items-center justify-center flex-shrink-0">
-                    <User className="w-2.5 h-2.5 text-white" />
-                  </div>
+                  <User className="w-4 h-4 text-am-blue flex-shrink-0" />
                   <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">{tCommon('myProfile')}</span>
                 </Link>
 
                 <button
-                  onClick={handleCopy}
+                  onClick={handleCopyReferral}
                   className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-am-blue/10 transition-colors text-left"
                 >
                   {copied ? (
                     <Check className="w-4 h-4 text-am-green" />
                   ) : (
+                    <Users className="w-4 h-4 text-am-orange" />
+                  )}
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    {copied ? tCommon('referralCopied') : tCommon('copyReferralLink')}
+                  </span>
+                </button>
+
+                <button
+                  onClick={handleCopyWallet}
+                  className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-am-blue/10 transition-colors text-left"
+                >
+                  {copiedWallet ? (
+                    <Check className="w-4 h-4 text-am-green" />
+                  ) : (
                     <Copy className="w-4 h-4 text-gray-400" />
                   )}
                   <span className="text-sm text-gray-700 dark:text-gray-300">
-                    {copied ? tCommon('copied') : tCommon('copyAddress')}
+                    {copiedWallet ? tCommon('copied') : tCommon('copyAddress')}
                   </span>
                 </button>
 

@@ -9,6 +9,7 @@ import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Car, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { VehicleImage } from '@/lib/supabase/types';
+import VehicleGalleryLightbox from './VehicleGalleryLightbox';
 
 interface Props {
   images: VehicleImage[];
@@ -17,6 +18,7 @@ interface Props {
 
 export default function VehicleGallery({ images, alt }: Props) {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   if (images.length === 0) {
     return (
@@ -34,7 +36,10 @@ export default function VehicleGallery({ images, alt }: Props) {
   return (
     <div className="space-y-3">
       {/* Main image */}
-      <div className="relative glass-crystal rounded-2xl overflow-hidden aspect-[16/10]">
+      <div
+        className="relative glass-crystal rounded-2xl overflow-hidden aspect-[16/10] cursor-pointer"
+        onClick={() => setLightboxOpen(true)}
+      >
         <AnimatePresence mode="wait">
           <motion.div
             key={current.id}
@@ -59,13 +64,13 @@ export default function VehicleGallery({ images, alt }: Props) {
         {images.length > 1 && (
           <>
             <button
-              onClick={prev}
+              onClick={(e) => { e.stopPropagation(); prev(); }}
               className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors backdrop-blur-sm"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
             <button
-              onClick={next}
+              onClick={(e) => { e.stopPropagation(); next(); }}
               className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors backdrop-blur-sm"
             >
               <ChevronRight className="w-5 h-5" />
@@ -105,6 +110,18 @@ export default function VehicleGallery({ images, alt }: Props) {
           ))}
         </div>
       )}
+
+      {/* Fullscreen lightbox */}
+      <AnimatePresence>
+        {lightboxOpen && (
+          <VehicleGalleryLightbox
+            images={images}
+            alt={alt}
+            initialIndex={selectedIndex}
+            onClose={() => setLightboxOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

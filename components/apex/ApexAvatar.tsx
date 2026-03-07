@@ -20,6 +20,7 @@ import { useAccount } from '@/lib/thirdweb';
 import { useProfile } from '@/hooks/useProfile';
 import { AvatarBadge } from './AvatarBadge';
 import { Bell } from 'lucide-react';
+import { DEFAULT_AVATAR } from '@/lib/config/defaults';
 
 interface ApexAvatarProps {
   size?: 'sm' | 'md' | 'lg';
@@ -50,7 +51,7 @@ export function ApexAvatar({
   enableFloat = true,
   enableSticky = false,
   videoSrc,
-  imageSrc = '/apeX22.PNG',
+  imageSrc = DEFAULT_AVATAR,
   useUserProfile = false,
 }: ApexAvatarProps) {
   const { address, isConnected } = useAccount();

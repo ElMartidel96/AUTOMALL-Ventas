@@ -25,6 +25,7 @@ import {
 } from 'react';
 import { useAccount } from '@/lib/thirdweb';
 import { useProfile, usePublicProfile } from '@/hooks/useProfile';
+import { useUser } from '@/hooks/useUser';
 
 // =====================================================
 // TYPES
@@ -137,6 +138,10 @@ export function ProfileCardProvider({
   const ownProfile = useProfile(isOwnProfile ? targetWallet : undefined);
   const publicProfile = usePublicProfile(!isOwnProfile ? targetWallet : undefined);
 
+  // Also read from users table — avatar_url is more reliably updated there
+  // (same pattern as PersonalInfoCard: user?.avatar_url || profile?.avatar_url)
+  const { user } = useUser();
+
   // Normalize profile data to common format
   const profile = useMemo<ProfileData | null>(() => {
     const source = isOwnProfile ? ownProfile.profile : publicProfile.profile;
@@ -145,9 +150,9 @@ export function ProfileCardProvider({
     return {
       wallet_address: source.wallet_address,
       username: source.username,
-      display_name: source.display_name,
+      display_name: (isOwnProfile ? user?.display_name : null) || source.display_name,
       bio: source.bio,
-      avatar_url: source.avatar_url,
+      avatar_url: (isOwnProfile ? user?.avatar_url : null) || source.avatar_url,
       twitter_handle: source.twitter_handle,
       telegram_handle: source.telegram_handle,
       discord_handle: source.discord_handle,
@@ -159,7 +164,7 @@ export function ProfileCardProvider({
       tier: source.tier,
       tier_color: source.tier_color,
     };
-  }, [isOwnProfile, ownProfile.profile, publicProfile.profile]);
+  }, [isOwnProfile, ownProfile.profile, publicProfile.profile, user]);
 
   const isLoading = isOwnProfile ? ownProfile.isLoading : publicProfile.isLoading;
   const isError = isOwnProfile ? ownProfile.isError : publicProfile.isError;

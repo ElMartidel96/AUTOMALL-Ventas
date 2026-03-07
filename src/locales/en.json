@@ -150,6 +150,8 @@
     "wallet": "Wallet",
     "copyAddress": "Copy Address",
     "copied": "Copied!",
+    "referralCopied": "Link copied!",
+    "copyReferralLink": "Copy Referral Link",
     "viewOnExplorer": "View on Explorer",
     "balance": "Balance",
     "refresh": "Refresh",
@@ -1740,7 +1742,46 @@
     "personalTiktokPlaceholder": "@yourprofile",
     "saveSocial": "Save Social Media",
     "socialSaved": "Social media saved!",
-    "socialSaveError": "Failed to save. Please try again."
+    "socialSaveError": "Failed to save. Please try again.",
+    "editProfile": "Edit Profile",
+    "editProfileHint": "Update your name, photo, and bio",
+    "displayNameLabel": "Display Name",
+    "displayNamePlaceholder": "Your name",
+    "usernameLabel": "Username",
+    "usernamePlaceholder": "your_username",
+    "usernameAvailable": "Available!",
+    "usernameTaken": "Already taken",
+    "usernameChecking": "Checking...",
+    "usernameTooShort": "At least 3 characters",
+    "bioLabel": "Bio",
+    "bioPlaceholder": "Tell us about yourself...",
+    "bioCharCount": "{count}/500",
+    "uploadAvatar": "Change Photo",
+    "avatarUploading": "Uploading...",
+    "avatarSuccess": "Photo updated!",
+    "avatarError": "Upload failed. Try again.",
+    "saveProfile": "Save Profile",
+    "profileSaved": "Profile saved!",
+    "profileSaveError": "Failed to save profile. Try again.",
+    "stats": {
+      "reputation": "Reputation",
+      "referrals": "Referrals",
+      "tasks": "Tasks",
+      "earned": "Earned"
+    },
+    "share": {
+      "button": "Share Profile",
+      "copied": "Link copied!",
+      "nfcNotSupported": "NFC not supported on this device",
+      "nfcError": "NFC failed. Try again.",
+      "shareMessage": "Check out my profile on AutoMALL!",
+      "qrTitle": "Profile QR Code",
+      "qrDescription": "Scan to view this profile",
+      "downloadQR": "Download",
+      "shareButton": "Share",
+      "nfcReady": "Tap to share",
+      "activateNfc": "Activate NFC"
+    }
   },
   "specialInvite": {
     "header": {
@@ -2385,7 +2426,13 @@
       "back": "Back",
       "next": "Next",
       "publish": "Publish",
-      "saveDraft": "Save Draft"
+      "saveDraft": "Save Draft",
+      "publishFacebook": "Publish to Facebook",
+      "publishing": "Publishing...",
+      "publishSuccess": "Published!",
+      "publishError": "Failed to publish",
+      "publishedFacebook": "Published",
+      "viewFacebookPost": "View"
     },
     "form": {
       "brand": "Brand",
@@ -2644,6 +2691,24 @@
       "sellerName": "Sold by {name}",
       "noContact": "Request Info",
       "noContactAvailable": "Contact the seller through the platform"
+    },
+    "share": {
+      "button": "Share",
+      "copied": "Link copied!",
+      "shareTitle": "Check out this vehicle!",
+      "shareText": "Take a look at this {title}"
+    },
+    "gallery": {
+      "fullscreen": "View fullscreen",
+      "close": "Close"
+    },
+    "publish": {
+      "facebook": "Publish to Facebook",
+      "publishing": "Publishing...",
+      "success": "Published!",
+      "error": "Failed to publish",
+      "published": "Published",
+      "viewPost": "View"
     },
     "related": {
       "title": "Similar Vehicles",
@@ -2927,7 +2992,106 @@
     "recentTitle": "Recent Publications",
     "postTypeNew": "New listing",
     "postTypeSold": "Sold",
-    "postTypeRepost": "Repost"
+    "postTypeRepost": "Repost",
+    "postTypeManual": "Manual publish",
+    "engagement": {
+      "title": "Facebook Engagement",
+      "likes": "Likes",
+      "comments": "Comments",
+      "shares": "Shares",
+      "reactions": "Reactions",
+      "refresh": "Refresh",
+      "noData": "No engagement data yet",
+      "fromPosts": "From {count} published posts"
+    }
+  },
+  "crm": {
+    "title": "My Clients",
+    "subtitle": "Manage your leads, pipeline, and sales interactions",
+    "loginRequired": "Sign in to view your clients",
+    "loginRequiredDesc": "You need to be signed in to manage your CRM.",
+    "sellersOnly": "Seller access only",
+    "sellersOnlyDesc": "The CRM is available for sellers and BirdDogs.",
+    "newLead": "New Lead",
+    "editLead": "Edit Lead",
+    "listView": "List view",
+    "pipelineView": "Pipeline view",
+    "searchPlaceholder": "Search leads...",
+    "allStatuses": "All statuses",
+    "allSources": "All sources",
+    "results": "results",
+    "noLeads": "No leads yet. Add your first lead to get started.",
+    "noInteractions": "No interactions recorded yet.",
+    "more": "more",
+    "pipeline": "Pipeline",
+    "timeline": "Interaction Timeline",
+    "budget": "Budget",
+    "confirmDelete": "Delete this lead?",
+    "stats": {
+      "totalLeads": "Total Leads",
+      "newThisWeek": "New This Week",
+      "conversionRate": "Conversion Rate",
+      "hotLeads": "Hot Leads"
+    },
+    "status": {
+      "new": "New",
+      "contacted": "Contacted",
+      "qualified": "Qualified",
+      "negotiating": "Negotiating",
+      "won": "Won",
+      "lost": "Lost"
+    },
+    "interest": {
+      "hot": "Hot",
+      "warm": "Warm",
+      "cold": "Cold",
+      "lost": "Lost"
+    },
+    "source": {
+      "manual": "Manual",
+      "facebook": "Facebook",
+      "whatsapp": "WhatsApp",
+      "website": "Website",
+      "referral": "Referral",
+      "phone": "Phone",
+      "walk_in": "Walk-in"
+    },
+    "interactionType": {
+      "call": "Call",
+      "whatsapp": "WhatsApp",
+      "email": "Email",
+      "sms": "SMS",
+      "facebook_comment": "FB Comment",
+      "facebook_message": "FB Message",
+      "website_visit": "Website Visit",
+      "test_drive": "Test Drive",
+      "walk_in": "Walk-in",
+      "note": "Note",
+      "status_change": "Status Change"
+    },
+    "direction": {
+      "inbound": "Inbound",
+      "outbound": "Outbound",
+      "internal": "Internal"
+    },
+    "form": {
+      "name": "Name",
+      "phone": "Phone",
+      "email": "Email",
+      "whatsapp": "WhatsApp",
+      "source": "Source",
+      "interestLevel": "Interest Level",
+      "budgetMin": "Min Budget",
+      "budgetMax": "Max Budget",
+      "notes": "Notes",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving...",
+      "delete": "Delete",
+      "addInteraction": "Add Interaction",
+      "interactionSummary": "What happened?",
+      "interactionDetails": "Details (optional)"
+    }
   },
   "legal": {
     "privacy": {
@@ -3109,6 +3273,38 @@
       "hint": "Try expanding the radius or search by a different address.",
       "trySearch": "Search by Address"
     }
+  },
+  "whatsapp": {
+    "tabWhatsApp": "WhatsApp AI",
+    "title": "WhatsApp AI Assistant",
+    "subtitle": "Create vehicle listings by sending photos via WhatsApp",
+    "businessNumber": "AutoMALL WhatsApp Business",
+    "sendPhotosHere": "Send your vehicle photos to this number",
+    "howItWorks": "How It Works",
+    "step1": "Send photos of the vehicle to our WhatsApp Business number",
+    "step2": "Write the details: brand, model, year, price, mileage",
+    "step3": "AI analyzes photos and extracts all vehicle information",
+    "step4": "Your listing is created and published automatically",
+    "linkPhone": "Link Your Phone Number",
+    "phoneLinked": "Phone number linked",
+    "phonePlaceholder": "+1 (321) 555-1234",
+    "linkBtn": "Link",
+    "linkError": "Failed to link phone number",
+    "language": "Language",
+    "autoActivate": "Auto-activate listings",
+    "autoActivateDesc": "Automatically publish listings after creation (skip draft status)",
+    "recentSessions": "Recent Conversations",
+    "noSessions": "No conversations yet. Send photos to our WhatsApp to start!",
+    "photos": "photos",
+    "stateIdle": "Ready",
+    "stateCollecting": "Collecting photos",
+    "stateExtracting": "Analyzing...",
+    "stateConfirming": "Awaiting confirmation",
+    "stateCreating": "Creating listing...",
+    "stateComplete": "Completed",
+    "stateError": "Error",
+    "viewListing": "View Listing",
+    "retryExtraction": "Retry"
   },
   "campaigns": {
     "dashboardTitle": "Campaigns",

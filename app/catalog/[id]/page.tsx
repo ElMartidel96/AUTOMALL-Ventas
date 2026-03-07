@@ -40,6 +40,8 @@ import { Footer } from '@/components/layout/Footer';
 import VehicleGallery from '@/components/catalog/VehicleGallery';
 import VehicleSpecs from '@/components/catalog/VehicleSpecs';
 import CatalogVehicleCard from '@/components/catalog/CatalogVehicleCard';
+import VehicleShareButton from '@/components/catalog/VehicleShareButton';
+import VehicleFacebookButton from '@/components/catalog/VehicleFacebookButton';
 import { useCatalogVehicle } from '@/hooks/useCatalog';
 import { generateVehicleJsonLd } from '@/lib/catalog/json-ld';
 import { useTenant } from '@/lib/tenant/TenantProvider';
@@ -177,9 +179,18 @@ export default function VehicleDetailPage({ params }: { params: { id: string } }
             >
               {/* Title + Price */}
               <div className="glass-crystal-enhanced rounded-2xl p-5">
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
-                  {title}
-                </h1>
+                <div className="flex items-start justify-between gap-2">
+                  <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+                    {title}
+                  </h1>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <VehicleFacebookButton
+                      vehicleId={id}
+                      vehicleSellerHandle={vehicle.seller_handle ?? null}
+                    />
+                    <VehicleShareButton vehicleId={id} vehicleTitle={title} />
+                  </div>
+                </div>
                 {typeof vehicle.trim === 'string' && vehicle.trim && (
                   <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{vehicle.trim}</p>
                 )}

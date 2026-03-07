@@ -20,16 +20,18 @@ import { useReferralDashboard } from '@/hooks/useReferrals';
 import { MyProfileSection } from '@/components/profile/MyProfileSection';
 import { MyDealershipSection } from '@/components/profile/MyDealershipSection';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Store, User as UserIcon, Bot, Facebook } from 'lucide-react';
-import { FEATURE_AI_AGENT_CONNECTOR, FEATURE_META_INTEGRATION } from '@/lib/config/features';
+import { Store, User as UserIcon, Bot, Facebook, MessageCircle } from 'lucide-react';
+import { FEATURE_AI_AGENT_CONNECTOR, FEATURE_META_INTEGRATION, FEATURE_WHATSAPP } from '@/lib/config/features';
 import { AgentConnectorPanel } from '@/components/agent/AgentConnectorPanel';
 import { MetaConnectionPanel } from '@/components/meta/MetaConnectionPanel';
+import { WhatsAppAssistantPanel } from '@/components/whatsapp/WhatsAppAssistantPanel';
 
 export default function ProfilePage() {
   const t = useTranslations('profile');
   const tCommon = useTranslations('common');
   const tAgent = useTranslations('agent');
   const tMeta = useTranslations('meta');
+  const tWhatsApp = useTranslations('whatsapp');
   const { address, isConnected } = useAccount();
   const { seller, isLoading, completionPercentage, refetch } = useSellerProfile();
   const { user, role, isDealer, isLoading: userLoading, updateRole, refetch: refetchUser } = useUser();
@@ -40,7 +42,7 @@ export default function ProfilePage() {
   // Read ?tab= from URL for deep linking (e.g. from chat widget CTA)
   const initialTab = useMemo(() => {
     const tab = searchParams.get('tab');
-    if (tab === 'agent' || tab === 'dealership' || tab === 'profile' || tab === 'meta') return tab;
+    if (tab === 'agent' || tab === 'dealership' || tab === 'profile' || tab === 'meta' || tab === 'whatsapp') return tab;
     return 'profile';
   }, [searchParams]);
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -106,6 +108,7 @@ export default function ProfilePage() {
   const showDealerTab = isDealer && !!seller;
   const showAgentTab = FEATURE_AI_AGENT_CONNECTOR;
   const showMetaTab = FEATURE_META_INTEGRATION && isDealer && !!seller;
+  const showWhatsAppTab = FEATURE_WHATSAPP && isDealer && !!seller;
 
   return (
     <>
@@ -126,8 +129,9 @@ export default function ProfilePage() {
             <TabsList
               className={`glass-crystal-enhanced w-full h-14 rounded-2xl p-1.5 mb-8 grid ${
                 (() => {
-                  const count = 1 + (showDealerTab ? 1 : 0) + (showAgentTab ? 1 : 0) + (showMetaTab ? 1 : 0);
-                  if (count >= 4) return 'grid-cols-4';
+                  const count = 1 + (showDealerTab ? 1 : 0) + (showAgentTab ? 1 : 0) + (showMetaTab ? 1 : 0) + (showWhatsAppTab ? 1 : 0);
+                  if (count >= 5) return 'grid-cols-5';
+                  if (count === 4) return 'grid-cols-4';
                   if (count === 3) return 'grid-cols-3';
                   if (count === 2) return 'grid-cols-2';
                   return 'grid-cols-1';
@@ -168,6 +172,15 @@ export default function ProfilePage() {
                   {tMeta('tabMeta')}
                 </TabsTrigger>
               )}
+              {showWhatsAppTab && (
+                <TabsTrigger
+                  value="whatsapp"
+                  className="rounded-xl h-full text-sm font-bold transition-all data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#25D366] data-[state=active]:to-[#128C7E] data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=inactive]:text-gray-500 dark:data-[state=inactive]:text-gray-400 flex items-center justify-center gap-2"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  {tWhatsApp('tabWhatsApp')}
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="profile" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
@@ -205,6 +218,12 @@ export default function ProfilePage() {
             {showMetaTab && (
               <TabsContent value="meta" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
                 <MetaConnectionPanel walletAddress={address} />
+              </TabsContent>
+            )}
+
+            {showWhatsAppTab && (
+              <TabsContent value="whatsapp" className="mt-0 focus-visible:ring-0 focus-visible:ring-offset-0">
+                <WhatsAppAssistantPanel walletAddress={address} />
               </TabsContent>
             )}
           </Tabs>

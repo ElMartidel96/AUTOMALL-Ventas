@@ -45,9 +45,9 @@ export function vehicleToFeedItem(
   seller: SellerForFeed,
   images: VehicleImage[]
 ): MetaVehicleFeedItem {
-  const sortedImages = [...images].sort((a, b) => a.position - b.position);
-  const primaryImage = sortedImages[0]?.url || '';
-  const additionalImages = sortedImages.slice(1).map((img) => img.url);
+  const sortedImages = [...images].sort((a, b) => a.display_order - b.display_order);
+  const primaryImage = sortedImages[0]?.public_url || '';
+  const additionalImages = sortedImages.slice(1).map((img) => img.public_url);
   const condition = mapCondition(vehicle.condition);
 
   return {

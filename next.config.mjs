@@ -25,6 +25,20 @@ const nextConfig = {
         hostname: 'pwajikcybnicshuqlybo.supabase.co',
         pathname: '/**',
       },
+      // Google profile photos (social login)
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
+      // Facebook profile photos (social login)
+      {
+        protocol: 'https',
+        hostname: 'platform-lookaside.fbsbx.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'graph.facebook.com',
+      },
     ],
   },
 

@@ -7,7 +7,8 @@
  * - Connect/disconnect Facebook page via OAuth
  * - Auto-publish settings (new listings, sold)
  * - Product Feed URL for WhatsApp Catalog
- * - Recent publication log
+ * - Recent publication log with engagement metrics
+ * - Engagement summary card
  */
 
 import React, { useState, useCallback } from 'react';
@@ -35,6 +36,8 @@ import {
   useMetaPages,
   useMetaSelectPage,
 } from '@/hooks/useMetaConnection';
+import { useSyncEngagement } from '@/hooks/useEngagement';
+import { EngagementMetrics, EngagementSummaryCard } from './EngagementMetrics';
 
 interface Props {
   walletAddress: string;
@@ -50,6 +53,7 @@ export function MetaConnectionPanel({ walletAddress }: Props) {
   const disconnectMutation = useMetaDisconnect(walletAddress);
   const { data: pagesData, refetch: fetchPages } = useMetaPages();
   const selectPageMutation = useMetaSelectPage(walletAddress);
+  const syncEngagement = useSyncEngagement(walletAddress);
 
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
@@ -73,13 +77,16 @@ export function MetaConnectionPanel({ walletAddress }: Props) {
     settingsMutation.mutate({ [key]: value });
   };
 
-  // Page selection flow (multi-page OAuth callback)
   const handlePageSelection = async () => {
     await fetchPages();
   };
 
   const selectPage = async (pageId: string) => {
     await selectPageMutation.mutateAsync(pageId);
+  };
+
+  const handleSyncEngagement = () => {
+    syncEngagement.mutate({});
   };
 
   if (isLoading) {
@@ -95,6 +102,18 @@ export function MetaConnectionPanel({ walletAddress }: Props) {
   const conn = data?.connection;
   const feedUrl = data?.feedUrl;
   const publications = data?.recentPublications ?? [];
+  const engagementSummary = data?.engagementSummary ?? null;
+
+  // Post type label helper
+  const getPostTypeLabel = (postType: string) => {
+    switch (postType) {
+      case 'new_listing': return t('postTypeNew');
+      case 'sold': return t('postTypeSold');
+      case 'manual': return t('postTypeManual');
+      case 'repost': return t('postTypeRepost');
+      default: return postType;
+    }
+  };
 
   // Page selection mode
   if (status === 'select_page') {
@@ -233,6 +252,19 @@ export function MetaConnectionPanel({ walletAddress }: Props) {
         )}
       </div>
 
+      {/* ── Engagement Summary Card ── */}
+      {connected && engagementSummary && engagementSummary.total_posts > 0 && (
+        <EngagementSummaryCard
+          totalLikes={engagementSummary.total_likes}
+          totalComments={engagementSummary.total_comments}
+          totalShares={engagementSummary.total_shares}
+          totalReactions={engagementSummary.total_reactions}
+          totalPosts={engagementSummary.total_posts}
+          onSync={handleSyncEngagement}
+          isSyncing={syncEngagement.isPending}
+        />
+      )}
+
       {/* ── Settings Card (only when connected) ── */}
       {connected && conn && (
         <div className="glass-crystal-enhanced rounded-2xl p-6">
@@ -242,7 +274,6 @@ export function MetaConnectionPanel({ walletAddress }: Props) {
           </div>
 
           <div className="space-y-4">
-            {/* Auto-publish on active */}
             <ToggleSetting
               label={t('autoPublishActive')}
               description={t('autoPublishActiveDesc')}
@@ -250,8 +281,6 @@ export function MetaConnectionPanel({ walletAddress }: Props) {
               onChange={(v) => handleSettingToggle('auto_publish_on_active', v)}
               disabled={settingsMutation.isPending}
             />
-
-            {/* Auto-publish on sold */}
             <ToggleSetting
               label={t('autoPublishSold')}
               description={t('autoPublishSoldDesc')}
@@ -259,8 +288,6 @@ export function MetaConnectionPanel({ walletAddress }: Props) {
               onChange={(v) => handleSettingToggle('auto_publish_on_sold', v)}
               disabled={settingsMutation.isPending}
             />
-
-            {/* Include price */}
             <ToggleSetting
               label={t('includePrice')}
               description={t('includePriceDesc')}
@@ -268,8 +295,6 @@ export function MetaConnectionPanel({ walletAddress }: Props) {
               onChange={(v) => handleSettingToggle('include_price', v)}
               disabled={settingsMutation.isPending}
             />
-
-            {/* Include hashtags */}
             <ToggleSetting
               label={t('includeHashtags')}
               description={t('includeHashtagsDesc')}
@@ -277,8 +302,6 @@ export function MetaConnectionPanel({ walletAddress }: Props) {
               onChange={(v) => handleSettingToggle('include_hashtags', v)}
               disabled={settingsMutation.isPending}
             />
-
-            {/* Caption language */}
             <div className="flex items-center justify-between py-2">
               <div>
                 <p className="text-sm font-medium text-gray-900 dark:text-white">{t('captionLanguage')}</p>
@@ -349,37 +372,51 @@ export function MetaConnectionPanel({ walletAddress }: Props) {
             {publications.map((pub) => (
               <div
                 key={pub.id}
-                className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/30"
+                className="flex flex-col gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/30"
               >
-                {pub.status === 'published' ? (
-                  <CheckCircle2 className="w-4 h-4 text-am-green flex-shrink-0" />
-                ) : pub.status === 'failed' ? (
-                  <XCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-                ) : (
-                  <Clock className="w-4 h-4 text-yellow-500 flex-shrink-0" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                    {pub.caption.split('\n').slice(0, 2).join(' ')}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {pub.post_type === 'new_listing' ? t('postTypeNew') : pub.post_type === 'sold' ? t('postTypeSold') : t('postTypeRepost')}
-                    {' · '}
-                    {new Date(pub.created_at).toLocaleDateString()}
-                  </p>
-                  {pub.error_message && (
-                    <p className="text-xs text-red-400 mt-0.5">{pub.error_message}</p>
+                <div className="flex items-center gap-3">
+                  {pub.status === 'published' ? (
+                    <CheckCircle2 className="w-4 h-4 text-am-green flex-shrink-0" />
+                  ) : pub.status === 'failed' ? (
+                    <XCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                  ) : (
+                    <Clock className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                      {pub.caption.split('\n').slice(0, 2).join(' ')}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {getPostTypeLabel(pub.post_type)}
+                      {' · '}
+                      {new Date(pub.created_at).toLocaleDateString()}
+                    </p>
+                    {pub.error_message && (
+                      <p className="text-xs text-red-400 mt-0.5">{pub.error_message}</p>
+                    )}
+                  </div>
+                  {pub.fb_post_id && (
+                    <a
+                      href={`https://facebook.com/${pub.fb_post_id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 text-gray-400" />
+                    </a>
                   )}
                 </div>
-                {pub.fb_post_id && (
-                  <a
-                    href={`https://facebook.com/${pub.fb_post_id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5 text-gray-400" />
-                  </a>
+                {/* Inline engagement for published posts */}
+                {pub.status === 'published' && pub.fb_post_id && (
+                  <div className="pl-7">
+                    <EngagementMetrics
+                      likes={0}
+                      comments={0}
+                      shares={0}
+                      reactions={0}
+                      compact
+                    />
+                  </div>
                 )}
               </div>
             ))}

@@ -25,6 +25,8 @@ interface StatusChangeEvent {
   sellerAddress: string;
   oldStatus: string;
   newStatus: string;
+  /** Skip auto_publish_on_active/sold check (e.g. explicit user confirmation via WhatsApp) */
+  forcePublish?: boolean;
 }
 
 export async function handleStatusChange(event: StatusChangeEvent): Promise<void> {
@@ -55,9 +57,11 @@ export async function handleStatusChange(event: StatusChangeEvent): Promise<void
 
     const conn = connection as unknown as MetaConnection;
 
-    // Check if auto-publish is enabled for this event type
-    if (postType === 'new_listing' && !conn.auto_publish_on_active) return;
-    if (postType === 'sold' && !conn.auto_publish_on_sold) return;
+    // Check if auto-publish is enabled for this event type (skip if forcePublish)
+    if (!event.forcePublish) {
+      if (postType === 'new_listing' && !conn.auto_publish_on_active) return;
+      if (postType === 'sold' && !conn.auto_publish_on_sold) return;
+    }
 
     // Get vehicle details
     const { data: vehicle } = await supabase
@@ -118,12 +122,12 @@ export async function handleStatusChange(event: StatusChangeEvent): Promise<void
     // Get vehicle images
     const { data: images } = await supabase
       .from('vehicle_images')
-      .select('id, url, position')
+      .select('id, public_url, display_order')
       .eq('vehicle_id', vehicleId)
-      .order('position', { ascending: true })
+      .order('display_order', { ascending: true })
       .limit(MAX_CAROUSEL_IMAGES);
 
-    const imageUrls = (images || []).map((img: { id: string; url: string; position: number }) => img.url);
+    const imageUrls = (images || []).map((img: { id: string; public_url: string; display_order: number }) => img.public_url);
 
     // Create pending log entry
     const { data: logEntry } = await supabase

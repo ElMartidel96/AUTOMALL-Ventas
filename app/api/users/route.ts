@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { wallet, role = 'buyer', display_name, email, phone } = body;
+    const { wallet, role = 'buyer', display_name, email, phone, avatar_url } = body;
 
     if (!wallet) {
       return NextResponse.json(
@@ -107,6 +107,7 @@ export async function POST(request: NextRequest) {
         display_name: display_name || null,
         ...(email ? { email } : {}),
         ...(phone ? { phone } : {}),
+        ...(avatar_url ? { avatar_url } : {}),
       })
       .select()
       .single();
