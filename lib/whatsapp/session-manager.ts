@@ -47,20 +47,34 @@ export async function handleIncomingMessage(
 ): Promise<void> {
   const supabase = getTypedClient();
 
+  // Normalize to E.164 — webhook sends "12814680109", DB stores "+12814680109"
+  const normalizedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`;
+
+  // Dedup: skip if this message was already processed (Meta retries webhooks)
+  const { data: alreadyProcessed } = await supabase
+    .from('wa_message_log')
+    .select('id')
+    .eq('wa_message_id', message.id)
+    .limit(1);
+
+  if (alreadyProcessed && alreadyProcessed.length > 0) {
+    return;
+  }
+
   // Mark message as read (fire-and-forget)
   markAsRead(waPhoneNumberId, message.id, accessToken).catch(() => {});
 
-  // 1. Lookup seller by phone number
+  // 1. Lookup seller by phone number (normalized E.164)
   const { data: phoneLink } = await supabase
     .from('wa_phone_links')
     .select('*')
-    .eq('phone_number', phoneNumber)
+    .eq('phone_number', normalizedPhone)
     .single();
 
   if (!phoneLink) {
     const lang = detectLanguage(message);
     await sendTextMessage(waPhoneNumberId, phoneNumber, templates.phoneNotLinkedMessage(lang), accessToken);
-    await logMessage(null, message.id, 'inbound', message.type, phoneNumber, getMessageContent(message), getMediaId(message), message);
+    await logMessage(null, message.id, 'inbound', message.type, normalizedPhone, getMessageContent(message), getMediaId(message), message);
     return;
   }
 
@@ -75,14 +89,14 @@ export async function handleIncomingMessage(
   }
 
   // 3. Get or create session
-  let session = await getActiveSession(phoneNumber);
+  let session = await getActiveSession(normalizedPhone);
 
   if (!session) {
     session = await createSession(link, waPhoneNumberId);
   }
 
   // Log inbound message
-  await logMessage(session.id, message.id, 'inbound', message.type, phoneNumber, getMessageContent(message), getMediaId(message), message);
+  await logMessage(session.id, message.id, 'inbound', message.type, normalizedPhone, getMessageContent(message), getMediaId(message), message);
 
   // 4. Route based on current state + message type
   try {
@@ -235,25 +249,29 @@ async function handleConfirmingState(
     action = message.button.payload;
   } else if (message.type === 'text' && message.text?.body) {
     const text = message.text.body.toLowerCase().trim();
-    if (['si', 'sí', 'yes', 'ok', 'crear', 'create', '1'].includes(text)) {
-      action = 'confirm_yes';
-    } else if (['editar', 'edit', 'cambiar', 'change', '2'].includes(text)) {
-      action = 'confirm_edit';
+    if (['si', 'sí', 'yes', 'ok', 'crear', 'create', 'catalogo', 'catalog', '1'].includes(text)) {
+      action = 'publish_catalog';
+    } else if (['facebook', 'fb', 'ambos', 'both', '2'].includes(text)) {
+      action = 'publish_catalog_fb';
     } else if (['cancelar', 'cancel', 'no', '3'].includes(text)) {
       action = 'confirm_cancel';
     } else {
-      // Treat as field update — store text and re-extract
-      action = 'confirm_edit';
+      // Treat as field correction — store text and go back to collecting
       await appendTextMessage(session.id, message.text.body);
+      action = 'field_correction';
     }
   }
 
   switch (action) {
-    case 'confirm_yes':
-      await createVehicleFlow(session, waPhoneNumberId, accessToken, link);
+    case 'publish_catalog':
+      await createVehicleFlow(session, waPhoneNumberId, accessToken, link, false);
       break;
 
-    case 'confirm_edit':
+    case 'publish_catalog_fb':
+      await createVehicleFlow(session, waPhoneNumberId, accessToken, link, true);
+      break;
+
+    case 'field_correction':
       await updateSession(session.id, { state: 'collecting' });
       await sendTextMessage(waPhoneNumberId, session.phone_number, templates.editInstructionsMessage(lang), accessToken);
       break;
@@ -278,8 +296,8 @@ async function handleConfirmingState(
 }
 
 /**
- * Handle messages in 'complete' state — Facebook publish confirmation.
- * Vehicle has been created and user was asked "Want to publish to Facebook?"
+ * Handle messages in 'complete' state — vehicle was created, session ready for reset.
+ * This state is reached briefly; treat any input as start of a new flow.
  */
 async function handleCompleteState(
   session: WASession,
@@ -288,38 +306,9 @@ async function handleCompleteState(
   accessToken: string,
   link: WAPhoneLink
 ): Promise<void> {
-  const lang = link.language;
-
-  // If user sends a new image, start new vehicle
-  if (message.type === 'image') {
-    await handleIdleState(session, message, waPhoneNumberId, accessToken, link);
-    return;
-  }
-
-  let action: string | null = null;
-
-  // Check for button reply
-  if (message.type === 'interactive' && message.interactive?.button_reply) {
-    action = message.interactive.button_reply.id;
-  } else if (message.type === 'text' && message.text?.body) {
-    const text = message.text.body.toLowerCase().trim();
-    if (['si', 'sí', 'yes', 'ok', 'publicar', 'publish', '1'].includes(text)) {
-      action = 'fb_yes';
-    } else if (['no', 'nah', 'skip', '2'].includes(text)) {
-      action = 'fb_no';
-    }
-  }
-
-  if (action === 'fb_yes') {
-    await publishToFacebook(session, waPhoneNumberId, accessToken, link);
-  } else if (action === 'fb_no') {
-    await sendTextMessage(waPhoneNumberId, session.phone_number, templates.fbSkippedMessage(lang), accessToken);
-    await resetSession(session.id);
-  } else {
-    // Unrecognized input — treat as "skip" and ready for next vehicle
-    await sendTextMessage(waPhoneNumberId, session.phone_number, templates.fbSkippedMessage(lang), accessToken);
-    await resetSession(session.id);
-  }
+  // Reset and treat as idle — ready for next vehicle
+  await resetSession(session.id);
+  await handleIdleState(session, message, waPhoneNumberId, accessToken, link);
 }
 
 // ─────────────────────────────────────────────
@@ -401,7 +390,8 @@ async function createVehicleFlow(
   session: WASession,
   waPhoneNumberId: string,
   accessToken: string,
-  link: WAPhoneLink
+  link: WAPhoneLink,
+  publishToFb: boolean
 ): Promise<void> {
   const lang = link.language;
 
@@ -433,14 +423,22 @@ async function createVehicleFlow(
       imagesToUse,
     );
 
-    await updateSession(session.id, {
-      state: 'complete',
-      vehicle_id: result.vehicleId,
-    });
+    // Publish to Facebook if requested
+    let fbPublished = false;
+    if (publishToFb) {
+      try {
+        fbPublished = await tryPublishToFacebook(result.vehicleId, link);
+      } catch (err) {
+        console.error(`[WA-Session] FB publish failed for vehicle ${result.vehicleId}:`, err);
+      }
+    }
 
-    // Send success message + ask about Facebook
-    const { text, buttons } = templates.vehicleCreatedMessage(lang, extracted, result.catalogUrl);
-    await sendInteractiveMessage(waPhoneNumberId, session.phone_number, text, buttons, accessToken);
+    // Send unified success message
+    const successMsg = templates.vehiclePublishedMessage(lang, extracted, result.catalogUrl, publishToFb, fbPublished);
+    await sendTextMessage(waPhoneNumberId, session.phone_number, successMsg, accessToken);
+
+    // Reset session — ready for next vehicle
+    await resetSession(session.id);
   } catch (error) {
     console.error(`[WA-Session] Vehicle creation failed:`, error);
     await updateSessionState(session.id, 'error');
@@ -452,54 +450,31 @@ async function createVehicleFlow(
 // Facebook Publishing
 // ─────────────────────────────────────────────
 
-async function publishToFacebook(
-  session: WASession,
-  waPhoneNumberId: string,
-  accessToken: string,
-  link: WAPhoneLink
-): Promise<void> {
-  const lang = link.language;
+/**
+ * Attempt to publish vehicle to Facebook. Returns true if successful.
+ */
+async function tryPublishToFacebook(vehicleId: string, link: WAPhoneLink): Promise<boolean> {
+  const supabase = getTypedClient();
+  const { data: connection } = await supabase
+    .from('seller_meta_connections')
+    .select('id, is_active')
+    .eq('wallet_address', link.wallet_address.toLowerCase())
+    .eq('is_active', true)
+    .single();
 
-  if (!session.vehicle_id) {
-    await sendTextMessage(waPhoneNumberId, session.phone_number, templates.errorMessage(lang), accessToken);
-    await resetSession(session.id);
-    return;
-  }
+  if (!connection) return false;
 
-  try {
-    // Check if seller has Meta connection
-    const supabase = getTypedClient();
-    const { data: connection } = await supabase
-      .from('seller_meta_connections')
-      .select('id, is_active')
-      .eq('wallet_address', link.wallet_address.toLowerCase())
-      .eq('is_active', true)
-      .single();
+  const { handleStatusChange } = await import('@/lib/meta/auto-publisher');
 
-    if (!connection) {
-      await sendTextMessage(waPhoneNumberId, session.phone_number, templates.fbNotConnectedMessage(lang), accessToken);
-      await resetSession(session.id);
-      return;
-    }
+  await handleStatusChange({
+    vehicleId,
+    sellerAddress: link.wallet_address,
+    oldStatus: 'draft',
+    newStatus: 'active',
+    forcePublish: true,
+  });
 
-    // Publish via auto-publisher with forcePublish (bypass auto_publish_on_active check)
-    const { handleStatusChange } = await import('@/lib/meta/auto-publisher');
-
-    await handleStatusChange({
-      vehicleId: session.vehicle_id,
-      sellerAddress: link.wallet_address,
-      oldStatus: 'draft',
-      newStatus: 'active',
-      forcePublish: true,
-    });
-
-    await sendTextMessage(waPhoneNumberId, session.phone_number, templates.fbPublishedMessage(lang), accessToken);
-  } catch (error) {
-    console.error(`[WA-Session] FB publish failed for vehicle ${session.vehicle_id}:`, error);
-    await sendTextMessage(waPhoneNumberId, session.phone_number, templates.fbErrorMessage(lang), accessToken);
-  }
-
-  await resetSession(session.id);
+  return true;
 }
 
 // ─────────────────────────────────────────────

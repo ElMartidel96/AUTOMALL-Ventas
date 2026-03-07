@@ -58,12 +58,12 @@ export function confirmationMessage(
   const bodyType = vehicle.body_type || '—';
 
   const text = lang === 'es'
-    ? `He extraido la siguiente informacion:\n\n*${title}${trim}*\nPrecio: ${price}\nMillaje: ${miles}\nColor: ${color}\nTipo: ${bodyType}\nTransmision: ${trans}\nCondicion: ${condition}\n\nSe creara el listado en tu catalogo: ${sellerHandle}.${APP_DOMAIN}\n\nEs correcto?`
-    : `I've extracted the following information:\n\n*${title}${trim}*\nPrice: ${price}\nMileage: ${miles}\nColor: ${color}\nType: ${bodyType}\nTransmission: ${trans}\nCondition: ${condition}\n\nA listing will be created on your catalog: ${sellerHandle}.${APP_DOMAIN}\n\nIs this correct?`;
+    ? `He extraido la siguiente informacion:\n\n*${title}${trim}*\nPrecio: ${price}\nMillaje: ${miles}\nColor: ${color}\nTipo: ${bodyType}\nTransmision: ${trans}\nCondicion: ${condition}\n\nSe publicara en tu catalogo: ${sellerHandle}.${APP_DOMAIN}\n\n¿Donde deseas publicar?\n_Envia texto para corregir datos_`
+    : `I've extracted the following information:\n\n*${title}${trim}*\nPrice: ${price}\nMileage: ${miles}\nColor: ${color}\nType: ${bodyType}\nTransmission: ${trans}\nCondition: ${condition}\n\nWill be published on your catalog: ${sellerHandle}.${APP_DOMAIN}\n\nWhere would you like to publish?\n_Send text to correct any data_`;
 
   const buttons: WAButton[] = [
-    { type: 'reply', reply: { id: 'confirm_yes', title: lang === 'es' ? 'Si, crear' : 'Yes, create' } },
-    { type: 'reply', reply: { id: 'confirm_edit', title: lang === 'es' ? 'Editar' : 'Edit' } },
+    { type: 'reply', reply: { id: 'publish_catalog', title: lang === 'es' ? 'Solo catalogo' : 'Catalog only' } },
+    { type: 'reply', reply: { id: 'publish_catalog_fb', title: lang === 'es' ? 'Catalogo + FB' : 'Catalog + FB' } },
     { type: 'reply', reply: { id: 'confirm_cancel', title: lang === 'es' ? 'Cancelar' : 'Cancel' } },
   ];
 
@@ -120,6 +120,39 @@ export function vehicleCreatedMessage(
   ];
 
   return { text, buttons };
+}
+
+export function vehiclePublishedMessage(
+  lang: Lang,
+  vehicle: ExtractedVehicle,
+  catalogUrl: string,
+  requestedFb: boolean,
+  fbPublished: boolean
+): string {
+  const title = `${vehicle.year} ${vehicle.brand} ${vehicle.model}`;
+  const trim = vehicle.trim ? ` ${vehicle.trim}` : '';
+  const price = vehicle.price ? `$${vehicle.price.toLocaleString('en-US')}` : '';
+  const miles = vehicle.mileage ? `${vehicle.mileage.toLocaleString('en-US')} mi` : '';
+
+  const details = [price, miles, vehicle.exterior_color, vehicle.transmission]
+    .filter(Boolean)
+    .join(' | ');
+
+  if (!requestedFb) {
+    return lang === 'es'
+      ? `Tu listado ha sido creado!\n\n*${title}${trim}* — ${details}\n\nVer: ${catalogUrl}\n\nEnvia mas fotos para crear otro listado.`
+      : `Your listing has been created!\n\n*${title}${trim}* — ${details}\n\nView: ${catalogUrl}\n\nSend more photos to create another listing.`;
+  }
+
+  if (fbPublished) {
+    return lang === 'es'
+      ? `Tu listado ha sido creado y publicado en Facebook!\n\n*${title}${trim}* — ${details}\n\nVer: ${catalogUrl}\n\nEnvia mas fotos para crear otro listado.`
+      : `Your listing has been created and published to Facebook!\n\n*${title}${trim}* — ${details}\n\nView: ${catalogUrl}\n\nSend more photos to create another listing.`;
+  }
+
+  return lang === 'es'
+    ? `Tu listado ha sido creado en tu catalogo.\n\n*${title}${trim}* — ${details}\n\nNo se pudo publicar en Facebook (verifica la conexion en tu perfil).\n\nVer: ${catalogUrl}\n\nEnvia mas fotos para crear otro listado.`
+    : `Your listing has been created on your catalog.\n\n*${title}${trim}* — ${details}\n\nCouldn't publish to Facebook (check your connection in your profile).\n\nView: ${catalogUrl}\n\nSend more photos to create another listing.`;
 }
 
 export function fbPublishedMessage(lang: Lang): string {
