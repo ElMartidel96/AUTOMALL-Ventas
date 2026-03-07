@@ -14,7 +14,6 @@ import { getTypedClient } from '@/lib/supabase/client';
 import { getMediaUrl, downloadMedia } from './api';
 
 const BUCKET = 'vehicle-images';
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const DOWNLOAD_RETRY_ATTEMPTS = 2;
 const DOWNLOAD_RETRY_DELAY_MS = 1500;
 
@@ -27,7 +26,6 @@ async function ensureBucket() {
   if (!buckets?.some(b => b.name === BUCKET)) {
     await db.storage.createBucket(BUCKET, {
       public: true,
-      fileSizeLimit: MAX_FILE_SIZE,
       allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
     });
   }
@@ -60,11 +58,6 @@ async function downloadWithRetry(
     try {
       const mediaInfo = await getMediaUrl(mediaId, waAccessToken);
       const buffer = await downloadMedia(mediaInfo.url, waAccessToken);
-
-      if (buffer.length > MAX_FILE_SIZE) {
-        console.warn(`[WA-Pipeline] Image ${index} too large (${buffer.length} bytes), skipping`);
-        return null;
-      }
 
       return { buffer, mime_type: mediaInfo.mime_type || 'image/jpeg' };
     } catch (error) {

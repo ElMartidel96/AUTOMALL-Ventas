@@ -5,7 +5,9 @@
  * POST — Incoming messages (text, image, interactive, etc.)
  *
  * Security: HMAC-SHA256 signature verification
- * Performance: Returns 200 immediately, processes async
+ * Processing: SYNCHRONOUS — must await all processing before returning.
+ *   Vercel serverless kills the function after response is sent,
+ *   so fire-and-forget promises NEVER complete.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -17,8 +19,8 @@ import type { WAWebhookPayload, WAMessage } from '@/lib/whatsapp/types';
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || '';
 const WA_ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN || '';
 
-// Allow up to 30s for processing
-export const maxDuration = 30;
+// Allow up to 60s — extraction with GPT-4o Vision can take 30-45s
+export const maxDuration = 60;
 
 // ─────────────────────────────────────────────
 // GET — Webhook Verification
@@ -95,15 +97,18 @@ export async function POST(request: NextRequest) {
       console.log(`[WA-Webhook] ${messagesToProcess.length} message(s): ${messagesToProcess.map(m => `${m.message.type}:${m.message.id.slice(0,8)}`).join(', ')}`);
     }
 
-    // 4. Fire-and-forget: process each message
+    // 4. Process each message SYNCHRONOUSLY — must complete before returning.
+    //    Vercel serverless kills the function after response, so fire-and-forget
+    //    promises NEVER complete. Each webhook call typically has 1 message.
     for (const { phoneNumber, waPhoneNumberId, message } of messagesToProcess) {
-      handleIncomingMessage(phoneNumber, waPhoneNumberId, message, WA_ACCESS_TOKEN)
-        .catch((err) => {
-          console.error(`[WA-Webhook] Error processing message from ${phoneNumber}:`, err);
-        });
+      try {
+        await handleIncomingMessage(phoneNumber, waPhoneNumberId, message, WA_ACCESS_TOKEN);
+      } catch (err) {
+        console.error(`[WA-Webhook] Error processing message from ${phoneNumber}:`, err);
+      }
     }
 
-    // 5. Return 200 immediately (Meta requirement: respond < 20 seconds)
+    // 5. Return 200 after processing completes
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('[WA-Webhook] Error:', error);

@@ -4,9 +4,10 @@
  * Handles vehicle listing creation via WhatsApp photos + AI Vision.
  *
  * Design principles:
- *   - First photo gets acknowledgment (proof bot is alive + user guidance)
- *   - Subsequent photos silently accumulate via message log (no rate limiting)
+ *   - EVERY photo gets acknowledgment with running count (proof bot is alive)
+ *   - No image count or size limits — platform handles optimization
  *   - Text message triggers AI extraction with photo count + text preview
+ *   - ALL processing is SYNCHRONOUS — Vercel kills fire-and-forget promises
  *   - Smart auto-fill estimates missing optional fields (transmission, features, etc.)
  *   - Missing required fields → offer AI auto-fill button
  *   - wa_message_log is source of truth for media IDs (race-condition safe)
@@ -17,7 +18,7 @@
  *   idle ──(image)──────────> collecting (send first-photo ack)
  *   idle ──(text, has photos)> extracting (trigger AI)
  *   idle ──(text, no photos)─> idle (send welcome)
- *   collecting ──(image)────> collecting (silent accumulate via log)
+ *   collecting ──(image)────> collecting (ack with count)
  *   collecting ──(text)─────> extracting (send "analyzing...", run AI)
  *   extracting ──(text)─────> extracting (ack "still analyzing")
  *   confirming ──(auto_fill)> confirming (fill & show with publish options)
@@ -44,8 +45,7 @@ import type { WAMessage, WASession, WAPhoneLink, ExtractedVehicle } from './type
 import type { StagedImage } from './image-pipeline';
 import type { WAButton } from './types';
 
-const MAX_IMAGES = 10;
-const PHOTO_SETTLE_DELAY_MS = 2000;
+// No image limit — platform handles optimization on upload
 
 // ─────────────────────────────────────────────
 // Main Entry Point
@@ -77,8 +77,8 @@ export async function handleIncomingMessage(
     return;
   }
 
-  // Mark message as read (fire-and-forget)
-  markAsRead(waPhoneNumberId, message.id, accessToken).catch(() => {});
+  // Mark message as read (best-effort, non-blocking)
+  try { await markAsRead(waPhoneNumberId, message.id, accessToken); } catch { /* cosmetic — ignore */ }
 
   // 1. Lookup seller by phone number (normalized E.164)
   const { data: phoneLink, error: linkError } = await supabase
@@ -168,7 +168,7 @@ async function handleIdleState(
   const lang = link.language;
 
   if (message.type === 'image') {
-    // First photo → transition to collecting + send acknowledgment
+    // Photo received → transition to collecting + send acknowledgment with count
     if (session.state === 'error' || session.state === 'complete') {
       await resetSession(session.id);
     }
@@ -180,9 +180,10 @@ async function handleIdleState(
       vehicle_id: null,
     });
 
-    // Send first-photo acknowledgment (ONE message, not per-photo)
-    console.log(`[WA] → First photo ack (idle → collecting)`);
-    await safeSend(waPhoneNumberId, session.phone_number, templates.firstPhotoAck(lang), accessToken);
+    // Send ack with current photo count from message log
+    const photoCount = await getSessionMediaCount(session.id);
+    console.log(`[WA] → Photo ack #${photoCount} (idle → collecting)`);
+    await safeSend(waPhoneNumberId, session.phone_number, templates.photoReceived(lang, photoCount), accessToken);
   } else if (message.type === 'text') {
     // Text in idle — check if photos were already accumulated from concurrent handlers
     const mediaIds = await getSessionMediaIds(session.id);
@@ -204,21 +205,15 @@ async function handleCollectingState(
   link: WAPhoneLink
 ): Promise<void> {
   if (message.type === 'image') {
-    // Photos accumulate silently via message log — no response per photo.
-    // Only send max-images notification if we hit the cap.
+    // Each photo gets acknowledgment with updated count
     const imageCount = await getSessionMediaCount(session.id);
-    if (imageCount >= MAX_IMAGES) {
-      console.log(`[WA] Max images reached (${imageCount})`);
-      await safeSend(waPhoneNumberId, session.phone_number, templates.maxImagesReached(link.language), accessToken);
-    }
+    console.log(`[WA] → Photo ack #${imageCount} (collecting)`);
+    await safeSend(waPhoneNumberId, session.phone_number, templates.photoReceived(link.language, imageCount), accessToken);
     return;
   }
 
   if (message.type === 'text' && message.text?.body) {
-    // Text triggers extraction — wait briefly for any remaining photos to arrive
-    await new Promise(resolve => setTimeout(resolve, PHOTO_SETTLE_DELAY_MS));
-
-    // Gather all media IDs from message log (race-condition-safe)
+    // Text triggers extraction — gather all media IDs from message log
     const mediaIds = await getSessionMediaIds(session.id);
     if (mediaIds.length === 0) {
       console.log(`[WA] Text received but 0 photos in log — sending welcome`);
@@ -365,7 +360,7 @@ async function handleConfirmingState(
 
 /**
  * Trigger extraction: send smart acknowledgment with photo count + text preview,
- * then run AI pipeline in the background.
+ * then run AI extraction pipeline SYNCHRONOUSLY (must complete before webhook returns).
  */
 async function triggerExtraction(
   session: WASession,
@@ -376,19 +371,16 @@ async function triggerExtraction(
   link: WAPhoneLink
 ): Promise<void> {
   const lang = link.language;
-  const count = Math.min(mediaIds.length, MAX_IMAGES);
 
   await updateSessionState(session.id, 'extracting');
 
   // Get text preview for the acknowledgment
   const textContent = textMessage?.text?.body || '';
-  const ackMsg = templates.extractionStartMessage(lang, count, textContent);
+  const ackMsg = templates.extractionStartMessage(lang, mediaIds.length, textContent);
   await safeSend(waPhoneNumberId, session.phone_number, ackMsg, accessToken);
 
-  // Fire-and-forget: run AI extraction
-  runExtraction(session, mediaIds.slice(0, MAX_IMAGES), waPhoneNumberId, accessToken, link).catch((err) => {
-    console.error(`[WA] Extraction pipeline error:`, err);
-  });
+  // SYNCHRONOUS: must complete before Vercel kills the function
+  await runExtraction(session, mediaIds, waPhoneNumberId, accessToken, link);
 }
 
 async function runExtraction(
@@ -589,7 +581,7 @@ async function getOrCreateSession(
     // Check expiry
     if (new Date(session.expires_at) < new Date()) {
       console.log(`[WA] Session expired, resetting`);
-      cleanupStagingImages(session.image_urls || []).catch(() => {});
+      try { await cleanupStagingImages(session.image_urls || []); } catch { /* best-effort */ }
       await resetSession(session.id);
       session.state = 'idle';
       session.image_urls = [];
@@ -682,8 +674,7 @@ async function getSessionMediaIds(sessionId: string): Promise<string[]> {
     .eq('session_id', sessionId)
     .eq('direction', 'inbound')
     .not('media_id', 'is', null)
-    .order('created_at', { ascending: true })
-    .limit(MAX_IMAGES);
+    .order('created_at', { ascending: true });
 
   return (data || []).map((row: { media_id: string }) => row.media_id);
 }
