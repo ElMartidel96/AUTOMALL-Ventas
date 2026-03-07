@@ -306,3 +306,9 @@ export function unsupportedMessageType(lang: Lang): string {
     ? `Solo acepto fotos y mensajes de texto. Por favor envia fotos del vehiculo.`
     : `I only accept photos and text messages. Please send photos of the vehicle.`;
 }
+
+export function restartConfirmation(lang: Lang): string {
+  return lang === 'es'
+    ? `Sesion reiniciada. Envia fotos para crear un nuevo listado.\n\nEscribe "reiniciar" en cualquier momento para empezar de nuevo.`
+    : `Session restarted. Send photos to create a new listing.\n\nType "restart" at any time to start over.`;
+}

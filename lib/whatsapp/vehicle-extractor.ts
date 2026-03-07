@@ -16,7 +16,9 @@ import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
 import type { ExtractedVehicle } from './types';
 
-const EXTRACTION_TIMEOUT_MS = 90_000;
+// Must complete before Vercel's 60s function timeout — leave ~15s headroom
+// for image downloads, error handling, and sending the response
+const EXTRACTION_TIMEOUT_MS = 40_000;
 
 export const VehicleExtractionSchema = z.object({
   brand: z.string().nullable().describe('Vehicle manufacturer (e.g. Toyota, Ford, Chevrolet, Kia, Nissan, Honda)'),

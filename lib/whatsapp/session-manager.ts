@@ -11,16 +11,19 @@
  *   - Smart auto-fill estimates missing optional fields (transmission, features, etc.)
  *   - Missing required fields → offer AI auto-fill button
  *   - wa_message_log is source of truth for media IDs (race-condition safe)
- *   - Non-destructive session creation (INSERT, not UPSERT)
+ *   - Session reset NULLs old message log entries → clean photo count per listing
+ *   - Extraction watchdog: short expiry prevents stuck sessions forever
+ *   - Universal restart command ("reiniciar") works in any state
  *   - Prominent error logging — token/auth issues surface immediately
  *
  * State transitions:
- *   idle ──(image)──────────> collecting (send first-photo ack)
+ *   idle ──(image)──────────> collecting (ack with count)
  *   idle ──(text, has photos)> extracting (trigger AI)
  *   idle ──(text, no photos)─> idle (send welcome)
  *   collecting ──(image)────> collecting (ack with count)
  *   collecting ──(text)─────> extracting (send "analyzing...", run AI)
  *   extracting ──(text)─────> extracting (ack "still analyzing")
+ *   extracting ──(expired)──> idle (watchdog auto-reset, 2 min)
  *   confirming ──(auto_fill)> confirming (fill & show with publish options)
  *   confirming ──(publish)──> creating (create vehicle)
  *   confirming ──(text)─────> extracting (re-extract with new text)
@@ -29,6 +32,7 @@
  *   creating ──(success)────> idle (done, reset)
  *   creating ──(error)──────> error
  *   error/complete ──(any)──> idle (fresh start)
+ *   ANY ──("reiniciar")─────> idle (user restart command)
  */
 
 import { getTypedClient } from '@/lib/supabase/client';
@@ -45,7 +49,16 @@ import type { WAMessage, WASession, WAPhoneLink, ExtractedVehicle } from './type
 import type { StagedImage } from './image-pipeline';
 import type { WAButton } from './types';
 
-// No image limit — platform handles optimization on upload
+// Restart keywords — user can type these in ANY state to reset
+const RESTART_KEYWORDS = [
+  'reiniciar', 'restart', 'reset', 'empezar', 'start over',
+  '/reiniciar', '/restart', '/reset', '/nuevo', '/new',
+];
+
+// Watchdog: extraction sessions expire after 2 minutes (if function dies, session auto-resets)
+const EXTRACTION_WATCHDOG_MS = 2 * 60 * 1000;
+// Normal session expiry: 30 minutes of inactivity
+const SESSION_EXPIRY_MS = 30 * 60 * 1000;
 
 // ─────────────────────────────────────────────
 // Main Entry Point
@@ -77,7 +90,7 @@ export async function handleIncomingMessage(
     return;
   }
 
-  // Mark message as read (best-effort, non-blocking)
+  // Mark message as read (best-effort)
   try { await markAsRead(waPhoneNumberId, message.id, accessToken); } catch { /* cosmetic — ignore */ }
 
   // 1. Lookup seller by phone number (normalized E.164)
@@ -107,14 +120,26 @@ export async function handleIncomingMessage(
     return;
   }
 
-  // 3. Get or create session (non-destructive — never overwrites existing)
+  // 3. Get or create session (handles expiry + watchdog auto-reset)
   const session = await getOrCreateSession(normalizedPhone, link, waPhoneNumberId);
   console.log(`[WA] Session: ${session.id.slice(0, 8)} state=${session.state}`);
 
   // 4. Log inbound message (with session_id + media_id for later retrieval)
   await logMessage(session.id, message.id, 'inbound', message.type, normalizedPhone, getMessageContent(message), getMediaId(message), message);
 
-  // 5. Route based on current state + message type
+  // 5. Universal restart command — works in ANY state
+  if (message.type === 'text' && message.text?.body) {
+    const text = message.text.body.toLowerCase().trim();
+    if (RESTART_KEYWORDS.includes(text)) {
+      console.log(`[WA] Restart command detected in state=${session.state}`);
+      try { await cleanupStagingImages(session.image_urls || []); } catch { /* best-effort */ }
+      await resetSession(session.id);
+      await safeSend(waPhoneNumberId, session.phone_number, templates.restartConfirmation(lang), accessToken);
+      return;
+    }
+  }
+
+  // 6. Route based on current state + message type
   try {
     switch (session.state) {
       case 'idle':
@@ -128,9 +153,7 @@ export async function handleIncomingMessage(
         break;
 
       case 'extracting':
-        if (message.type === 'text') {
-          await safeSend(waPhoneNumberId, session.phone_number, templates.extractingMessage(lang), accessToken);
-        }
+        await handleExtractingState(session, message, waPhoneNumberId, accessToken, link);
         break;
 
       case 'confirming':
@@ -168,9 +191,9 @@ async function handleIdleState(
   const lang = link.language;
 
   if (message.type === 'image') {
-    // Photo received → transition to collecting + send acknowledgment with count
+    // Coming from error/complete → clean old listing data, keep current photo's log entry
     if (session.state === 'error' || session.state === 'complete') {
-      await resetSession(session.id);
+      await resetSession(session.id, message.id);
     }
     await updateSession(session.id, {
       state: 'collecting',
@@ -185,7 +208,7 @@ async function handleIdleState(
     console.log(`[WA] → Photo ack #${photoCount} (idle → collecting)`);
     await safeSend(waPhoneNumberId, session.phone_number, templates.photoReceived(lang, photoCount), accessToken);
   } else if (message.type === 'text') {
-    // Text in idle — check if photos were already accumulated from concurrent handlers
+    // Text in idle — check if photos were already accumulated
     const mediaIds = await getSessionMediaIds(session.id);
     if (mediaIds.length > 0) {
       console.log(`[WA] Text in idle but ${mediaIds.length} photos in log → triggering extraction`);
@@ -225,6 +248,25 @@ async function handleCollectingState(
   }
 }
 
+async function handleExtractingState(
+  session: WASession,
+  message: WAMessage,
+  waPhoneNumberId: string,
+  accessToken: string,
+  link: WAPhoneLink
+): Promise<void> {
+  const lang = link.language;
+
+  if (message.type === 'image') {
+    // Photo during extraction — acknowledge but it won't be in current extraction
+    const imageCount = await getSessionMediaCount(session.id);
+    console.log(`[WA] → Photo ack #${imageCount} (during extraction)`);
+    await safeSend(waPhoneNumberId, session.phone_number, templates.photoReceived(lang, imageCount), accessToken);
+  } else if (message.type === 'text') {
+    await safeSend(waPhoneNumberId, session.phone_number, templates.extractingMessage(lang), accessToken);
+  }
+}
+
 async function handleConfirmingState(
   session: WASession,
   message: WAMessage,
@@ -236,8 +278,8 @@ async function handleConfirmingState(
 
   // New image during confirmation → start new vehicle
   if (message.type === 'image') {
-    await cleanupStagingImages(session.image_urls || []);
-    await resetSession(session.id);
+    try { await cleanupStagingImages(session.image_urls || []); } catch { /* best-effort */ }
+    await resetSession(session.id, message.id);
     await updateSession(session.id, {
       state: 'collecting',
       image_urls: [],
@@ -245,8 +287,9 @@ async function handleConfirmingState(
       missing_fields: [],
       vehicle_id: null,
     });
-    console.log(`[WA] New image in confirming → reset to collecting`);
-    await safeSend(waPhoneNumberId, session.phone_number, templates.firstPhotoAck(lang), accessToken);
+    const photoCount = await getSessionMediaCount(session.id);
+    console.log(`[WA] New image in confirming → reset to collecting (${photoCount} photo)`);
+    await safeSend(waPhoneNumberId, session.phone_number, templates.photoReceived(lang, photoCount), accessToken);
     return;
   }
 
@@ -328,7 +371,7 @@ async function handleConfirmingState(
     }
 
     case 'confirm_cancel':
-      await cleanupStagingImages(session.image_urls || []);
+      try { await cleanupStagingImages(session.image_urls || []); } catch { /* best-effort */ }
       await resetSession(session.id);
       await safeSend(waPhoneNumberId, session.phone_number, templates.welcomeMessage(lang), accessToken);
       break;
@@ -359,8 +402,8 @@ async function handleConfirmingState(
 // ─────────────────────────────────────────────
 
 /**
- * Trigger extraction: send smart acknowledgment with photo count + text preview,
- * then run AI extraction pipeline SYNCHRONOUSLY (must complete before webhook returns).
+ * Trigger extraction: send smart acknowledgment, set watchdog expiry,
+ * then run AI extraction pipeline SYNCHRONOUSLY.
  */
 async function triggerExtraction(
   session: WASession,
@@ -372,7 +415,12 @@ async function triggerExtraction(
 ): Promise<void> {
   const lang = link.language;
 
-  await updateSessionState(session.id, 'extracting');
+  // Set state + SHORT expiry (watchdog). If function dies during extraction,
+  // the session will auto-reset on the next message (expiry triggers reset).
+  await updateSession(session.id, {
+    state: 'extracting',
+    expires_at: new Date(Date.now() + EXTRACTION_WATCHDOG_MS).toISOString(),
+  });
 
   // Get text preview for the acknowledgment
   const textContent = textMessage?.text?.body || '';
@@ -416,11 +464,11 @@ async function runExtraction(
     // Store public URLs for reference
     await updateSession(session.id, { image_urls: imageUrls });
 
-    // Get all text messages from the message log
+    // Get all text messages from the message log (scoped to current listing)
     const textMessages = await getSessionTexts(session.id);
     console.log(`[WA] Running AI extraction with ${imageUrls.length} images + ${textMessages.length} texts`);
 
-    // Run AI extraction (90s timeout)
+    // Run AI extraction (40s timeout — must finish before Vercel's 60s kill)
     const extracted = await extractVehicleData(imageUrls, textMessages);
     console.log(`[WA] AI extracted: ${extracted.brand} ${extracted.model} ${extracted.year} $${extracted.price} ${extracted.mileage}mi`);
 
@@ -434,6 +482,7 @@ async function runExtraction(
         state: 'confirming',
         extracted_vehicle: { ...extracted, _staged_images: stagedImages },
         missing_fields: missingRequired,
+        expires_at: new Date(Date.now() + SESSION_EXPIRY_MS).toISOString(), // Restore normal expiry
       });
       const { text, buttons } = templates.missingRequiredMessage(lang, extracted, missingRequired);
       await safeSendInteractive(waPhoneNumberId, session.phone_number, text, buttons, accessToken);
@@ -449,6 +498,7 @@ async function runExtraction(
       state: 'confirming',
       extracted_vehicle: { ...filled, _staged_images: stagedImages, _auto_filled: autoFilledFields },
       missing_fields: [],
+      expires_at: new Date(Date.now() + SESSION_EXPIRY_MS).toISOString(), // Restore normal expiry
     });
 
     const { text, buttons } = templates.smartConfirmation(lang, filled, autoFilledFields, sellerHandle);
@@ -520,7 +570,7 @@ async function createVehicleFlow(
     const successMsg = templates.vehiclePublishedMessage(lang, extracted, result.catalogUrl, publishToFb, fbPublished);
     await safeSend(waPhoneNumberId, session.phone_number, successMsg, accessToken);
 
-    // Reset session — ready for next vehicle
+    // Reset session — ready for next vehicle (NULL all old message log entries)
     await resetSession(session.id);
   } catch (error) {
     console.error(`[WA] Vehicle creation failed:`, error);
@@ -578,9 +628,12 @@ async function getOrCreateSession(
   if (existing) {
     const session = existing as unknown as WASession;
 
-    // Check expiry
+    // Check expiry — this also handles the extraction watchdog.
+    // If extraction timed out (Vercel killed function), expires_at was set to 2 min.
+    // After 2 min, the session auto-resets here.
     if (new Date(session.expires_at) < new Date()) {
-      console.log(`[WA] Session expired, resetting`);
+      const wasExtracting = session.state === 'extracting';
+      console.log(`[WA] Session expired (was state=${session.state}), resetting`);
       try { await cleanupStagingImages(session.image_urls || []); } catch { /* best-effort */ }
       await resetSession(session.id);
       session.state = 'idle';
@@ -588,13 +641,20 @@ async function getOrCreateSession(
       session.extracted_vehicle = null;
       session.missing_fields = [];
       session.vehicle_id = null;
+
+      // If the session was stuck in extracting, it was the watchdog that triggered
+      if (wasExtracting) {
+        console.log(`[WA] Watchdog auto-reset: extraction timed out`);
+      }
     }
 
-    // Extend expiry
-    await supabase
-      .from('wa_sessions')
-      .update({ expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString() })
-      .eq('id', session.id);
+    // Extend expiry — but NOT for extracting/creating states (preserve watchdog)
+    if (!['extracting', 'creating'].includes(session.state)) {
+      await supabase
+        .from('wa_sessions')
+        .update({ expires_at: new Date(Date.now() + SESSION_EXPIRY_MS).toISOString() })
+        .eq('id', session.id);
+    }
 
     return session;
   }
@@ -613,7 +673,7 @@ async function getOrCreateSession(
       image_urls: [],
       raw_text_messages: [],
       missing_fields: [],
-      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      expires_at: new Date(Date.now() + SESSION_EXPIRY_MS).toISOString(),
     })
     .select('*')
     .single();
@@ -650,16 +710,44 @@ async function updateSessionState(sessionId: string, state: string): Promise<voi
   await updateSession(sessionId, { state });
 }
 
-async function resetSession(sessionId: string): Promise<void> {
-  await updateSession(sessionId, {
-    state: 'idle',
-    image_media_ids: [],
-    image_urls: [],
-    raw_text_messages: [],
-    extracted_vehicle: null,
-    missing_fields: [],
-    vehicle_id: null,
-  });
+/**
+ * Reset session for a new listing.
+ * NULLs out old wa_message_log entries so the next listing starts with a clean
+ * photo count. If keepMessageId is provided, that message is excluded (it's the
+ * first message of the new listing, already logged with this session_id).
+ */
+async function resetSession(sessionId: string, keepMessageId?: string): Promise<void> {
+  const supabase = getTypedClient();
+
+  // Disassociate old message log entries from this session.
+  // New listing messages will get this same session_id, but old ones won't pollute queries.
+  if (keepMessageId) {
+    await supabase
+      .from('wa_message_log')
+      .update({ session_id: null })
+      .eq('session_id', sessionId)
+      .neq('wa_message_id', keepMessageId);
+  } else {
+    await supabase
+      .from('wa_message_log')
+      .update({ session_id: null })
+      .eq('session_id', sessionId);
+  }
+
+  // Reset session state
+  await supabase
+    .from('wa_sessions')
+    .update({
+      state: 'idle',
+      image_media_ids: [],
+      image_urls: [],
+      raw_text_messages: [],
+      extracted_vehicle: null,
+      missing_fields: [],
+      vehicle_id: null,
+      expires_at: new Date(Date.now() + SESSION_EXPIRY_MS).toISOString(),
+    })
+    .eq('id', sessionId);
 }
 
 // ─────────────────────────────────────────────
@@ -741,11 +829,6 @@ async function logMessage(
 // Send Helpers (with diagnostic logging)
 // ─────────────────────────────────────────────
 
-/**
- * Send a text message with prominent error logging.
- * Does NOT throw — prevents cascading failures from rate limits.
- * BUT logs errors prominently so token issues are immediately visible in Vercel.
- */
 async function safeSend(
   phoneNumberId: string,
   to: string,
@@ -766,9 +849,6 @@ async function safeSend(
   }
 }
 
-/**
- * Send an interactive message (with buttons) with diagnostic logging.
- */
 async function safeSendInteractive(
   phoneNumberId: string,
   to: string,
