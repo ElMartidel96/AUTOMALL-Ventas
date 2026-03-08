@@ -51,9 +51,9 @@ export const Navbar: React.FC = () => {
     setMounted(true);
   }, []);
 
-  // Contact info from tenant or defaults
-  const contactWhatsApp = (isSubdomain && seller?.whatsapp) || '18320000000';
-  const displayPhone = (isSubdomain && seller?.phone) || '(832) 000-0000';
+  // Contact info from tenant or support default
+  const contactWhatsApp = (isSubdomain && seller?.whatsapp) || '12814680109';
+  const displayPhone = (isSubdomain && seller?.phone) || '(281) 468-0109';
 
   return (
     <header className="fixed top-0 left-0 right-0 z-[10000] px-3 sm:px-4 lg:px-6 pt-2 space-y-1.5">

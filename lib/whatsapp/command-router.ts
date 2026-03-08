@@ -357,6 +357,34 @@ async function handleButtonAction(
     return handlers.handleCampaignToggleStatus(lang, link, campaignId, 'active');
   }
 
+  // Campaign delete (CRITICAL: _yes_ BEFORE plain prefix — startsWith would match both)
+  if (actionId.startsWith('cmd_camp_del_yes_')) {
+    // The ID after prefix is the campaign name (used as confirm token), get real ID from context
+    const campaignId = (context?.data?.campaignId as string) || '';
+    if (!campaignId) return null;
+    return handlers.handleCampaignDeleteConfirm(lang, link, campaignId);
+  }
+  if (actionId.startsWith('cmd_camp_del_')) {
+    const campaignId = actionId.replace('cmd_camp_del_', '');
+    return handlers.handleCampaignDelete(lang, link, campaignId);
+  }
+
+  // Campaign stats
+  if (actionId.startsWith('cmd_camp_stats_')) {
+    const campaignId = actionId.replace('cmd_camp_stats_', '');
+    return handlers.handleCampaignStats(lang, link, campaignId);
+  }
+
+  // Vehicle FB delete (CRITICAL: _yes_ BEFORE plain prefix)
+  if (actionId.startsWith('cmd_fb_del_yes_')) {
+    const vehicleId = actionId.replace('cmd_fb_del_yes_', '');
+    return handlers.handleDeleteVehicleFBPostConfirm(lang, link, vehicleId);
+  }
+  if (actionId.startsWith('cmd_fb_del_')) {
+    const vehicleId = actionId.replace('cmd_fb_del_', '');
+    return handlers.handleDeleteVehicleFBPost(lang, link, vehicleId);
+  }
+
   // Campaign create flow buttons
   if (actionId === 'cmd_camp_create' && context?.flow === 'create_campaign') {
     return handlers.handleCampaignCreateStep(lang, link, 4, context.data, 'cmd_camp_create');

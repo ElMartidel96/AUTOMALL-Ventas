@@ -11,6 +11,8 @@ import {
   publishPhotoPost,
   uploadUnpublishedPhoto,
   publishCarouselPost,
+  deletePost,
+  fetchPostEngagement,
 } from '@/lib/meta/facebook-api';
 import { buildFBCaption, generateAdCopy, buildLandingURL } from './ad-copy-generator';
 import { getTemplate } from './campaign-templates';
@@ -189,7 +191,86 @@ export async function updateCampaign(
   return data as unknown as Campaign;
 }
 
-export async function deleteCampaign(id: string, walletAddress: string): Promise<void> {
+/**
+ * Unpublish all Facebook posts for a campaign.
+ * Iterates fb_post_ids[], deletes each from FB, updates publication log + campaign.
+ */
+export async function unpublishFromFacebook(
+  campaignId: string,
+  walletAddress: string
+): Promise<{ deletedPostsCount: number }> {
+  const supabase = getTypedClient();
+  const wallet = walletAddress.toLowerCase();
+
+  const campaign = await getCampaignById(campaignId, walletAddress);
+  if (!campaign) throw new Error('Campaign not found');
+
+  if (campaign.fb_post_ids.length === 0) {
+    return { deletedPostsCount: 0 };
+  }
+
+  // Get Meta connection for page access token
+  const { data: connection } = await supabase
+    .from('seller_meta_connections')
+    .select('*')
+    .eq('wallet_address', wallet)
+    .eq('is_active', true)
+    .single();
+
+  if (!connection) throw new Error('Facebook not connected');
+  const conn = connection as unknown as MetaConnection;
+
+  let deletedCount = 0;
+  for (const postId of campaign.fb_post_ids) {
+    try {
+      await deletePost(postId, conn.fb_page_access_token);
+      deletedCount++;
+    } catch (err) {
+      console.error(`[CampaignService] Failed to delete FB post ${postId}:`, safeErrorMsg(err));
+    }
+  }
+
+  // Update publication log entries to 'deleted'
+  try {
+    await supabase
+      .from('meta_publication_log')
+      .update({ status: 'deleted' })
+      .eq('campaign_id', campaignId)
+      .eq('status', 'published');
+  } catch (logErr) {
+    console.error('[CampaignService] Failed to update publication log:', safeErrorMsg(logErr));
+  }
+
+  // Clear FB data from campaign
+  await supabase
+    .from('campaigns')
+    .update({
+      fb_post_ids: [],
+      fb_publish_status: 'unpublished',
+      fb_permalink_url: null,
+    })
+    .eq('id', campaignId)
+    .eq('wallet_address', wallet);
+
+  console.log(`[CampaignService] Unpublished campaign ${campaignId}: ${deletedCount} posts deleted from FB`);
+  return { deletedPostsCount: deletedCount };
+}
+
+/**
+ * Delete (archive) a campaign, optionally removing its FB posts first.
+ */
+export async function deleteCampaign(
+  id: string,
+  walletAddress: string,
+  deleteFromFB: boolean = false
+): Promise<{ deletedPostsCount: number }> {
+  let deletedPostsCount = 0;
+
+  if (deleteFromFB) {
+    const result = await unpublishFromFacebook(id, walletAddress);
+    deletedPostsCount = result.deletedPostsCount;
+  }
+
   const supabase = getTypedClient();
   const { error } = await supabase
     .from('campaigns')
@@ -198,6 +279,186 @@ export async function deleteCampaign(id: string, walletAddress: string): Promise
     .eq('wallet_address', walletAddress.toLowerCase());
 
   if (error) throw new Error(`Failed to delete campaign: ${error.message}`);
+  return { deletedPostsCount };
+}
+
+/**
+ * Full stats for a campaign: landing page metrics + Facebook engagement.
+ */
+export async function getCampaignFullStats(
+  campaignId: string,
+  walletAddress: string
+): Promise<{
+  landing: CampaignMetrics;
+  fb: {
+    published: boolean;
+    impressions: number;
+    reach: number;
+    likes: number;
+    comments: number;
+    shares: number;
+    clicks: number;
+  };
+  publishedAt: string | null;
+}> {
+  const supabase = getTypedClient();
+  const wallet = walletAddress.toLowerCase();
+
+  // Landing page metrics
+  const landing = await getCampaignMetrics(campaignId);
+
+  // Campaign data
+  const campaign = await getCampaignById(campaignId, walletAddress);
+  const fbResult = {
+    published: false,
+    impressions: 0,
+    reach: 0,
+    likes: 0,
+    comments: 0,
+    shares: 0,
+    clicks: 0,
+  };
+
+  if (!campaign || campaign.fb_post_ids.length === 0) {
+    return { landing, fb: fbResult, publishedAt: campaign?.fb_published_at || null };
+  }
+
+  fbResult.published = true;
+
+  // Get Meta connection for page access token
+  const { data: connection } = await supabase
+    .from('seller_meta_connections')
+    .select('*')
+    .eq('wallet_address', wallet)
+    .eq('is_active', true)
+    .single();
+
+  if (connection) {
+    const conn = connection as unknown as MetaConnection;
+
+    for (const postId of campaign.fb_post_ids) {
+      try {
+        const eng = await fetchPostEngagement(postId, conn.fb_page_access_token);
+        fbResult.likes += eng.likes;
+        fbResult.comments += eng.comments;
+        fbResult.shares += eng.shares;
+        fbResult.impressions += eng.impressions;
+        fbResult.reach += eng.reach;
+        fbResult.clicks += eng.clicks;
+
+        // Save snapshot to fb_post_engagement
+        const { data: pubLog } = await supabase
+          .from('meta_publication_log')
+          .select('id')
+          .eq('campaign_id', campaignId)
+          .eq('fb_post_id', postId)
+          .single();
+
+        if (pubLog) {
+          try {
+            await supabase.from('fb_post_engagement').insert({
+              publication_id: (pubLog as { id: string }).id,
+              fb_post_id: postId,
+              likes_count: eng.likes,
+              comments_count: eng.comments,
+              shares_count: eng.shares,
+              reactions_count: eng.likes,
+              impressions: eng.impressions,
+              reach: eng.reach,
+              clicks: eng.clicks,
+            });
+          } catch {
+            // Snapshot save is best-effort
+          }
+        }
+      } catch (err) {
+        console.error(`[CampaignService] Failed to fetch engagement for ${postId}:`, safeErrorMsg(err));
+      }
+    }
+  }
+
+  return {
+    landing,
+    fb: fbResult,
+    publishedAt: campaign.fb_published_at,
+  };
+}
+
+/**
+ * Delete vehicle FB posts from meta_publication_log.
+ * Returns the count of deleted FB posts.
+ */
+export async function deleteVehicleFBPosts(
+  vehicleId: string,
+  walletAddress: string
+): Promise<{ deletedPostsCount: number }> {
+  const supabase = getTypedClient();
+  const wallet = walletAddress.toLowerCase();
+
+  // Get all published posts for this vehicle
+  const sellerId = await getSellerIdByWallet(walletAddress);
+  if (!sellerId) throw new Error('Seller not found');
+
+  const { data: publications } = await supabase
+    .from('meta_publication_log')
+    .select('id, fb_post_id, connection_id')
+    .eq('vehicle_id', vehicleId)
+    .eq('seller_id', sellerId)
+    .eq('status', 'published');
+
+  if (!publications || publications.length === 0) {
+    return { deletedPostsCount: 0 };
+  }
+
+  // Get Meta connection for page access token
+  const { data: connection } = await supabase
+    .from('seller_meta_connections')
+    .select('*')
+    .eq('wallet_address', wallet)
+    .eq('is_active', true)
+    .single();
+
+  if (!connection) throw new Error('Facebook not connected');
+  const conn = connection as unknown as MetaConnection;
+
+  let deletedCount = 0;
+  for (const pub of publications as { id: string; fb_post_id: string | null }[]) {
+    if (!pub.fb_post_id) continue;
+    try {
+      await deletePost(pub.fb_post_id, conn.fb_page_access_token);
+      deletedCount++;
+    } catch (err) {
+      console.error(`[CampaignService] Failed to delete vehicle FB post ${pub.fb_post_id}:`, safeErrorMsg(err));
+    }
+  }
+
+  // Update publication log entries to 'deleted'
+  const pubIds = (publications as { id: string }[]).map(p => p.id);
+  await supabase
+    .from('meta_publication_log')
+    .update({ status: 'deleted' })
+    .in('id', pubIds);
+
+  console.log(`[CampaignService] Deleted ${deletedCount} FB posts for vehicle ${vehicleId}`);
+  return { deletedPostsCount: deletedCount };
+}
+
+/**
+ * Count published FB posts for a vehicle.
+ */
+export async function getVehicleFBPostCount(
+  vehicleId: string,
+  sellerId: string
+): Promise<number> {
+  const supabase = getTypedClient();
+  const { count } = await supabase
+    .from('meta_publication_log')
+    .select('id', { count: 'exact', head: true })
+    .eq('vehicle_id', vehicleId)
+    .eq('seller_id', sellerId)
+    .eq('status', 'published');
+
+  return count || 0;
 }
 
 // ─────────────────────────────────────────────

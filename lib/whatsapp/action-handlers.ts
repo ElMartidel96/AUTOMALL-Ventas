@@ -141,7 +141,19 @@ export async function handleVehicleDetail(
     status: string; views_count: number; inquiries_count: number;
   };
 
-  const { text, buttons } = ct.vehicleDetailCard(lang, { ...v, seller_handle: handle });
+  // Check if vehicle has FB posts
+  let hasFBPosts = false;
+  if (seller) {
+    try {
+      const { getVehicleFBPostCount } = await import('@/lib/campaigns/campaign-service');
+      const fbCount = await getVehicleFBPostCount(vehicleId, seller.id);
+      hasFBPosts = fbCount > 0;
+    } catch {
+      // Non-critical — default to false
+    }
+  }
+
+  const { text, buttons } = ct.vehicleDetailCard(lang, { ...v, seller_handle: handle, has_fb_posts: hasFBPosts });
 
   const newContext: CommandContext = {
     flow: 'vehicle_detail',
@@ -1126,6 +1138,191 @@ export async function handleCampaignToggleStatus(
   } catch (err) {
     console.error('[WA-CMD] Campaign toggle error:', err);
     return { text: ct.commandError(lang, 'campaigns'), newContext: null };
+  }
+}
+
+// ─────────────────────────────────────────────
+// CAMPAIGN — Delete
+// ─────────────────────────────────────────────
+
+export async function handleCampaignDelete(
+  lang: Lang,
+  link: WAPhoneLink,
+  campaignId: string
+): Promise<CommandResult> {
+  try {
+    const { getCampaignById } = await import('@/lib/campaigns/campaign-service');
+    const campaign = await getCampaignById(campaignId, link.wallet_address);
+    if (!campaign) {
+      return { text: lang === 'es' ? 'Campana no encontrada.' : 'Campaign not found.', newContext: null };
+    }
+
+    const fbPostCount = campaign.fb_post_ids.length;
+    const { text, buttons } = ct.campaignDeleteConfirm(lang, {
+      name: campaign.name,
+      fbPostCount,
+    });
+
+    return {
+      text,
+      buttons,
+      newContext: {
+        flow: 'campaign_delete',
+        step: 1,
+        data: { campaignId, campaignName: campaign.name, fbPostCount },
+      },
+    };
+  } catch (err) {
+    console.error('[WA-CMD] Campaign delete prompt error:', err);
+    return { text: ct.commandError(lang, 'campaigns'), newContext: null };
+  }
+}
+
+export async function handleCampaignDeleteConfirm(
+  lang: Lang,
+  link: WAPhoneLink,
+  campaignId: string
+): Promise<CommandResult> {
+  try {
+    const { deleteCampaign, getCampaignById } = await import('@/lib/campaigns/campaign-service');
+    const campaign = await getCampaignById(campaignId, link.wallet_address);
+    if (!campaign) {
+      return { text: lang === 'es' ? 'Campana no encontrada.' : 'Campaign not found.', newContext: null };
+    }
+
+    const hasFBPosts = campaign.fb_post_ids.length > 0;
+    const result = await deleteCampaign(campaignId, link.wallet_address, hasFBPosts);
+
+    return {
+      text: ct.campaignDeleted(lang, campaign.name, result.deletedPostsCount),
+      newContext: null,
+    };
+  } catch (err) {
+    console.error('[WA-CMD] Campaign delete confirm error:', err);
+    return { text: ct.commandError(lang, 'campaigns'), newContext: null };
+  }
+}
+
+// ─────────────────────────────────────────────
+// CAMPAIGN — Full Stats
+// ─────────────────────────────────────────────
+
+export async function handleCampaignStats(
+  lang: Lang,
+  link: WAPhoneLink,
+  campaignId: string
+): Promise<CommandResult> {
+  try {
+    const { getCampaignFullStats, getCampaignById } = await import('@/lib/campaigns/campaign-service');
+    const campaign = await getCampaignById(campaignId, link.wallet_address);
+    if (!campaign) {
+      return { text: lang === 'es' ? 'Campana no encontrada.' : 'Campaign not found.', newContext: null };
+    }
+
+    const stats = await getCampaignFullStats(campaignId, link.wallet_address);
+
+    const { text, buttons } = ct.campaignFullStats(lang, {
+      name: campaign.name,
+      landing: stats.landing,
+      fb: stats.fb,
+      publishedAt: stats.publishedAt,
+    });
+
+    return { text, buttons, newContext: null };
+  } catch (err) {
+    console.error('[WA-CMD] Campaign stats error:', err);
+    return { text: ct.commandError(lang, 'campaigns'), newContext: null };
+  }
+}
+
+// ─────────────────────────────────────────────
+// VEHICLE — Delete FB Posts
+// ─────────────────────────────────────────────
+
+export async function handleDeleteVehicleFBPost(
+  lang: Lang,
+  link: WAPhoneLink,
+  vehicleId: string
+): Promise<CommandResult> {
+  try {
+    const supabase = getTypedClient();
+    const seller = await getSellerInfo(link.wallet_address);
+    if (!seller) {
+      return { text: ct.commandError(lang, 'delete_fb'), newContext: null };
+    }
+
+    // Get vehicle title
+    const { data: vehicle } = await supabase
+      .from('vehicles')
+      .select('year, brand, model')
+      .eq('id', vehicleId)
+      .single();
+
+    const v = vehicle as { year: number; brand: string; model: string } | null;
+    const title = v ? `${v.year} ${v.brand} ${v.model}` : 'Vehicle';
+
+    // Count published FB posts
+    const { getVehicleFBPostCount } = await import('@/lib/campaigns/campaign-service');
+    const count = await getVehicleFBPostCount(vehicleId, seller.id);
+
+    if (count === 0) {
+      return {
+        text: lang === 'es'
+          ? `*${title}* no tiene posts en Facebook.`
+          : `*${title}* has no Facebook posts.`,
+        newContext: null,
+      };
+    }
+
+    const { text, buttons } = ct.vehicleFBDeleteConfirm(lang, title, vehicleId, count);
+
+    return {
+      text,
+      buttons,
+      newContext: {
+        flow: 'delete_vehicle_fb',
+        step: 1,
+        data: { vehicleId, vehicleTitle: title, fbCount: count },
+      },
+    };
+  } catch (err) {
+    console.error('[WA-CMD] Vehicle FB delete prompt error:', err);
+    return { text: ct.commandError(lang, 'delete_fb'), newContext: null };
+  }
+}
+
+export async function handleDeleteVehicleFBPostConfirm(
+  lang: Lang,
+  link: WAPhoneLink,
+  vehicleId: string
+): Promise<CommandResult> {
+  try {
+    const supabase = getTypedClient();
+
+    // Get vehicle title
+    const { data: vehicle } = await supabase
+      .from('vehicles')
+      .select('year, brand, model')
+      .eq('id', vehicleId)
+      .single();
+
+    const v = vehicle as { year: number; brand: string; model: string } | null;
+    const title = v ? `${v.year} ${v.brand} ${v.model}` : 'Vehicle';
+
+    const { deleteVehicleFBPosts } = await import('@/lib/campaigns/campaign-service');
+    const result = await deleteVehicleFBPosts(vehicleId, link.wallet_address);
+
+    return {
+      text: ct.vehicleFBDeleted(lang, title, result.deletedPostsCount),
+      newContext: null,
+    };
+  } catch (err) {
+    console.error('[WA-CMD] Vehicle FB delete confirm error:', err);
+    const errMsg = err instanceof Error ? err.message : 'Unknown error';
+    return {
+      text: ct.vehicleFBDeleteError(lang, 'Vehicle', errMsg),
+      newContext: null,
+    };
   }
 }
 

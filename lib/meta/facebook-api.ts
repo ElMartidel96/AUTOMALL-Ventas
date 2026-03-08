@@ -243,6 +243,97 @@ export async function publishCarouselPost(
 }
 
 // ─────────────────────────────────────────────
+// Deletion
+// ─────────────────────────────────────────────
+
+/** Delete a post from Facebook.
+ *  Treats "already deleted" errors (100/803) as success. */
+export async function deletePost(
+  fbPostId: string,
+  pageAccessToken: string
+): Promise<{ success: boolean }> {
+  const url = new URL(`${GRAPH_API}/${fbPostId}`);
+  url.searchParams.set('access_token', pageAccessToken);
+
+  const res = await fetch(url.toString(), { method: 'DELETE' });
+
+  if (res.ok) {
+    const data = await res.json();
+    return { success: data.success === true };
+  }
+
+  const err = await res.json().catch(() => ({ error: { code: 0, message: res.statusText } }));
+  const code = err.error?.code;
+
+  // Post already deleted manually or doesn't exist — treat as success
+  if (code === 100 || code === 803) {
+    console.log(`[FB-API] Post ${fbPostId} already deleted (code ${code})`);
+    return { success: true };
+  }
+
+  throw new Error(`Delete post failed: ${err.error?.message || res.statusText}`);
+}
+
+// ─────────────────────────────────────────────
+// Engagement
+// ─────────────────────────────────────────────
+
+/** Fetch engagement metrics for a single post via Graph API */
+export async function fetchPostEngagement(
+  fbPostId: string,
+  pageAccessToken: string
+): Promise<{
+  likes: number;
+  comments: number;
+  shares: number;
+  impressions: number;
+  reach: number;
+  clicks: number;
+}> {
+  // Get basic engagement counts
+  const url = new URL(`${GRAPH_API}/${fbPostId}`);
+  url.searchParams.set('fields', 'likes.summary(true),comments.summary(true),shares');
+  url.searchParams.set('access_token', pageAccessToken);
+
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Fetch engagement failed: ${err.error?.message || res.statusText}`);
+  }
+
+  const data = await res.json();
+  const likes = data.likes?.summary?.total_count || 0;
+  const comments = data.comments?.summary?.total_count || 0;
+  const shares = data.shares?.count || 0;
+
+  // Try to get insights (impressions, reach, clicks) — may fail for non-page posts
+  let impressions = 0;
+  let reach = 0;
+  let clicks = 0;
+
+  try {
+    const insightsUrl = new URL(`${GRAPH_API}/${fbPostId}/insights`);
+    insightsUrl.searchParams.set('metric', 'post_impressions,post_impressions_unique,post_clicks');
+    insightsUrl.searchParams.set('access_token', pageAccessToken);
+
+    const insightsRes = await fetch(insightsUrl.toString());
+    if (insightsRes.ok) {
+      const insightsData = await insightsRes.json();
+      for (const metric of (insightsData.data || []) as { name: string; values: { value: number }[] }[]) {
+        const value = metric.values?.[0]?.value || 0;
+        if (metric.name === 'post_impressions') impressions = value;
+        else if (metric.name === 'post_impressions_unique') reach = value;
+        else if (metric.name === 'post_clicks') clicks = value;
+      }
+    }
+  } catch {
+    // Insights not available for all post types — ignore
+  }
+
+  return { likes, comments, shares, impressions, reach, clicks };
+}
+
+// ─────────────────────────────────────────────
 // OAuth URL Builder
 // ─────────────────────────────────────────────
 

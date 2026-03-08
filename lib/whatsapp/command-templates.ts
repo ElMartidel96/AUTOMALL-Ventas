@@ -109,6 +109,7 @@ interface VehicleDetail {
   views_count: number;
   inquiries_count: number;
   seller_handle: string;
+  has_fb_posts?: boolean;
 }
 
 export function vehicleDetailCard(lang: Lang, v: VehicleDetail): { text: string; buttons: WAButton[] } {
@@ -130,7 +131,12 @@ export function vehicleDetailCard(lang: Lang, v: VehicleDetail): { text: string;
   if (v.status === 'active') {
     buttons.push({ type: 'reply', reply: { id: `cmd_price_${v.id}`, title: lang === 'es' ? 'Cambiar precio' : 'Change price' } });
     buttons.push({ type: 'reply', reply: { id: `cmd_sell_${v.id}`, title: lang === 'es' ? 'Vendido' : 'Sold' } });
-    buttons.push({ type: 'reply', reply: { id: `cmd_fb_pub_${v.id}`, title: 'Facebook' } });
+    // Show "Eliminar FB" if has posts, otherwise "Facebook" to publish
+    if (v.has_fb_posts) {
+      buttons.push({ type: 'reply', reply: { id: `cmd_fb_del_${v.id}`, title: lang === 'es' ? 'Eliminar FB' : 'Delete FB' } });
+    } else {
+      buttons.push({ type: 'reply', reply: { id: `cmd_fb_pub_${v.id}`, title: 'Facebook' } });
+    }
   } else if (v.status === 'draft') {
     buttons.push({ type: 'reply', reply: { id: `cmd_activate_${v.id}`, title: lang === 'es' ? 'Activar' : 'Activate' } });
     buttons.push({ type: 'reply', reply: { id: `cmd_menu`, title: lang === 'es' ? 'Menu' : 'Menu' } });
@@ -600,19 +606,30 @@ export function campaignDetail(lang: Lang, c: CampaignDetailData): { text: strin
     ? `📢 *${c.name}*\n${statusText} | ${c.vehicle_count} vehiculos | ${budget}\n\n📊 Vistas: ${c.metrics.page_views} | WA clicks: ${c.metrics.whatsapp_clicks} | Leads: ${c.metrics.total_leads}\n🔗 ${landingUrl}${c.fb_permalink_url ? '\n📱 ' + c.fb_permalink_url : ''}`
     : `📢 *${c.name}*\n${statusText} | ${c.vehicle_count} vehicles | ${budget}\n\n📊 Views: ${c.metrics.page_views} | WA clicks: ${c.metrics.whatsapp_clicks} | Leads: ${c.metrics.total_leads}\n🔗 ${landingUrl}${c.fb_permalink_url ? '\n📱 ' + c.fb_permalink_url : ''}`;
 
+  // Strategy: 3 buttons max
+  // Button 1: Primary action (Publish FB / Pause / Resume) based on state
+  // Button 2: Stats (always, except archived)
+  // Button 3: Eliminar (if not archived) or Campanas (if archived)
   const buttons: WAButton[] = [];
 
-  if (c.fb_publish_status !== 'published' && c.status !== 'archived') {
-    buttons.push({ type: 'reply', reply: { id: `cmd_camp_pub_${c.id}`, title: lang === 'es' ? 'Publicar FB' : 'Publish FB' } });
-  }
+  if (c.status === 'archived') {
+    buttons.push({ type: 'reply', reply: { id: 'cmd_campaigns', title: lang === 'es' ? 'Campanas' : 'Campaigns' } });
+  } else {
+    // Button 1: Primary action
+    if (c.fb_publish_status !== 'published') {
+      buttons.push({ type: 'reply', reply: { id: `cmd_camp_pub_${c.id}`, title: lang === 'es' ? 'Publicar FB' : 'Publish FB' } });
+    } else if (c.status === 'active') {
+      buttons.push({ type: 'reply', reply: { id: `cmd_camp_pause_${c.id}`, title: lang === 'es' ? 'Pausar' : 'Pause' } });
+    } else if (c.status === 'paused') {
+      buttons.push({ type: 'reply', reply: { id: `cmd_camp_resume_${c.id}`, title: lang === 'es' ? 'Reactivar' : 'Resume' } });
+    }
 
-  if (c.status === 'active') {
-    buttons.push({ type: 'reply', reply: { id: `cmd_camp_pause_${c.id}`, title: lang === 'es' ? 'Pausar' : 'Pause' } });
-  } else if (c.status === 'paused') {
-    buttons.push({ type: 'reply', reply: { id: `cmd_camp_resume_${c.id}`, title: lang === 'es' ? 'Reactivar' : 'Resume' } });
-  }
+    // Button 2: Stats
+    buttons.push({ type: 'reply', reply: { id: `cmd_camp_stats_${c.id}`, title: 'Stats' } });
 
-  buttons.push({ type: 'reply', reply: { id: 'cmd_campaigns', title: lang === 'es' ? 'Campanas' : 'Campaigns' } });
+    // Button 3: Eliminar
+    buttons.push({ type: 'reply', reply: { id: `cmd_camp_del_${c.id}`, title: lang === 'es' ? 'Eliminar' : 'Delete' } });
+  }
 
   return { text, buttons };
 }
@@ -740,4 +757,128 @@ export function campaignNoActiveVehicles(lang: Lang): string {
   return lang === 'es'
     ? `No tienes vehiculos activos. Envia fotos primero para crear tu inventario.`
     : `You have no active vehicles. Send photos first to create your inventory.`;
+}
+
+// ─────────────────────────────────────────────
+// Campaign Delete
+// ─────────────────────────────────────────────
+
+export function campaignDeleteConfirm(
+  lang: Lang,
+  data: { name: string; fbPostCount: number }
+): { text: string; buttons: WAButton[] } {
+  const fbWarning = data.fbPostCount > 0
+    ? (lang === 'es'
+      ? `\n\n⚠️ Esto eliminara ${data.fbPostCount} post(s) de Facebook.`
+      : `\n\n⚠️ This will delete ${data.fbPostCount} post(s) from Facebook.`)
+    : '';
+
+  const text = lang === 'es'
+    ? `🗑️ Eliminar campana *${data.name}*?${fbWarning}\n\nEsta accion no se puede deshacer.`
+    : `🗑️ Delete campaign *${data.name}*?${fbWarning}\n\nThis action cannot be undone.`;
+
+  const buttons: WAButton[] = [
+    { type: 'reply', reply: { id: `cmd_camp_del_yes_${data.name}`, title: lang === 'es' ? 'Si, eliminar' : 'Yes, delete' } },
+    { type: 'reply', reply: { id: 'cmd_campaigns', title: lang === 'es' ? 'Cancelar' : 'Cancel' } },
+  ];
+
+  return { text, buttons };
+}
+
+export function campaignDeleted(lang: Lang, name: string, fbCount: number): string {
+  const fbNote = fbCount > 0
+    ? (lang === 'es'
+      ? `\n📱 ${fbCount} post(s) eliminados de Facebook.`
+      : `\n📱 ${fbCount} post(s) deleted from Facebook.`)
+    : '';
+
+  return lang === 'es'
+    ? `🗑️ Campana *${name}* eliminada.${fbNote}`
+    : `🗑️ Campaign *${name}* deleted.${fbNote}`;
+}
+
+// ─────────────────────────────────────────────
+// Campaign Full Stats
+// ─────────────────────────────────────────────
+
+interface CampaignFullStatsData {
+  name: string;
+  landing: { page_views: number; whatsapp_clicks: number; total_leads: number };
+  fb: {
+    published: boolean;
+    impressions: number;
+    reach: number;
+    likes: number;
+    comments: number;
+    shares: number;
+    clicks: number;
+  };
+  publishedAt: string | null;
+}
+
+export function campaignFullStats(lang: Lang, data: CampaignFullStatsData): { text: string; buttons: WAButton[] } {
+  let text = lang === 'es'
+    ? `📊 *Stats — ${data.name}*\n\n`
+    : `📊 *Stats — ${data.name}*\n\n`;
+
+  // Landing page stats
+  text += lang === 'es'
+    ? `🔗 *Landing Page:*\n👁️ Vistas: ${data.landing.page_views}\n📱 WA clicks: ${data.landing.whatsapp_clicks}\n👥 Leads: ${data.landing.total_leads}\n\n`
+    : `🔗 *Landing Page:*\n👁️ Views: ${data.landing.page_views}\n📱 WA clicks: ${data.landing.whatsapp_clicks}\n👥 Leads: ${data.landing.total_leads}\n\n`;
+
+  // Facebook stats
+  if (data.fb.published) {
+    const pubDate = data.publishedAt
+      ? new Date(data.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      : '—';
+
+    text += lang === 'es'
+      ? `📱 *Facebook* (pub: ${pubDate}):\n👁️ Impresiones: ${data.fb.impressions.toLocaleString()}\n👥 Alcance: ${data.fb.reach.toLocaleString()}\n❤️ Reacciones: ${data.fb.likes}\n💬 Comentarios: ${data.fb.comments}\n🔄 Compartidos: ${data.fb.shares}\n🔗 Clicks: ${data.fb.clicks}`
+      : `📱 *Facebook* (pub: ${pubDate}):\n👁️ Impressions: ${data.fb.impressions.toLocaleString()}\n👥 Reach: ${data.fb.reach.toLocaleString()}\n❤️ Reactions: ${data.fb.likes}\n💬 Comments: ${data.fb.comments}\n🔄 Shares: ${data.fb.shares}\n🔗 Clicks: ${data.fb.clicks}`;
+  } else {
+    text += lang === 'es'
+      ? `📱 *Facebook:* No publicada`
+      : `📱 *Facebook:* Not published`;
+  }
+
+  const buttons: WAButton[] = [
+    { type: 'reply', reply: { id: 'cmd_campaigns_list', title: lang === 'es' ? 'Mis campanas' : 'My campaigns' } },
+    { type: 'reply', reply: { id: 'cmd_menu', title: 'Menu' } },
+  ];
+
+  return { text, buttons };
+}
+
+// ─────────────────────────────────────────────
+// Vehicle FB Delete
+// ─────────────────────────────────────────────
+
+export function vehicleFBDeleteConfirm(
+  lang: Lang,
+  title: string,
+  vehicleId: string,
+  count: number
+): { text: string; buttons: WAButton[] } {
+  const text = lang === 'es'
+    ? `🗑️ Eliminar ${count} post(s) de Facebook para *${title}*?\n\nEl vehiculo seguira en tu inventario.`
+    : `🗑️ Delete ${count} post(s) from Facebook for *${title}*?\n\nThe vehicle will remain in your inventory.`;
+
+  const buttons: WAButton[] = [
+    { type: 'reply', reply: { id: `cmd_fb_del_yes_${vehicleId}`, title: lang === 'es' ? 'Si, eliminar' : 'Yes, delete' } },
+    { type: 'reply', reply: { id: 'cmd_inventory', title: lang === 'es' ? 'Cancelar' : 'Cancel' } },
+  ];
+
+  return { text, buttons };
+}
+
+export function vehicleFBDeleted(lang: Lang, title: string, count: number): string {
+  return lang === 'es'
+    ? `🗑️ ${count} post(s) de Facebook eliminados para *${title}*.`
+    : `🗑️ ${count} Facebook post(s) deleted for *${title}*.`;
+}
+
+export function vehicleFBDeleteError(lang: Lang, title: string, reason: string): string {
+  return lang === 'es'
+    ? `❌ No se pudieron eliminar los posts de *${title}*: ${reason}\nSoporte: ${SUPPORT_WA} (${SUPPORT_NAME})`
+    : `❌ Couldn't delete posts for *${title}*: ${reason}\nSupport: ${SUPPORT_WA} (${SUPPORT_NAME})`;
 }
