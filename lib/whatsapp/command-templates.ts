@@ -481,3 +481,257 @@ export function subFlowCancelled(lang: Lang): string {
     ? `Operacion cancelada.`
     : `Operation cancelled.`;
 }
+
+// ─────────────────────────────────────────────
+// Campaigns
+// ─────────────────────────────────────────────
+
+interface CampaignQuickStats {
+  active: number;
+  total: number;
+  leadsThisMonth: number;
+}
+
+export function campaignMenu(lang: Lang, stats: CampaignQuickStats): { text: string; buttons: WAButton[] } {
+  const text = lang === 'es'
+    ? `📢 *Campanas Facebook*\nActivas: ${stats.active} | Leads este mes: ${stats.leadsThisMonth}\n\nCrea campanas para atraer compradores por WhatsApp.`
+    : `📢 *Facebook Campaigns*\nActive: ${stats.active} | Leads this month: ${stats.leadsThisMonth}\n\nCreate campaigns to attract buyers via WhatsApp.`;
+
+  const buttons: WAButton[] = [
+    { type: 'reply', reply: { id: 'cmd_new_campaign', title: lang === 'es' ? 'Nueva campana' : 'New campaign' } },
+    { type: 'reply', reply: { id: 'cmd_campaigns_list', title: lang === 'es' ? 'Mis campanas' : 'My campaigns' } },
+    { type: 'reply', reply: { id: 'cmd_menu', title: 'Menu' } },
+  ];
+
+  return { text, buttons };
+}
+
+interface CampaignListItem {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  vehicle_count: number;
+  fb_publish_status: string;
+}
+
+export function campaignList(
+  lang: Lang,
+  campaigns: CampaignListItem[],
+  total: number,
+  page: number,
+  hasMore: boolean
+): { text: string; buttons: WAButton[] } {
+  if (campaigns.length === 0) {
+    const text = lang === 'es'
+      ? `📢 No tienes campanas. Crea una con /campanas`
+      : `📢 You have no campaigns. Create one with /campaigns`;
+    return {
+      text,
+      buttons: [
+        { type: 'reply', reply: { id: 'cmd_new_campaign', title: lang === 'es' ? 'Nueva campana' : 'New campaign' } },
+        { type: 'reply', reply: { id: 'cmd_menu', title: 'Menu' } },
+      ],
+    };
+  }
+
+  const statusEmoji: Record<string, string> = {
+    draft: '📝', active: '✅', paused: '⏸', completed: '🏁', archived: '📦',
+  };
+  const fbEmoji: Record<string, string> = {
+    published: '📱', unpublished: '', publishing: '⏳', failed: '❌',
+  };
+
+  let text = lang === 'es'
+    ? `📢 Tus campanas (${total} total):\n\n`
+    : `📢 Your campaigns (${total} total):\n\n`;
+
+  campaigns.forEach((c, i) => {
+    const num = (page - 1) * 5 + i + 1;
+    const se = statusEmoji[c.status] || '';
+    const fe = fbEmoji[c.fb_publish_status] || '';
+    text += `${num}. ${se}${fe} ${c.name} (${c.vehicle_count} veh)\n`;
+  });
+
+  text += lang === 'es'
+    ? `\nEnvia el numero para ver detalles.`
+    : `\nSend the number to view details.`;
+
+  const buttons: WAButton[] = [];
+  if (hasMore) {
+    buttons.push({ type: 'reply', reply: { id: 'cmd_campaigns_next', title: lang === 'es' ? 'Mas ▶' : 'More ▶' } });
+  }
+  buttons.push({ type: 'reply', reply: { id: 'cmd_new_campaign', title: lang === 'es' ? 'Nueva campana' : 'New campaign' } });
+  buttons.push({ type: 'reply', reply: { id: 'cmd_menu', title: 'Menu' } });
+
+  return { text, buttons };
+}
+
+interface CampaignDetailData {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  vehicle_count: number;
+  daily_budget: number | null;
+  fb_publish_status: string;
+  fb_permalink_url: string | null;
+  landing_slug: string | null;
+  metrics: { page_views: number; whatsapp_clicks: number; total_leads: number };
+}
+
+export function campaignDetail(lang: Lang, c: CampaignDetailData): { text: string; buttons: WAButton[] } {
+  const statusEmoji: Record<string, string> = {
+    draft: '📝 Borrador', active: '✅ Activa', paused: '⏸ Pausada',
+    completed: '🏁 Completada', archived: '📦 Archivada',
+  };
+  const statusEmojiEN: Record<string, string> = {
+    draft: '📝 Draft', active: '✅ Active', paused: '⏸ Paused',
+    completed: '🏁 Completed', archived: '📦 Archived',
+  };
+
+  const statusText = lang === 'es' ? (statusEmoji[c.status] || c.status) : (statusEmojiEN[c.status] || c.status);
+  const budget = c.daily_budget ? `$${c.daily_budget}/dia` : '—';
+  const landingUrl = c.landing_slug ? `autosmall.org/w/${c.landing_slug}` : '—';
+
+  const text = lang === 'es'
+    ? `📢 *${c.name}*\n${statusText} | ${c.vehicle_count} vehiculos | ${budget}\n\n📊 Vistas: ${c.metrics.page_views} | WA clicks: ${c.metrics.whatsapp_clicks} | Leads: ${c.metrics.total_leads}\n🔗 ${landingUrl}${c.fb_permalink_url ? '\n📱 ' + c.fb_permalink_url : ''}`
+    : `📢 *${c.name}*\n${statusText} | ${c.vehicle_count} vehicles | ${budget}\n\n📊 Views: ${c.metrics.page_views} | WA clicks: ${c.metrics.whatsapp_clicks} | Leads: ${c.metrics.total_leads}\n🔗 ${landingUrl}${c.fb_permalink_url ? '\n📱 ' + c.fb_permalink_url : ''}`;
+
+  const buttons: WAButton[] = [];
+
+  if (c.fb_publish_status !== 'published' && c.status !== 'archived') {
+    buttons.push({ type: 'reply', reply: { id: `cmd_camp_pub_${c.id}`, title: lang === 'es' ? 'Publicar FB' : 'Publish FB' } });
+  }
+
+  if (c.status === 'active') {
+    buttons.push({ type: 'reply', reply: { id: `cmd_camp_pause_${c.id}`, title: lang === 'es' ? 'Pausar' : 'Pause' } });
+  } else if (c.status === 'paused') {
+    buttons.push({ type: 'reply', reply: { id: `cmd_camp_resume_${c.id}`, title: lang === 'es' ? 'Reactivar' : 'Resume' } });
+  }
+
+  buttons.push({ type: 'reply', reply: { id: 'cmd_campaigns', title: lang === 'es' ? 'Campanas' : 'Campaigns' } });
+
+  return { text, buttons };
+}
+
+interface CampaignTemplateInfo {
+  type: string;
+  emoji: string;
+  name: string;
+  description: string;
+}
+
+export function campaignCreateTypeStep(lang: Lang, templates: CampaignTemplateInfo[]): { text: string; buttons: WAButton[] } {
+  let text = lang === 'es'
+    ? `📢 Paso 1/4 — Tipo de campana\nQue tipo de campana quieres crear?\n\n`
+    : `📢 Step 1/4 — Campaign type\nWhat type of campaign do you want to create?\n\n`;
+
+  for (const t of templates) {
+    text += `${t.emoji} *${t.name}* — ${t.description}\n`;
+  }
+
+  // WhatsApp allows max 3 buttons, show top 3 templates
+  const buttons: WAButton[] = templates.slice(0, 3).map(t => ({
+    type: 'reply' as const,
+    reply: { id: `tpl_${t.type}`, title: `${t.emoji} ${t.name}`.slice(0, 20) },
+  }));
+
+  return { text, buttons };
+}
+
+interface VehicleOption {
+  num: number;
+  year: number | null;
+  brand: string | null;
+  model: string | null;
+  price: number | null;
+}
+
+export function campaignCreateVehiclesStep(
+  lang: Lang,
+  vehicles: VehicleOption[],
+  typeName: string
+): string {
+  let text = lang === 'es'
+    ? `📢 Paso 2/4 — Vehiculos\nCampana: *${typeName}*\n\nTu inventario activo:\n`
+    : `📢 Step 2/4 — Vehicles\nCampaign: *${typeName}*\n\nYour active inventory:\n`;
+
+  for (const v of vehicles) {
+    const price = v.price ? `$${v.price.toLocaleString('en-US')}` : '';
+    text += `${v.num}. ${v.year || '?'} ${v.brand || '?'} ${v.model || '?'} — ${price}\n`;
+  }
+
+  text += lang === 'es'
+    ? `\nEnvia numeros separados por coma (ej: 1,3)\nO escribe "todos".`
+    : `\nSend numbers separated by comma (e.g. 1,3)\nOr type "all".`;
+
+  return text;
+}
+
+export function campaignCreateBudgetStep(
+  lang: Lang,
+  vehiclesSummary: string,
+  suggestedMin: number,
+  suggestedMax: number
+): string {
+  return lang === 'es'
+    ? `📢 Paso 3/4 — Presupuesto\nVehiculos: ${vehiclesSummary}\n\nPresupuesto diario? (Recomendado: $${suggestedMin}-$${suggestedMax}/dia)\nEscribe numero o "saltar"`
+    : `📢 Step 3/4 — Budget\nVehicles: ${vehiclesSummary}\n\nDaily budget? (Recommended: $${suggestedMin}-$${suggestedMax}/day)\nType number or "skip"`;
+}
+
+interface CampaignPreview {
+  typeName: string;
+  vehicleCount: number;
+  budget: number | null;
+  bodyPreview: string;
+  landingUrl: string;
+}
+
+export function campaignCreateConfirmStep(lang: Lang, preview: CampaignPreview): { text: string; buttons: WAButton[] } {
+  const budget = preview.budget ? `$${preview.budget}/dia` : '—';
+
+  const text = lang === 'es'
+    ? `📢 Paso 4/4 — Confirmar\n\n📋 *${preview.typeName}*\n🚗 ${preview.vehicleCount} vehiculos | 💰 ${budget}\n\n📝 Preview:\n"${preview.bodyPreview.slice(0, 300)}..."\n\n🔗 ${preview.landingUrl}`
+    : `📢 Step 4/4 — Confirm\n\n📋 *${preview.typeName}*\n🚗 ${preview.vehicleCount} vehicles | 💰 ${budget}\n\n📝 Preview:\n"${preview.bodyPreview.slice(0, 300)}..."\n\n🔗 ${preview.landingUrl}`;
+
+  const buttons: WAButton[] = [
+    { type: 'reply', reply: { id: 'cmd_camp_create', title: lang === 'es' ? 'Crear' : 'Create' } },
+    { type: 'reply', reply: { id: 'cmd_camp_create_pub', title: lang === 'es' ? 'Crear + FB' : 'Create + FB' } },
+    { type: 'reply', reply: { id: 'cmd_menu', title: lang === 'es' ? 'Cancelar' : 'Cancel' } },
+  ];
+
+  return { text, buttons };
+}
+
+export function campaignCreated(lang: Lang, name: string, landingSlug: string): string {
+  const landingUrl = `autosmall.org/w/${landingSlug}`;
+  return lang === 'es'
+    ? `✅ Campana creada: *${name}*\n🔗 ${landingUrl}\n\nUsa /campanas para publicar en Facebook.`
+    : `✅ Campaign created: *${name}*\n🔗 ${landingUrl}\n\nUse /campaigns to publish to Facebook.`;
+}
+
+export function campaignPublished(lang: Lang, name: string, permalink: string | null, landingSlug: string): string {
+  const landingUrl = `autosmall.org/w/${landingSlug}`;
+  const fbLink = permalink || 'Facebook';
+  return lang === 'es'
+    ? `✅ Campana publicada!\n📢 *${name}*\n📱 FB: ${fbLink}\n🔗 Landing: ${landingUrl}`
+    : `✅ Campaign published!\n📢 *${name}*\n📱 FB: ${fbLink}\n🔗 Landing: ${landingUrl}`;
+}
+
+export function campaignStatusChanged(lang: Lang, name: string, newStatus: string): string {
+  const statusText: Record<string, { es: string; en: string }> = {
+    active: { es: 'activada', en: 'activated' },
+    paused: { es: 'pausada', en: 'paused' },
+  };
+  const s = statusText[newStatus] || { es: newStatus, en: newStatus };
+  return lang === 'es'
+    ? `✅ Campana *${name}* ${s.es}.`
+    : `✅ Campaign *${name}* ${s.en}.`;
+}
+
+export function campaignNoActiveVehicles(lang: Lang): string {
+  return lang === 'es'
+    ? `No tienes vehiculos activos. Envia fotos primero para crear tu inventario.`
+    : `You have no active vehicles. Send photos first to create your inventory.`;
+}

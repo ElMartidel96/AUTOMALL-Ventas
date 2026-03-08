@@ -699,6 +699,435 @@ export async function handleEditProfileExecute(
 }
 
 // ─────────────────────────────────────────────
+// CAMPAIGNS
+// ─────────────────────────────────────────────
+
+export async function handleCampaigns(lang: Lang, link: WAPhoneLink): Promise<CommandResult> {
+  try {
+    const { getCampaignQuickStats } = await import('@/lib/campaigns/campaign-service');
+    const stats = await getCampaignQuickStats(link.wallet_address);
+    const { text, buttons } = ct.campaignMenu(lang, stats);
+    return { text, buttons, newContext: null };
+  } catch (err) {
+    console.error('[WA-CMD] Campaign menu error:', err);
+    return { text: ct.commandError(lang, 'campaigns'), newContext: null };
+  }
+}
+
+export async function handleListCampaigns(
+  lang: Lang,
+  link: WAPhoneLink,
+  page: number = 1
+): Promise<CommandResult> {
+  try {
+    const { getCampaigns } = await import('@/lib/campaigns/campaign-service');
+    const all = await getCampaigns(link.wallet_address);
+
+    const offset = (page - 1) * ITEMS_PER_PAGE;
+    const paged = all.slice(offset, offset + ITEMS_PER_PAGE);
+    const hasMore = offset + ITEMS_PER_PAGE < all.length;
+
+    const items = paged.map(c => ({
+      id: c.id,
+      name: c.name,
+      type: c.type,
+      status: c.status,
+      vehicle_count: c.vehicle_ids.length,
+      fb_publish_status: c.fb_publish_status,
+    }));
+
+    const { text, buttons } = ct.campaignList(lang, items, all.length, page, hasMore);
+
+    const itemIds = paged.map(c => c.id);
+    const newContext: CommandContext = {
+      flow: 'list_campaigns',
+      step: 1,
+      data: { page, items: itemIds },
+    };
+
+    return { text, buttons, newContext };
+  } catch (err) {
+    console.error('[WA-CMD] List campaigns error:', err);
+    return { text: ct.commandError(lang, 'campaigns'), newContext: null };
+  }
+}
+
+export async function handleCampaignDetail(
+  lang: Lang,
+  link: WAPhoneLink,
+  campaignId: string
+): Promise<CommandResult> {
+  try {
+    const { getCampaignById, getCampaignMetrics } = await import('@/lib/campaigns/campaign-service');
+    const campaign = await getCampaignById(campaignId, link.wallet_address);
+    if (!campaign) {
+      return { text: lang === 'es' ? 'Campana no encontrada.' : 'Campaign not found.', newContext: null };
+    }
+
+    const metrics = await getCampaignMetrics(campaignId);
+
+    const { text, buttons } = ct.campaignDetail(lang, {
+      id: campaign.id,
+      name: campaign.name,
+      type: campaign.type,
+      status: campaign.status,
+      vehicle_count: campaign.vehicle_ids.length,
+      daily_budget: campaign.daily_budget_usd,
+      fb_publish_status: campaign.fb_publish_status,
+      fb_permalink_url: campaign.fb_permalink_url,
+      landing_slug: campaign.landing_slug,
+      metrics: {
+        page_views: metrics.page_views,
+        whatsapp_clicks: metrics.whatsapp_clicks,
+        total_leads: metrics.total_leads,
+      },
+    });
+
+    return { text, buttons, newContext: null };
+  } catch (err) {
+    console.error('[WA-CMD] Campaign detail error:', err);
+    return { text: ct.commandError(lang, 'campaigns'), newContext: null };
+  }
+}
+
+export async function handleCampaignCreateStep(
+  lang: Lang,
+  link: WAPhoneLink,
+  step: number,
+  data: Record<string, unknown>,
+  userInput: string
+): Promise<CommandResult> {
+  const supabase = getTypedClient();
+
+  switch (step) {
+    case 0: {
+      // Step 1: Choose campaign type
+      const { getAllTemplates } = await import('@/lib/campaigns/campaign-templates');
+      const templates = getAllTemplates();
+      const templateInfos = templates.map(t => ({
+        type: t.type,
+        emoji: t.emoji,
+        name: lang === 'es' ? t.name_es : t.name_en,
+        description: lang === 'es' ? t.description_es : t.description_en,
+      }));
+      const { text, buttons } = ct.campaignCreateTypeStep(lang, templateInfos);
+      return {
+        text,
+        buttons,
+        newContext: { flow: 'create_campaign', step: 1, data: {} },
+      };
+    }
+
+    case 1: {
+      // Got campaign type → show vehicles
+      const input = userInput.toLowerCase().trim();
+      const { getTemplate } = await import('@/lib/campaigns/campaign-templates');
+
+      // Match template by button ID (tpl_*) or keyword
+      let campaignType = 'inventory_showcase';
+      if (input.startsWith('tpl_')) {
+        campaignType = input.replace('tpl_', '');
+      } else if (input.includes('inventario') || input.includes('inventory') || input.includes('showcase')) {
+        campaignType = 'inventory_showcase';
+      } else if (input.includes('oferta') || input.includes('promo') || input.includes('seasonal')) {
+        campaignType = 'seasonal_promo';
+      } else if (input.includes('liquidacion') || input.includes('clearance')) {
+        campaignType = 'clearance';
+      } else if (input.includes('financiamiento') || input.includes('financing')) {
+        campaignType = 'financing';
+      } else if (input.includes('trade') || input.includes('intercambio')) {
+        campaignType = 'trade_in';
+      } else if (input.includes('custom') || input.includes('personalizada')) {
+        campaignType = 'custom';
+      }
+
+      const template = getTemplate(campaignType as import('@/lib/campaigns/types').CampaignType);
+      const typeName = lang === 'es' ? template.name_es : template.name_en;
+
+      // Get active vehicles
+      const { data: vehicles } = await supabase
+        .from('vehicles')
+        .select('id, year, brand, model, price')
+        .eq('seller_address', link.wallet_address.toLowerCase())
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      const activeVehicles = (vehicles || []) as Array<{
+        id: string; year: number | null; brand: string | null;
+        model: string | null; price: number | null;
+      }>;
+
+      if (activeVehicles.length === 0) {
+        return { text: ct.campaignNoActiveVehicles(lang), newContext: null };
+      }
+
+      const vehicleOptions = activeVehicles.map((v, i) => ({
+        num: i + 1,
+        year: v.year,
+        brand: v.brand,
+        model: v.model,
+        price: v.price,
+      }));
+
+      const text = ct.campaignCreateVehiclesStep(lang, vehicleOptions, typeName);
+      return {
+        text,
+        newContext: {
+          flow: 'create_campaign',
+          step: 2,
+          data: {
+            campaignType,
+            typeName,
+            vehicleIds: activeVehicles.map(v => v.id),
+            vehicleTitles: activeVehicles.map(v => `${v.year} ${v.brand} ${v.model}`),
+          },
+        },
+      };
+    }
+
+    case 2: {
+      // Got vehicle selection → ask for budget
+      const input = userInput.toLowerCase().trim();
+      const allIds = (data.vehicleIds as string[]) || [];
+      const allTitles = (data.vehicleTitles as string[]) || [];
+
+      let selectedIds: string[];
+      let selectedTitles: string[];
+
+      if (input === 'todos' || input === 'all') {
+        selectedIds = allIds;
+        selectedTitles = allTitles;
+      } else {
+        // Parse comma-separated numbers
+        const nums = input.split(/[,\s]+/).map(n => parseInt(n.trim())).filter(n => !isNaN(n) && n > 0);
+        if (nums.length === 0) {
+          return {
+            text: lang === 'es' ? 'Envía números separados por coma (ej: 1,3) o "todos".' : 'Send numbers separated by comma (e.g. 1,3) or "all".',
+            newContext: { flow: 'create_campaign', step: 2, data },
+          };
+        }
+        selectedIds = nums.filter(n => n <= allIds.length).map(n => allIds[n - 1]);
+        selectedTitles = nums.filter(n => n <= allTitles.length).map(n => allTitles[n - 1]);
+      }
+
+      if (selectedIds.length === 0) {
+        return {
+          text: lang === 'es' ? 'Selección no válida. Intenta de nuevo.' : 'Invalid selection. Try again.',
+          newContext: { flow: 'create_campaign', step: 2, data },
+        };
+      }
+
+      const { getTemplate } = await import('@/lib/campaigns/campaign-templates');
+      const template = getTemplate((data.campaignType as string) as import('@/lib/campaigns/types').CampaignType);
+      const summary = selectedTitles.join(', ');
+
+      const text = ct.campaignCreateBudgetStep(
+        lang,
+        summary.length > 80 ? `${selectedIds.length} vehiculos` : summary,
+        template.suggested_daily_budget.min,
+        template.suggested_daily_budget.max,
+      );
+
+      return {
+        text,
+        newContext: {
+          flow: 'create_campaign',
+          step: 3,
+          data: {
+            ...data,
+            selectedIds,
+            selectedTitles,
+          },
+        },
+      };
+    }
+
+    case 3: {
+      // Got budget → show preview + confirm
+      const input = userInput.toLowerCase().trim();
+      const skip = ['saltar', 'skip', '-', 'no', '0'].includes(input);
+      const budget = skip ? null : parseFloat(input.replace(/[^0-9.]/g, ''));
+      const validBudget = budget && !isNaN(budget) && budget > 0 ? budget : null;
+
+      const { getTemplate } = await import('@/lib/campaigns/campaign-templates');
+      const template = getTemplate((data.campaignType as string) as import('@/lib/campaigns/types').CampaignType);
+      const typeName = (data.typeName as string) || (lang === 'es' ? template.name_es : template.name_en);
+
+      // Generate preview body
+      const { generateAdCopy, buildLandingURL } = await import('@/lib/campaigns/ad-copy-generator');
+
+      const seller = await getSellerInfo(link.wallet_address);
+      const sellerForFeed = {
+        id: '', handle: seller?.handle || 'dealer',
+        business_name: seller?.business_name || 'Dealer',
+        phone: seller?.phone || null, whatsapp: seller?.whatsapp || null,
+        city: seller?.city || null, state: seller?.state || null,
+        wallet_address: link.wallet_address,
+      };
+
+      const selectedIds = (data.selectedIds as string[]) || [];
+
+      // Fetch real vehicle data for accurate preview (with actual prices)
+      const { data: realVehicles } = await supabase
+        .from('vehicles')
+        .select('id, year, brand, model, trim, price, mileage')
+        .in('id', selectedIds);
+
+      const vehicleMap = new Map(
+        ((realVehicles || []) as Array<{
+          id: string; year: number; brand: string; model: string;
+          trim: string | null; price: number; mileage: number | null;
+        }>).map(v => [v.id, v])
+      );
+
+      const simpleVehicles = selectedIds.map(id => {
+        const v = vehicleMap.get(id);
+        return {
+          id,
+          year: v?.year || 2024,
+          brand: v?.brand || 'Vehicle',
+          model: v?.model || '',
+          trim: v?.trim || null,
+          price: v?.price || 0,
+          mileage: v?.mileage || null,
+        };
+      });
+
+      const tempSlug = typeName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const copy = generateAdCopy({
+        campaignType: (data.campaignType as string) as import('@/lib/campaigns/types').CampaignType,
+        vehicles: simpleVehicles,
+        seller: sellerForFeed,
+        lang: 'both',
+        slug: tempSlug,
+      });
+
+      const bodyPreview = lang === 'es' ? copy.body_es : copy.body_en;
+
+      const { text, buttons } = ct.campaignCreateConfirmStep(lang, {
+        typeName,
+        vehicleCount: selectedIds.length,
+        budget: validBudget,
+        bodyPreview,
+        landingUrl: buildLandingURL(tempSlug),
+      });
+
+      return {
+        text,
+        buttons,
+        newContext: {
+          flow: 'create_campaign',
+          step: 4,
+          data: {
+            ...data,
+            budget: validBudget,
+          },
+        },
+      };
+    }
+
+    case 4: {
+      // Confirm → create (and optionally publish)
+      const publishFB = userInput === 'cmd_camp_create_pub';
+
+      const { getTemplate } = await import('@/lib/campaigns/campaign-templates');
+      const template = getTemplate((data.campaignType as string) as import('@/lib/campaigns/types').CampaignType);
+      const campaignName = lang === 'es' ? template.name_es : template.name_en;
+
+      try {
+        const { createCampaign, publishToFacebook } = await import('@/lib/campaigns/campaign-service');
+
+        const campaign = await createCampaign(link.wallet_address, {
+          name: campaignName,
+          type: (data.campaignType as string) as import('@/lib/campaigns/types').CampaignType,
+          vehicle_ids: (data.selectedIds as string[]) || [],
+          daily_budget_usd: (data.budget as number) || null,
+          caption_language: 'both',
+        });
+
+        if (publishFB) {
+          try {
+            const result = await publishToFacebook(campaign.id, link.wallet_address);
+            return {
+              text: ct.campaignPublished(lang, campaignName, result.permalink, campaign.landing_slug || ''),
+              newContext: null,
+            };
+          } catch (fbErr) {
+            console.error('[WA-CMD] Campaign FB publish error:', fbErr);
+            // Campaign was created but FB publish failed
+            const createdText = ct.campaignCreated(lang, campaignName, campaign.landing_slug || '');
+            const fbError = lang === 'es'
+              ? '\n\n⚠️ No se pudo publicar en Facebook. Verifica tu conexion en /fb'
+              : '\n\n⚠️ Could not publish to Facebook. Check your connection at /fb';
+            return { text: createdText + fbError, newContext: null };
+          }
+        }
+
+        return {
+          text: ct.campaignCreated(lang, campaignName, campaign.landing_slug || ''),
+          newContext: null,
+        };
+      } catch (err) {
+        console.error('[WA-CMD] Campaign create error:', err);
+        return { text: ct.commandError(lang, 'create_campaign'), newContext: null };
+      }
+    }
+
+    default:
+      return { text: ct.commandError(lang, 'create_campaign'), newContext: null };
+  }
+}
+
+export async function handleCampaignPublish(
+  lang: Lang,
+  link: WAPhoneLink,
+  campaignId: string
+): Promise<CommandResult> {
+  try {
+    const { publishToFacebook, getCampaignById } = await import('@/lib/campaigns/campaign-service');
+    const campaign = await getCampaignById(campaignId, link.wallet_address);
+    if (!campaign) {
+      return { text: lang === 'es' ? 'Campana no encontrada.' : 'Campaign not found.', newContext: null };
+    }
+
+    const result = await publishToFacebook(campaignId, link.wallet_address);
+    return {
+      text: ct.campaignPublished(lang, campaign.name, result.permalink, campaign.landing_slug || ''),
+      newContext: null,
+    };
+  } catch (err) {
+    console.error('[WA-CMD] Campaign publish error:', err);
+    const errMsg = err instanceof Error ? err.message : 'Unknown error';
+    const text = lang === 'es'
+      ? `❌ Error al publicar: ${errMsg}`
+      : `❌ Publish error: ${errMsg}`;
+    return { text, newContext: null };
+  }
+}
+
+export async function handleCampaignToggleStatus(
+  lang: Lang,
+  link: WAPhoneLink,
+  campaignId: string,
+  newStatus: 'active' | 'paused'
+): Promise<CommandResult> {
+  try {
+    const { updateCampaign, getCampaignById } = await import('@/lib/campaigns/campaign-service');
+    const campaign = await getCampaignById(campaignId, link.wallet_address);
+    if (!campaign) {
+      return { text: lang === 'es' ? 'Campana no encontrada.' : 'Campaign not found.', newContext: null };
+    }
+
+    await updateCampaign(campaignId, link.wallet_address, { status: newStatus });
+    return { text: ct.campaignStatusChanged(lang, campaign.name, newStatus), newContext: null };
+  } catch (err) {
+    console.error('[WA-CMD] Campaign toggle error:', err);
+    return { text: ct.commandError(lang, 'campaigns'), newContext: null };
+  }
+}
+
+// ─────────────────────────────────────────────
 // SUPPORT
 // ─────────────────────────────────────────────
 

@@ -27,8 +27,9 @@ import {
   Users,
   Car,
   MessageCircle,
+  Megaphone,
 } from 'lucide-react';
-import { FEATURE_WEB3_VISIBLE, FEATURE_CGC_TOKEN, FEATURE_NEAR_ME } from '@/lib/config/features';
+import { FEATURE_WEB3_VISIBLE, FEATURE_CGC_TOKEN, FEATURE_NEAR_ME, FEATURE_CAMPAIGNS } from '@/lib/config/features';
 import { MapPin } from 'lucide-react';
 import { useTenant } from '@/lib/tenant/TenantProvider';
 import { DEFAULT_LOGO_NAV } from '@/lib/config/defaults';
@@ -120,6 +121,16 @@ export const Navbar: React.FC = () => {
               <Users className="w-3 h-3" />
             </Link>
 
+            {FEATURE_CAMPAIGNS && !isSubdomain && isDealer && (
+              <Link
+                href="/campaigns"
+                className="text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors text-sm font-bold flex items-center gap-1 px-2"
+              >
+                <Megaphone className="w-3.5 h-3.5" />
+                {t('campaigns')}
+              </Link>
+            )}
+
             {/* Separator */}
             <div className="w-px h-6 bg-gradient-to-b from-transparent via-gray-300 dark:via-am-blue-light/30 to-transparent opacity-40 mx-2"></div>
 
@@ -209,6 +220,17 @@ export const Navbar: React.FC = () => {
                 <Users className="w-4 h-4" />
                 {t('referrals')}
               </Link>
+
+              {FEATURE_CAMPAIGNS && !isSubdomain && isDealer && (
+                <Link
+                  href="/campaigns"
+                  className="block text-gray-600 dark:text-gray-300 hover:text-am-orange dark:hover:text-am-orange-light transition-colors px-4 py-3 font-bold text-base flex items-center gap-2"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <Megaphone className="w-4 h-4" />
+                  {t('campaigns')}
+                </Link>
+              )}
 
               <div className="mx-4 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-am-blue/30 to-transparent opacity-30"></div>
 

@@ -91,6 +91,12 @@ const COMMANDS: CommandDef[] = [
     keywords_es: ['soporte', 'problema', 'error', 'ayuda tecnica'],
     keywords_en: ['support', 'problem', 'error', 'technical help'],
   },
+  {
+    id: 'campaigns',
+    slash: ['/campanas', '/campaigns', '/camp'],
+    keywords_es: ['campanas', 'campana', 'mis campanas', 'nueva campana'],
+    keywords_en: ['campaigns', 'campaign', 'my campaigns', 'new campaign'],
+  },
 ];
 
 // ─────────────────────────────────────────────
@@ -221,6 +227,9 @@ async function executeCommand(commandId: string, lang: Lang, link: WAPhoneLink):
     case 'support':
       return handlers.handleSupport(lang, link);
 
+    case 'campaigns':
+      return handlers.handleCampaigns(lang, link);
+
     default:
       return handlers.handleMenu(lang);
   }
@@ -290,6 +299,41 @@ async function handleButtonAction(
     return handlers.handlePublishFB(lang, link, vehicleId, vehicleTitle);
   }
 
+  // Campaign buttons
+  if (actionId === 'cmd_campaigns') return handlers.handleCampaigns(lang, link);
+  if (actionId === 'cmd_new_campaign') return handlers.handleCampaignCreateStep(lang, link, 0, {}, '');
+  if (actionId === 'cmd_campaigns_list') return handlers.handleListCampaigns(lang, link);
+  if (actionId === 'cmd_campaigns_next' && context?.flow === 'list_campaigns') {
+    const nextPage = ((context.data.page as number) || 1) + 1;
+    return handlers.handleListCampaigns(lang, link, nextPage);
+  }
+
+  if (actionId.startsWith('cmd_camp_pub_')) {
+    const campaignId = actionId.replace('cmd_camp_pub_', '');
+    return handlers.handleCampaignPublish(lang, link, campaignId);
+  }
+  if (actionId.startsWith('cmd_camp_pause_')) {
+    const campaignId = actionId.replace('cmd_camp_pause_', '');
+    return handlers.handleCampaignToggleStatus(lang, link, campaignId, 'paused');
+  }
+  if (actionId.startsWith('cmd_camp_resume_')) {
+    const campaignId = actionId.replace('cmd_camp_resume_', '');
+    return handlers.handleCampaignToggleStatus(lang, link, campaignId, 'active');
+  }
+
+  // Campaign create flow buttons
+  if (actionId === 'cmd_camp_create' && context?.flow === 'create_campaign') {
+    return handlers.handleCampaignCreateStep(lang, link, 4, context.data, 'cmd_camp_create');
+  }
+  if (actionId === 'cmd_camp_create_pub' && context?.flow === 'create_campaign') {
+    return handlers.handleCampaignCreateStep(lang, link, 4, context.data, 'cmd_camp_create_pub');
+  }
+
+  // Template selection buttons (tpl_*)
+  if (actionId.startsWith('tpl_') && context?.flow === 'create_campaign') {
+    return handlers.handleCampaignCreateStep(lang, link, 1, context.data, actionId);
+  }
+
   // Edit profile buttons
   if (actionId === 'cmd_edit_phone') return handlers.handleEditProfileStart(lang, 'phone');
   if (actionId === 'cmd_edit_location') return handlers.handleEditProfileStart(lang, 'location');
@@ -338,9 +382,14 @@ async function handleSubFlow(
       break;
     }
 
-    // list_vehicles / list_leads — number selection handled separately
+    case 'create_campaign': {
+      return handlers.handleCampaignCreateStep(lang, link, step, data, text);
+    }
+
+    // list_vehicles / list_leads / list_campaigns — number selection handled separately
     case 'list_vehicles':
     case 'list_leads':
+    case 'list_campaigns':
       // Only handle if input is a number
       if (/^\d+$/.test(text.trim())) {
         return handleNumberSelection(parseInt(text.trim()), context, lang, link);
@@ -373,6 +422,10 @@ async function handleNumberSelection(
 
   if (context.flow === 'list_vehicles') {
     return handlers.handleVehicleDetail(lang, link, selectedId);
+  }
+
+  if (context.flow === 'list_campaigns') {
+    return handlers.handleCampaignDetail(lang, link, selectedId);
   }
 
   if (context.flow === 'list_leads') {
