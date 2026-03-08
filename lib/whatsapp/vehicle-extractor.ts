@@ -93,15 +93,24 @@ Generate a bilingual description (English first, then Spanish separated by "---"
 - 0.3-0.4 = Low confidence guess
 - Set field to null if confidence would be below 0.3`;
 
+// Max images to send to GPT-4o (10 is plenty for vehicle identification, keeps request size sane)
+const MAX_EXTRACTION_IMAGES = 10;
+
 export async function extractVehicleData(
   imageUrls: string[],
-  textMessages: string[]
+  textMessages: string[],
+  imageBuffers?: (Buffer | undefined)[]
 ): Promise<ExtractedVehicle> {
-  const content: Array<{ type: 'text'; text: string } | { type: 'image'; image: string }> = [];
+  const content: Array<{ type: 'text'; text: string } | { type: 'image'; image: string | Buffer; mimeType?: string }> = [];
 
-  // Add all images
-  for (const url of imageUrls) {
-    content.push({ type: 'image', image: url });
+  // Add images — prefer inline buffer (avoids OpenAI download timeout from Supabase)
+  const maxImages = Math.min(imageUrls.length, MAX_EXTRACTION_IMAGES);
+  for (let i = 0; i < maxImages; i++) {
+    if (imageBuffers?.[i]) {
+      content.push({ type: 'image', image: imageBuffers[i]!, mimeType: 'image/jpeg' });
+    } else {
+      content.push({ type: 'image', image: imageUrls[i] });
+    }
   }
 
   // Add seller text messages

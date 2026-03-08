@@ -44,8 +44,9 @@ import {
 import { extractVehicleData, findMissingFields, smartAutoFill } from './vehicle-extractor';
 import { createVehicleFromExtraction } from './vehicle-creator';
 import { cleanupStagingImages } from './image-pipeline';
+import { routeCommand } from './command-router';
 import * as templates from './reply-templates';
-import type { WAMessage, WASession, WAPhoneLink, ExtractedVehicle } from './types';
+import type { WAMessage, WASession, WAPhoneLink, ExtractedVehicle, CommandContext } from './types';
 import type { StagedImage } from './image-pipeline';
 import type { WAButton } from './types';
 
@@ -190,6 +191,7 @@ async function handleIdleState(
 ): Promise<void> {
   const lang = link.language;
 
+  // ── Image → vehicle creation flow (unchanged) ──
   if (message.type === 'image') {
     // Coming from error/complete → clean old listing data, keep current photo's log entry
     if (session.state === 'error' || session.state === 'complete') {
@@ -201,24 +203,65 @@ async function handleIdleState(
       extracted_vehicle: null,
       missing_fields: [],
       vehicle_id: null,
+      command_context: null,
     });
 
     // Send ack with current photo count from message log
     const photoCount = await getSessionMediaCount(session.id);
     console.log(`[WA] → Photo ack #${photoCount} (idle → collecting)`);
     await safeSend(waPhoneNumberId, session.phone_number, templates.photoReceived(lang, photoCount), accessToken);
-  } else if (message.type === 'text') {
-    // Text in idle — check if photos were already accumulated
+    return;
+  }
+
+  // ── Text or button → command router first, then vehicle flow ──
+  const textContent = getMessageContent(message) || '';
+  const buttonActionId = getButtonActionId(message);
+
+  // Check for active command_context or button action or text command
+  const currentContext = session.command_context as CommandContext | null;
+
+  // Try command router (handles sub-flows, slash commands, keywords, numbers, buttons)
+  if (textContent || buttonActionId) {
+    const result = await routeCommand(textContent, lang, link, currentContext, buttonActionId);
+
+    if (result) {
+      console.log(`[WA-CMD] Routed: "${textContent.substring(0, 30)}" → response`);
+      // Update command_context in session
+      await updateSession(session.id, {
+        command_context: result.newContext !== undefined ? result.newContext : null,
+      });
+
+      // Send response
+      if (result.buttons && result.buttons.length > 0) {
+        await safeSendInteractive(waPhoneNumberId, session.phone_number, result.text, result.buttons, accessToken);
+      } else {
+        await safeSend(waPhoneNumberId, session.phone_number, result.text, accessToken);
+      }
+      return;
+    }
+  }
+
+  // ── No command matched → check for photos in log (vehicle extraction flow) ──
+  if (message.type === 'text') {
     const mediaIds = await getSessionMediaIds(session.id);
     if (mediaIds.length > 0) {
       console.log(`[WA] Text in idle but ${mediaIds.length} photos in log → triggering extraction`);
+      // Clear command_context when entering vehicle flow
+      await updateSession(session.id, { command_context: null });
       await triggerExtraction(session, mediaIds, message, waPhoneNumberId, accessToken, link);
-    } else {
-      // No photos yet → send welcome
-      await safeSend(waPhoneNumberId, session.phone_number, templates.welcomeMessage(lang), accessToken);
+      return;
     }
+
+    // No photos, no command matched → show main menu
+    const { mainMenu } = await import('./command-templates');
+    const { text: menuText, buttons } = mainMenu(lang);
+    await updateSession(session.id, { command_context: null });
+    await safeSendInteractive(waPhoneNumberId, session.phone_number, menuText, buttons, accessToken);
   }
 }
+
+// Throttle: only ack every Nth photo to avoid WhatsApp rate limit (131056)
+const PHOTO_ACK_INTERVAL = 5;
 
 async function handleCollectingState(
   session: WASession,
@@ -228,10 +271,15 @@ async function handleCollectingState(
   link: WAPhoneLink
 ): Promise<void> {
   if (message.type === 'image') {
-    // Each photo gets acknowledgment with updated count
+    // Throttled acks: only ack every 5th photo to prevent rate limit
+    // (1st photo ack comes from handleIdleState when transitioning idle → collecting)
     const imageCount = await getSessionMediaCount(session.id);
-    console.log(`[WA] → Photo ack #${imageCount} (collecting)`);
-    await safeSend(waPhoneNumberId, session.phone_number, templates.photoReceived(link.language, imageCount), accessToken);
+    if (imageCount % PHOTO_ACK_INTERVAL === 0) {
+      console.log(`[WA] → Photo ack #${imageCount} (collecting, throttled)`);
+      await safeSend(waPhoneNumberId, session.phone_number, templates.photoReceived(link.language, imageCount), accessToken);
+    } else {
+      console.log(`[WA] Photo #${imageCount} received (silent)`);
+    }
     return;
   }
 
@@ -258,10 +306,9 @@ async function handleExtractingState(
   const lang = link.language;
 
   if (message.type === 'image') {
-    // Photo during extraction — acknowledge but it won't be in current extraction
+    // Photo during extraction — log silently (won't be in current extraction, avoids rate limit)
     const imageCount = await getSessionMediaCount(session.id);
-    console.log(`[WA] → Photo ack #${imageCount} (during extraction)`);
-    await safeSend(waPhoneNumberId, session.phone_number, templates.photoReceived(lang, imageCount), accessToken);
+    console.log(`[WA] Photo #${imageCount} during extraction (silent)`);
   } else if (message.type === 'text') {
     await safeSend(waPhoneNumberId, session.phone_number, templates.extractingMessage(lang), accessToken);
   }
@@ -463,16 +510,22 @@ async function runExtraction(
     console.log(`[WA] Staged ${stagedImages.length}/${mediaIds.length} images successfully`);
     const imageUrls = stagedImages.map(img => img.public_url);
 
-    // Store public URLs for reference
+    // Keep buffers for inline GPT-4o analysis (avoids OpenAI download timeout from Supabase)
+    const imageBuffers = stagedImages.map(img => img.buffer);
+
+    // Store public URLs for reference (but free buffers from session — they live in local scope only)
     await updateSession(session.id, { image_urls: imageUrls });
 
     // Get all text messages from the message log (scoped to current listing)
     const textMessages = await getSessionTexts(session.id);
-    console.log(`[WA] Running AI extraction with ${imageUrls.length} images + ${textMessages.length} texts`);
+    console.log(`[WA] Running AI extraction with ${imageUrls.length} images (${imageBuffers.filter(Boolean).length} inline) + ${textMessages.length} texts`);
 
-    // Run AI extraction (40s timeout — must finish before Vercel's 60s kill)
-    const extracted = await extractVehicleData(imageUrls, textMessages);
+    // Run AI extraction with inline buffers (40s timeout — must finish before Vercel's 60s kill)
+    const extracted = await extractVehicleData(imageUrls, textMessages, imageBuffers);
     console.log(`[WA] AI extracted: ${extracted.brand} ${extracted.model} ${extracted.year} $${extracted.price} ${extracted.mileage}mi`);
+
+    // Strip buffers before saving to JSONB — buffers are not serializable
+    const stagedForSession = stagedImages.map(({ buffer: _buf, ...rest }) => rest);
 
     // Check for missing required fields
     const missingRequired = findMissingFields(extracted);
@@ -482,7 +535,7 @@ async function runExtraction(
       console.log(`[WA] Missing required: ${missingRequired.join(', ')}`);
       await updateSession(session.id, {
         state: 'confirming',
-        extracted_vehicle: { ...extracted, _staged_images: stagedImages },
+        extracted_vehicle: { ...extracted, _staged_images: stagedForSession },
         missing_fields: missingRequired,
         expires_at: new Date(Date.now() + SESSION_EXPIRY_MS).toISOString(), // Restore normal expiry
       });
@@ -499,7 +552,7 @@ async function runExtraction(
     const sellerHasLocation = await checkSellerLocation(link.wallet_address);
     await updateSession(session.id, {
       state: 'confirming',
-      extracted_vehicle: { ...filled, _staged_images: stagedImages, _auto_filled: autoFilledFields },
+      extracted_vehicle: { ...filled, _staged_images: stagedForSession, _auto_filled: autoFilledFields },
       missing_fields: [],
       expires_at: new Date(Date.now() + SESSION_EXPIRY_MS).toISOString(), // Restore normal expiry
     });
@@ -748,6 +801,7 @@ async function resetSession(sessionId: string, keepMessageId?: string): Promise<
       extracted_vehicle: null,
       missing_fields: [],
       vehicle_id: null,
+      command_context: null,
       expires_at: new Date(Date.now() + SESSION_EXPIRY_MS).toISOString(),
     })
     .eq('id', sessionId);
@@ -884,6 +938,16 @@ function getMessageContent(message: WAMessage): string | null {
   if (message.image?.caption) return message.image.caption;
   if (message.interactive?.button_reply?.title) return message.interactive.button_reply.title;
   if (message.button?.text) return message.button.text;
+  return null;
+}
+
+function getButtonActionId(message: WAMessage): string | null {
+  if (message.type === 'interactive' && message.interactive?.button_reply?.id) {
+    return message.interactive.button_reply.id;
+  }
+  if (message.type === 'button' && message.button?.payload) {
+    return message.button.payload;
+  }
   return null;
 }
 

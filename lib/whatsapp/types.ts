@@ -87,6 +87,7 @@ export interface WASession {
   extracted_vehicle: ExtractedVehicle | null;
   missing_fields: string[];
   vehicle_id: string | null;
+  command_context: CommandContext | null;
   language: 'en' | 'es';
   expires_at: string;
   created_at: string;
@@ -103,6 +104,16 @@ export interface WAPhoneLink {
   language: 'en' | 'es';
   created_at: string;
   updated_at: string;
+}
+
+// ─────────────────────────────────────────────
+// Command Router Context (sub-flows)
+// ─────────────────────────────────────────────
+
+export interface CommandContext {
+  flow: string;           // 'list_vehicles' | 'vehicle_detail' | 'change_price' | 'sell_vehicle' | 'publish_fb' | 'list_leads' | 'lead_detail' | 'create_lead' | 'edit_profile' | etc.
+  step: number;           // Current step in multi-step flow
+  data: Record<string, unknown>;  // Accumulated data (items, page, selected_id, etc.)
 }
 
 // ─────────────────────────────────────────────

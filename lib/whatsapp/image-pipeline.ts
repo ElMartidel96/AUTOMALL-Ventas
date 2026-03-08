@@ -37,6 +37,7 @@ export interface StagedImage {
   storage_path: string;
   file_size: number;
   mime_type: string;
+  buffer?: Buffer; // Kept for inline GPT-4o analysis (avoids OpenAI download timeout)
 }
 
 export interface UploadedImage {
@@ -120,6 +121,7 @@ export async function stageWhatsAppImages(
         storage_path: storagePath,
         file_size: buffer.length,
         mime_type,
+        buffer, // Keep for inline GPT-4o (avoids Supabase download timeout)
       });
     } catch (error) {
       console.error(`[WA-Pipeline] Error uploading image ${i}:`, error);
