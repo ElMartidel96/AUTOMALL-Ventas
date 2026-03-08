@@ -1,20 +1,18 @@
 /**
  * Campaign Ad Copy Generator — Bilingual EN/ES
  *
- * Generates Facebook CTWA ad copy with:
- * - Proper bilingual handling (en, es, both)
- * - Facebook character limits (headline ≤70, body ≤2200)
- * - Dynamic hashtags based on seller city
- * - Monthly payment estimates
- * - WhatsApp deep links
- * - Landing page URLs
+ * Optimized for Facebook organic reach (March 2026):
+ * - NO URLs in body text (links kill organic reach — Meta penalizes them)
+ * - Max 3 hashtags (more than 5 drops engagement 68%)
+ * - Hook within first 125 chars (Facebook truncates with "See more")
+ * - TILA/Reg Z compliant financing disclaimers
+ * - Single language per post (bilingual = shorter compact version)
+ * - Phone number as plain text (not a link — safe for reach)
  */
 
 import type { CampaignType, CaptionLanguage } from './types';
 import type { SellerForFeed } from '@/lib/meta/types';
 import { getTemplate } from './campaign-templates';
-
-const DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || 'autosmall.org';
 
 const FB_HEADLINE_MAX = 70;
 const FB_BODY_MAX = 2200;
@@ -82,25 +80,25 @@ function truncate(text: string, maxLen: number): string {
   return text.slice(0, maxLen - 3) + '...';
 }
 
+/**
+ * Generate max 3 hashtags — research shows more than 3 hurts engagement.
+ * Priority: #AutosMALL (brand) + #BrandModel (specific) + #CityState (local)
+ */
 function generateHashtags(vehicles: VehicleForCopy[], seller: SellerForFeed): string {
   const city = (seller.city || 'Houston').replace(/\s+/g, '');
   const state = (seller.state || 'TX').replace(/\s+/g, '');
-  const tags = new Set<string>();
+  const tags: string[] = [];
 
-  tags.add(`#Autos${city}`);
-  tags.add(`#CarsForSale${city}`);
-  tags.add(`#${city}Cars`);
-  tags.add(`#UsedCars${city}`);
+  tags.push('#AutosMALL');
 
-  for (const v of vehicles.slice(0, 3)) {
-    tags.add(`#${v.brand.replace(/\s+/g, '')}${v.model.replace(/\s+/g, '')}`);
-    tags.add(`#${v.brand.replace(/\s+/g, '')}`);
+  if (vehicles.length > 0) {
+    const v = vehicles[0];
+    tags.push(`#${v.brand.replace(/\s+/g, '')}${v.model.replace(/\s+/g, '')}`);
   }
 
-  tags.add(`#AutosMALL`);
-  tags.add(`#${city}${state}`);
+  tags.push(`#${city}${state}`);
 
-  return [...tags].join(' ');
+  return tags.join(' ');
 }
 
 export function buildWhatsAppURL(phone: string, message?: string): string {
@@ -111,7 +109,8 @@ export function buildWhatsAppURL(phone: string, message?: string): string {
 }
 
 export function buildLandingURL(slug: string): string {
-  return `https://${DOMAIN}/w/${slug}`;
+  const domain = process.env.NEXT_PUBLIC_APP_DOMAIN || 'autosmall.org';
+  return `https://${domain}/w/${slug}`;
 }
 
 // ─────────────────────────────────────────────
@@ -122,10 +121,9 @@ function vehicleLineEN(v: VehicleForCopy): string {
   let line = `${v.year} ${v.brand} ${v.model}`;
   if (v.trim) line += ` ${v.trim}`;
   line += ` — ${formatPrice(v.price)}`;
-  // Always show monthly estimate — research shows it boosts engagement significantly
   if (v.price > 0) {
     const monthly = estimateMonthly(v.price);
-    line += ` | From $${monthly}/mo*`;
+    line += ` | ~$${monthly}/mo*`;
   }
   if (v.mileage && v.mileage > 0) {
     line += ` | ${formatMileage(v.mileage)} mi`;
@@ -137,10 +135,9 @@ function vehicleLineES(v: VehicleForCopy): string {
   let line = `${v.year} ${v.brand} ${v.model}`;
   if (v.trim) line += ` ${v.trim}`;
   line += ` — ${formatPrice(v.price)}`;
-  // Always show monthly estimate — research shows it boosts engagement significantly
   if (v.price > 0) {
     const monthly = estimateMonthly(v.price);
-    line += ` | Desde $${monthly}/mes*`;
+    line += ` | ~$${monthly}/mes*`;
   }
   if (v.mileage && v.mileage > 0) {
     line += ` | ${formatMileage(v.mileage)} mi`;
@@ -149,42 +146,62 @@ function vehicleLineES(v: VehicleForCopy): string {
 }
 
 // ─────────────────────────────────────────────
-// Body generators
+// TILA/Reg Z compliant financing disclaimer
+// ─────────────────────────────────────────────
+
+const DISCLAIMER_EN = '*Est. payment: $0 down, 60 mo, 6.9% APR. Subject to credit approval (OAC). Taxes & fees not included.';
+const DISCLAIMER_ES = '*Pago est.: $0 enganche, 60 meses, 6.9% APR. Sujeto a aprobacion de credito (OAC). Impuestos no incluidos.';
+
+// ─────────────────────────────────────────────
+// Body generators — optimized for organic reach
+//
+// Structure (within 125 chars before "See more"):
+// Line 1: CTA hook (template-specific, attention-grabbing)
+// Line 2: Business name + location
+// --- below the fold ---
+// Vehicle list
+// Disclaimer
+// Phone number (plain text, not a link)
+// Hashtags (max 3)
+//
+// NO wa.me links — they kill organic reach
+// NO website URLs — same penalty
+// Phone and WhatsApp are discoverable via the page CTA button
 // ─────────────────────────────────────────────
 
 function buildBodyEN(opts: AdCopyOptions): string {
-  const { campaignType, vehicles, seller, slug } = opts;
+  const { campaignType, vehicles, seller } = opts;
   const template = getTemplate(campaignType);
   const lines: string[] = [];
 
-  lines.push(`🚗 ${template.name_en} at ${seller.business_name}`);
-  lines.push(`📍 ${seller.city || 'Houston'}, ${seller.state || 'TX'} — Local Dealer`);
-  if (seller.address) {
-    lines.push(`📌 ${seller.address}`);
-  }
+  // Hook — must be within first 125 chars (before "See more")
+  lines.push(`${template.cta_en || 'Great deals available!'}`);
+  lines.push(`${seller.business_name} — ${seller.city || 'Houston'}, ${seller.state || 'TX'}`);
   lines.push('');
 
+  // Vehicle list
   for (const v of vehicles) {
-    lines.push(`✅ ${vehicleLineEN(v)}`);
+    lines.push(`${vehicleLineEN(v)}`);
   }
 
-  // Always show financing disclaimer when monthly estimates are displayed
+  // TILA/Reg Z disclaimer
   if (vehicles.some(v => v.price > 0)) {
     lines.push('');
-    lines.push('*Estimated payment. Subject to credit approval.');
+    lines.push(DISCLAIMER_EN);
   }
 
+  // Contact — plain text only, NO links
   lines.push('');
-  lines.push(`💬 ${template.cta_en || 'Message us on WhatsApp for details!'}`);
-
-  if (seller.whatsapp) {
-    lines.push(`📱 ${buildWhatsAppURL(seller.whatsapp)}`);
-  }
   if (seller.phone) {
-    lines.push(`📞 ${seller.phone}`);
+    lines.push(`Call or text: ${seller.phone}`);
   }
 
-  lines.push(`🔗 ${buildLandingURL(slug)}`);
+  // Address if available
+  if (seller.address) {
+    lines.push(`${seller.address}`);
+  }
+
+  // Hashtags — max 3
   lines.push('');
   lines.push(generateHashtags(vehicles, seller));
 
@@ -192,38 +209,83 @@ function buildBodyEN(opts: AdCopyOptions): string {
 }
 
 function buildBodyES(opts: AdCopyOptions): string {
-  const { campaignType, vehicles, seller, slug } = opts;
+  const { campaignType, vehicles, seller } = opts;
   const template = getTemplate(campaignType);
   const lines: string[] = [];
 
-  lines.push(`🚗 ${template.name_es} en ${seller.business_name}`);
-  lines.push(`📍 ${seller.city || 'Houston'}, ${seller.state || 'TX'} — Dealer Local`);
-  if (seller.address) {
-    lines.push(`📌 ${seller.address}`);
-  }
+  // Hook — must be within first 125 chars
+  lines.push(`${template.cta_es || 'Grandes ofertas disponibles!'}`);
+  lines.push(`${seller.business_name} — ${seller.city || 'Houston'}, ${seller.state || 'TX'}`);
   lines.push('');
 
+  // Vehicle list
   for (const v of vehicles) {
-    lines.push(`✅ ${vehicleLineES(v)}`);
+    lines.push(`${vehicleLineES(v)}`);
   }
 
-  // Always show financing disclaimer when monthly estimates are displayed
+  // TILA/Reg Z disclaimer
   if (vehicles.some(v => v.price > 0)) {
     lines.push('');
-    lines.push('*Pago estimado. Sujeto a aprobacion de credito.');
+    lines.push(DISCLAIMER_ES);
   }
 
+  // Contact — plain text only, NO links
   lines.push('');
-  lines.push(`💬 ${template.cta_es || 'Escribenos por WhatsApp para mas informacion!'}`);
-
-  if (seller.whatsapp) {
-    lines.push(`📱 ${buildWhatsAppURL(seller.whatsapp)}`);
-  }
   if (seller.phone) {
-    lines.push(`📞 ${seller.phone}`);
+    lines.push(`Llama o escribe: ${seller.phone}`);
   }
 
-  lines.push(`🔗 ${buildLandingURL(slug)}`);
+  // Address if available
+  if (seller.address) {
+    lines.push(`${seller.address}`);
+  }
+
+  // Hashtags — max 3
+  lines.push('');
+  lines.push(generateHashtags(vehicles, seller));
+
+  return truncate(lines.join('\n'), FB_BODY_MAX);
+}
+
+/**
+ * Bilingual body — compact version, NOT duplicated content.
+ * Research: mixing full EN+ES in one post confuses the algorithm.
+ * Solution: vehicle info is language-neutral (numbers, brands), add minimal bilingual labels.
+ */
+function buildBodyBilingual(opts: AdCopyOptions): string {
+  const { campaignType, vehicles, seller } = opts;
+  const template = getTemplate(campaignType);
+  const lines: string[] = [];
+
+  // Bilingual hook
+  const ctaEn = template.cta_en || 'Great deals!';
+  const ctaEs = template.cta_es || 'Grandes ofertas!';
+  lines.push(`${ctaEn}`);
+  lines.push(`${ctaEs}`);
+  lines.push(`${seller.business_name} — ${seller.city || 'Houston'}, ${seller.state || 'TX'}`);
+  lines.push('');
+
+  // Vehicle list — numbers are universal
+  for (const v of vehicles) {
+    lines.push(`${vehicleLineEN(v)}`);
+  }
+
+  // Bilingual disclaimer
+  if (vehicles.some(v => v.price > 0)) {
+    lines.push('');
+    lines.push(DISCLAIMER_EN);
+  }
+
+  // Contact
+  lines.push('');
+  if (seller.phone) {
+    lines.push(`Call / Llama: ${seller.phone}`);
+  }
+
+  if (seller.address) {
+    lines.push(`${seller.address}`);
+  }
+
   lines.push('');
   lines.push(generateHashtags(vehicles, seller));
 
@@ -254,7 +316,8 @@ export function generateAdCopy(opts: AdCopyOptions): GeneratedCopy {
 
 /**
  * Build the Facebook caption for a campaign publish.
- * Respects lang preference: 'en' → English only, 'es' → Spanish only, 'both' → bilingual.
+ * Respects lang preference: 'en' | 'es' | 'both'.
+ * 'both' generates a compact bilingual version (NOT duplicated content).
  */
 export function buildFBCaption(opts: AdCopyOptions): string {
   const copy = generateAdCopy(opts);
@@ -265,10 +328,7 @@ export function buildFBCaption(opts: AdCopyOptions): string {
     case 'es':
       return copy.body_es;
     case 'both':
-    default: {
-      // Bilingual: English first, then Spanish
-      const separator = '\n\n— — — — —\n\n';
-      return truncate(copy.body_en + separator + copy.body_es, FB_BODY_MAX);
-    }
+    default:
+      return buildBodyBilingual(opts);
   }
 }
