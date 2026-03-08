@@ -383,7 +383,9 @@ export default function Home() {
               </Link>
 
               <a
-                href={`mailto:${isSubdomain && seller?.email ? seller.email : 'info@autosmall.com'}`}
+                href={isSubdomain && seller?.whatsapp ? `https://wa.me/${seller.whatsapp.replace(/\D/g, '')}` : 'https://wa.me/12814680109'}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 glass-button px-8 py-4 rounded-xl font-bold text-lg"
               >
                 <MessageCircle className="w-5 h-5" />
@@ -391,7 +393,7 @@ export default function Home() {
               </a>
 
               <a
-                href={`tel:${isSubdomain && seller?.phone ? seller.phone : '+1-832-000-0000'}`}
+                href={`tel:${isSubdomain && seller?.phone ? seller.phone : '+1 (281) 468-0109'}`}
                 className="inline-flex items-center justify-center gap-2 glass-button px-8 py-4 rounded-xl font-bold text-lg"
               >
                 <Phone className="w-5 h-5" />

@@ -14,6 +14,7 @@ import { useTranslations } from 'next-intl';
 import {
   Facebook,
   Instagram,
+  MessageCircle,
   Mail,
   Phone,
   MapPin,
@@ -29,9 +30,10 @@ export const Footer: React.FC = () => {
   const tLegal = useTranslations('legal');
   const { seller, isSubdomain } = useTenant();
 
-  // Seller-specific or default contact info
+  // Seller-specific or default contact info — WhatsApp is primary support channel
+  const supportWhatsApp = 'https://wa.me/12814680109';
   const contactEmail = (isSubdomain && seller?.email) || 'info@autosmall.com';
-  const contactPhone = (isSubdomain && seller?.phone) || '+1-832-000-0000';
+  const contactPhone = (isSubdomain && seller?.phone) || '+1 (281) 468-0109';
   const instagramUrl = (isSubdomain && seller?.social_instagram) || 'https://instagram.com/autosmall';
   const facebookUrl = (isSubdomain && seller?.social_facebook) || 'https://facebook.com/autosmall';
 
@@ -92,6 +94,16 @@ export const Footer: React.FC = () => {
               >
                 <Facebook className="w-5 h-5" />
               </a>
+              {/* WhatsApp — primary support */}
+              <a
+                href={isSubdomain && seller?.whatsapp ? `https://wa.me/${seller.whatsapp.replace(/\D/g, '')}` : supportWhatsApp}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-green-500 transition-colors"
+                aria-label="WhatsApp"
+              >
+                <MessageCircle className="w-5 h-5" />
+              </a>
               {/* Email */}
               <a
                 href={`mailto:${contactEmail}`}
@@ -144,16 +156,20 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2 text-sm text-gray-400">
               <li>
                 <a
-                  href={`mailto:${isSubdomain && seller?.email ? seller.email : 'soporte@autosmall.com'}`}
-                  className="hover:text-am-orange transition-colors"
+                  href={isSubdomain && seller?.whatsapp ? `https://wa.me/${seller.whatsapp.replace(/\D/g, '')}` : supportWhatsApp}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-green-500 transition-colors"
                 >
                   {t('resources.support')}
                 </a>
               </li>
               <li>
                 <a
-                  href={`mailto:${isSubdomain && seller?.email ? seller.email : 'soporte@autosmall.com'}`}
-                  className="hover:text-am-orange transition-colors"
+                  href={isSubdomain && seller?.whatsapp ? `https://wa.me/${seller.whatsapp.replace(/\D/g, '')}` : supportWhatsApp}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-green-500 transition-colors"
                 >
                   {t('resources.faq')}
                 </a>
@@ -175,8 +191,10 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <a
-                  href={`mailto:${contactEmail}`}
-                  className="hover:text-am-orange transition-colors"
+                  href={isSubdomain && seller?.whatsapp ? `https://wa.me/${seller.whatsapp.replace(/\D/g, '')}` : supportWhatsApp}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-green-500 transition-colors"
                 >
                   {t('company.contact')}
                 </a>

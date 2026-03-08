@@ -10,6 +10,8 @@ import type { WAButton } from './types';
 type Lang = 'en' | 'es';
 
 const APP_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || 'autosmall.org';
+const SUPPORT_WA = 'https://wa.me/12814680109';
+const SUPPORT_NAME = 'Rafael Gonzalez';
 
 // ─────────────────────────────────────────────
 // Main Menu
@@ -176,8 +178,8 @@ export function fbPublishResult(lang: Lang, vehicleTitle: string, success: boole
       : `📱 *${vehicleTitle}* published to Facebook!`;
   }
   return lang === 'es'
-    ? `No se pudo publicar en Facebook. Verifica tu conexion en tu perfil web.\nSoporte: support@autosmall.org`
-    : `Couldn't publish to Facebook. Check your connection in your web profile.\nSupport: support@autosmall.org`;
+    ? `No se pudo publicar en Facebook. Verifica tu conexion en tu perfil web.\nSoporte: ${SUPPORT_WA} (${SUPPORT_NAME})`
+    : `Couldn't publish to Facebook. Check your connection in your web profile.\nSupport: ${SUPPORT_WA} (${SUPPORT_NAME})`;
 }
 
 // ─────────────────────────────────────────────
@@ -456,8 +458,8 @@ export function supportMessage(lang: Lang, sellerHandle: string | null): string 
   const ts = Date.now().toString(36).toUpperCase();
   const webUrl = sellerHandle ? `${sellerHandle}.${APP_DOMAIN}` : APP_DOMAIN;
   return lang === 'es'
-    ? `📞 Soporte Autos MALL:\n\n• Escribe "reiniciar" para limpiar la sesion\n• Ve a ${webUrl} para gestion web\n• Contacta: support@autosmall.org\n\nSi detectaste un error, describe que paso.\nRef: ERR-${ts}`
-    : `📞 Autos MALL Support:\n\n• Type "restart" to clear the session\n• Go to ${webUrl} for web management\n• Contact: support@autosmall.org\n\nIf you found a bug, describe what happened.\nRef: ERR-${ts}`;
+    ? `📞 Soporte Autos MALL:\n\n• Escribe "reiniciar" para limpiar la sesion\n• Ve a ${webUrl} para gestion web\n• Soporte: ${SUPPORT_WA}\n  ${SUPPORT_NAME} (WhatsApp)\n\nSi detectaste un error, describe que paso.\nRef: ERR-${ts}`
+    : `📞 Autos MALL Support:\n\n• Type "restart" to clear the session\n• Go to ${webUrl} for web management\n• Support: ${SUPPORT_WA}\n  ${SUPPORT_NAME} (WhatsApp)\n\nIf you found a bug, describe what happened.\nRef: ERR-${ts}`;
 }
 
 // ─────────────────────────────────────────────
@@ -466,8 +468,8 @@ export function supportMessage(lang: Lang, sellerHandle: string | null): string 
 
 export function commandError(lang: Lang, action: string): string {
   return lang === 'es'
-    ? `Error al ejecutar "${action}". Intenta de nuevo o escribe /soporte.\nSoporte: support@autosmall.org`
-    : `Error executing "${action}". Try again or type /support.\nSupport: support@autosmall.org`;
+    ? `Error al ejecutar "${action}". Intenta de nuevo o escribe /soporte.\nSoporte: ${SUPPORT_WA} (${SUPPORT_NAME})`
+    : `Error executing "${action}". Try again or type /support.\nSupport: ${SUPPORT_WA} (${SUPPORT_NAME})`;
 }
 
 export function invalidNumber(lang: Lang): string {
