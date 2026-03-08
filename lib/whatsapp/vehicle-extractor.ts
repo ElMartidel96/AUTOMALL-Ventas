@@ -41,6 +41,15 @@ export const VehicleExtractionSchema = z.object({
   features: z.array(z.string()).describe('Notable features visible in photos or mentioned'),
   description: z.string().nullable().describe('Generated bilingual description (English + Spanish), 2-3 sentences each'),
   confidence: z.record(z.string(), z.number()).describe('Confidence score 0-1 for each extracted field'),
+  image_order: z.array(z.object({
+    index: z.number().int().describe('0-based index of this image in the array sent'),
+    category: z.enum([
+      'exterior_front', 'exterior_rear', 'exterior_side',
+      'exterior_angle', 'interior_dashboard', 'interior_seats',
+      'interior_detail', 'engine', 'wheels_tires', 'trunk',
+      'document', 'damage', 'other',
+    ]).describe('What this image primarily shows'),
+  })).describe('Classification of each image for optimal catalog display order'),
 });
 
 const SYSTEM_PROMPT = `You are an expert vehicle identification specialist for Autos MALL, a car dealership platform in Houston, Texas.
@@ -91,10 +100,27 @@ Generate a bilingual description (English first, then Spanish separated by "---"
 - 0.8-0.9 = Clearly visible in photos or strongly implied
 - 0.5-0.7 = Educated guess from partial evidence
 - 0.3-0.4 = Low confidence guess
-- Set field to null if confidence would be below 0.3`;
+- Set field to null if confidence would be below 0.3
+
+## IMAGE ORDERING
+
+Classify each image by what it primarily shows. This determines the display order on the catalog listing. Return one entry per image in the image_order array. Categories:
+- exterior_front: Front view of vehicle (hood, grille, headlights) — BEST hero shot
+- exterior_angle: 3/4 angle view showing front and side
+- exterior_side: Side profile view
+- exterior_rear: Rear view (trunk, taillights)
+- interior_dashboard: Dashboard, steering wheel, center console
+- interior_seats: Front or rear seats
+- interior_detail: Close-ups of features (infotainment screen, controls, trim details)
+- engine: Engine bay
+- wheels_tires: Wheels, tires, rims close-up
+- trunk: Trunk/cargo area
+- document: Window sticker, title, Carfax, registration
+- damage: Visible damage, scratches, dents
+- other: Anything that doesn't fit above`;
 
 // Max images to send to GPT-4o (10 is plenty for vehicle identification, keeps request size sane)
-const MAX_EXTRACTION_IMAGES = 10;
+export const MAX_EXTRACTION_IMAGES = 10;
 
 export async function extractVehicleData(
   imageUrls: string[],

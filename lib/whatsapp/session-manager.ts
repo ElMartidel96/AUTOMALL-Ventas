@@ -41,7 +41,7 @@ import {
   sendInteractiveMessage,
   markAsRead,
 } from './api';
-import { extractVehicleData, findMissingFields, smartAutoFill } from './vehicle-extractor';
+import { extractVehicleData, findMissingFields, smartAutoFill, MAX_EXTRACTION_IMAGES } from './vehicle-extractor';
 import { createVehicleFromExtraction } from './vehicle-creator';
 import { cleanupStagingImages } from './image-pipeline';
 import { routeCommand } from './command-router';
@@ -60,6 +60,8 @@ const RESTART_KEYWORDS = [
 const EXTRACTION_WATCHDOG_MS = 2 * 60 * 1000;
 // Normal session expiry: 30 minutes of inactivity
 const SESSION_EXPIRY_MS = 30 * 60 * 1000;
+// Max photos per listing — soft cap, photos beyond this are silently ignored
+const MAX_PHOTOS = 20;
 
 // ─────────────────────────────────────────────
 // Main Entry Point
@@ -271,9 +273,21 @@ async function handleCollectingState(
   link: WAPhoneLink
 ): Promise<void> {
   if (message.type === 'image') {
+    const imageCount = await getSessionMediaCount(session.id);
+
+    // Photo cap: at MAX_PHOTOS send notification, beyond that stay silent
+    if (imageCount >= MAX_PHOTOS) {
+      if (imageCount === MAX_PHOTOS) {
+        console.log(`[WA] Photo cap reached (${MAX_PHOTOS}), notifying user`);
+        await safeSend(waPhoneNumberId, session.phone_number, templates.maxImagesReached(link.language, MAX_PHOTOS), accessToken);
+      } else {
+        console.log(`[WA] Photo #${imageCount} over cap (silent)`);
+      }
+      return;
+    }
+
     // Throttled acks: only ack every 5th photo to prevent rate limit
     // (1st photo ack comes from handleIdleState when transitioning idle → collecting)
-    const imageCount = await getSessionMediaCount(session.id);
     if (imageCount % PHOTO_ACK_INTERVAL === 0) {
       console.log(`[WA] → Photo ack #${imageCount} (collecting, throttled)`);
       await safeSend(waPhoneNumberId, session.phone_number, templates.photoReceived(link.language, imageCount), accessToken);
@@ -464,6 +478,9 @@ async function triggerExtraction(
 ): Promise<void> {
   const lang = link.language;
 
+  // Cap media IDs to MAX_PHOTOS (soft limit — extras were logged but not used)
+  const cappedMediaIds = mediaIds.slice(0, MAX_PHOTOS);
+
   // Set state + SHORT expiry (watchdog). If function dies during extraction,
   // the session will auto-reset on the next message (expiry triggers reset).
   await updateSession(session.id, {
@@ -473,11 +490,11 @@ async function triggerExtraction(
 
   // Get text preview for the acknowledgment
   const textContent = textMessage?.text?.body || '';
-  const ackMsg = templates.extractionStartMessage(lang, mediaIds.length, textContent);
+  const ackMsg = templates.extractionStartMessage(lang, cappedMediaIds.length, textContent);
   await safeSend(waPhoneNumberId, session.phone_number, ackMsg, accessToken);
 
   // SYNCHRONOUS: must complete before Vercel kills the function
-  await runExtraction(session, mediaIds, waPhoneNumberId, accessToken, link);
+  await runExtraction(session, cappedMediaIds, waPhoneNumberId, accessToken, link);
 }
 
 async function runExtraction(
@@ -524,8 +541,11 @@ async function runExtraction(
     const extracted = await extractVehicleData(imageUrls, textMessages, imageBuffers);
     console.log(`[WA] AI extracted: ${extracted.brand} ${extracted.model} ${extracted.year} $${extracted.price} ${extracted.mileage}mi`);
 
+    // Smart reorder: sort images by AI-classified category for optimal catalog presentation
+    const reorderedStaged = reorderStagedImages(stagedImages, extracted.image_order, MAX_EXTRACTION_IMAGES);
+
     // Strip buffers before saving to JSONB — buffers are not serializable
-    const stagedForSession = stagedImages.map(({ buffer: _buf, ...rest }) => rest);
+    const stagedForSession = reorderedStaged.map(({ buffer: _buf, ...rest }) => rest);
 
     // Check for missing required fields
     const missingRequired = findMissingFields(extracted);
@@ -926,6 +946,62 @@ async function safeSendInteractive(
     // Fallback: try sending as plain text
     console.log(`[WA] Falling back to plain text...`);
     return safeSend(phoneNumberId, to, bodyText, token);
+  }
+}
+
+// ─────────────────────────────────────────────
+// Smart Image Reordering
+// ─────────────────────────────────────────────
+
+const IMAGE_CATEGORY_PRIORITY: Record<string, number> = {
+  exterior_front: 1,
+  exterior_angle: 2,
+  exterior_side: 3,
+  exterior_rear: 4,
+  interior_dashboard: 5,
+  interior_seats: 6,
+  interior_detail: 7,
+  engine: 8,
+  wheels_tires: 9,
+  trunk: 10,
+  document: 11,
+  damage: 12,
+  other: 13,
+};
+
+/**
+ * Reorder staged images by AI-classified category for optimal catalog display.
+ * Only the first `maxAnalyzed` images are classified by GPT-4o — the rest keep original order.
+ * Fallback: any error → original order. NEVER throws.
+ */
+function reorderStagedImages(
+  staged: StagedImage[],
+  imageOrder: Array<{ index: number; category: string }> | undefined,
+  maxAnalyzed: number
+): StagedImage[] {
+  if (!imageOrder || imageOrder.length === 0) return staged;
+
+  try {
+    const analyzed = staged.slice(0, maxAnalyzed);
+    const rest = staged.slice(maxAnalyzed);
+
+    const priorityMap = new Map<number, number>();
+    for (const item of imageOrder) {
+      if (item.index >= 0 && item.index < analyzed.length) {
+        priorityMap.set(item.index, IMAGE_CATEGORY_PRIORITY[item.category] ?? 13);
+      }
+    }
+
+    const sorted = analyzed
+      .map((img, i) => ({ img, priority: priorityMap.get(i) ?? 13, i }))
+      .sort((a, b) => a.priority - b.priority || a.i - b.i)
+      .map(x => x.img);
+
+    console.log(`[WA] Reordered ${sorted.length} images by AI classification`);
+    return [...sorted, ...rest];
+  } catch {
+    console.warn('[WA] Image reorder failed, using original order');
+    return staged;
   }
 }
 

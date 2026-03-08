@@ -27,10 +27,10 @@ export function photoReceived(lang: Lang, count: number): string {
     : `Photo received! (${count} ${count === 1 ? 'photo' : 'photos'}). Send more photos or write the vehicle details to continue.`;
 }
 
-export function maxImagesReached(lang: Lang): string {
+export function maxImagesReached(lang: Lang, max: number = 20): string {
   return lang === 'es'
-    ? `Maximo de 10 fotos alcanzado. Ahora escribe los detalles del vehiculo (marca, modelo, ano, precio, millaje).`
-    : `Maximum 10 photos reached. Now write the vehicle details (brand, model, year, price, mileage).`;
+    ? `Maximo de ${max} fotos alcanzado. Ahora escribe los detalles del vehiculo (marca, modelo, ano, precio, millaje).`
+    : `Maximum ${max} photos reached. Now write the vehicle details (brand, model, year, price, mileage).`;
 }
 
 export function extractingMessage(lang: Lang): string {

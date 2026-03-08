@@ -140,6 +140,7 @@ export interface ExtractedVehicle {
   features: string[];
   description: string | null;
   confidence: Record<string, number>;
+  image_order?: Array<{ index: number; category: string }>;
 }
 
 // ─────────────────────────────────────────────
