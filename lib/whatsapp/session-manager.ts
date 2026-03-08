@@ -50,6 +50,13 @@ import type { WAMessage, WASession, WAPhoneLink, ExtractedVehicle, CommandContex
 import type { StagedImage } from './image-pipeline';
 import type { WAButton } from './types';
 
+// Safe error formatting — prevents util.inspect TypeError on complex AI SDK/Supabase errors
+function safeErrorMsg(error: unknown): string {
+  if (error instanceof Error) return `${error.name}: ${error.message}`;
+  if (typeof error === 'string') return error;
+  try { return JSON.stringify(error); } catch { return String(error); }
+}
+
 // Restart keywords — user can type these in ANY state to reset
 const RESTART_KEYWORDS = [
   'reiniciar', 'restart', 'reset', 'empezar', 'start over',
@@ -174,7 +181,7 @@ export async function handleIncomingMessage(
         await safeSend(waPhoneNumberId, session.phone_number, templates.welcomeMessage(lang), accessToken);
     }
   } catch (error) {
-    console.error(`[WA] Error handling message for ${normalizedPhone}:`, error);
+    console.error(`[WA] Error handling message for ${normalizedPhone}: ${safeErrorMsg(error)}`);
     await updateSessionState(session.id, 'error');
     await safeSend(waPhoneNumberId, phoneNumber, templates.errorMessage(lang), accessToken);
   }
@@ -208,10 +215,15 @@ async function handleIdleState(
       command_context: null,
     });
 
-    // Send ack with current photo count from message log
+    // Send ack with current photo count — but use shouldAckPhoto to prevent
+    // race-condition acks (multiple serverless functions see idle simultaneously)
     const photoCount = await getSessionMediaCount(session.id);
-    console.log(`[WA] → Photo ack #${photoCount} (idle → collecting)`);
-    await safeSend(waPhoneNumberId, session.phone_number, templates.photoReceived(lang, photoCount), accessToken);
+    if (shouldAckPhoto(photoCount)) {
+      console.log(`[WA] → Photo ack #${photoCount} (idle → collecting)`);
+      await safeSend(waPhoneNumberId, session.phone_number, templates.photoReceived(lang, photoCount), accessToken);
+    } else {
+      console.log(`[WA] Photo #${photoCount} (idle → collecting, ack deferred)`);
+    }
     return;
   }
 
@@ -282,10 +294,21 @@ async function handleCollectingState(
   if (message.type === 'image') {
     const imageCount = await getSessionMediaCount(session.id);
 
-    // Photo cap: at MAX_PHOTOS send notification, beyond that stay silent
+    // Photo cap: at MAX_PHOTOS send notification + auto-trigger if text exists
     if (imageCount >= MAX_PHOTOS) {
       if (imageCount === MAX_PHOTOS) {
         console.log(`[WA] Photo cap reached (${MAX_PHOTOS}), notifying user`);
+
+        // Check if text already exists in log (forwarded text arrives before photos)
+        const existingTexts = await getSessionTexts(session.id);
+        if (existingTexts.length > 0) {
+          // Text + photos ready → auto-trigger extraction (no need to re-type)
+          console.log(`[WA] Cap reached with ${existingTexts.length} texts in log → auto-triggering extraction`);
+          const mediaIds = await getSessionMediaIds(session.id);
+          await triggerExtraction(session, mediaIds, null, waPhoneNumberId, accessToken, link);
+          return;
+        }
+
         await safeSend(waPhoneNumberId, session.phone_number, templates.maxImagesReached(link.language, MAX_PHOTOS), accessToken);
       } else {
         console.log(`[WA] Photo #${imageCount} over cap (silent)`);
@@ -587,7 +610,11 @@ async function runExtraction(
     const { text, buttons } = templates.smartConfirmation(lang, filled, autoFilledFields, sellerHandle, !sellerHasLocation);
     await safeSendInteractive(waPhoneNumberId, session.phone_number, text, buttons, accessToken);
   } catch (error) {
-    console.error(`[WA] Extraction failed:`, error);
+    const msg = safeErrorMsg(error);
+    console.error(`[WA] Extraction failed: ${msg}`);
+    if (msg.includes('abort') || msg.includes('Abort') || msg.includes('timeout')) {
+      console.error(`[WA] Likely GPT-4o timeout (40s limit) — user can retry`);
+    }
     await updateSessionState(session.id, 'error');
     await safeSend(waPhoneNumberId, session.phone_number, templates.errorMessage(lang), accessToken);
   }
@@ -645,7 +672,7 @@ async function createVehicleFlow(
         fbPublished = await tryPublishToFacebook(result.vehicleId, link);
         console.log(`[WA] FB publish: ${fbPublished ? 'success' : 'skipped (no connection)'}`);
       } catch (err) {
-        console.error(`[WA] FB publish failed:`, err);
+        console.error(`[WA] FB publish failed: ${safeErrorMsg(err)}`);
       }
     }
 
@@ -656,7 +683,7 @@ async function createVehicleFlow(
     // Reset session — ready for next vehicle (NULL all old message log entries)
     await resetSession(session.id);
   } catch (error) {
-    console.error(`[WA] Vehicle creation failed:`, error);
+    console.error(`[WA] Vehicle creation failed: ${safeErrorMsg(error)}`);
     await updateSessionState(session.id, 'error');
     await safeSend(waPhoneNumberId, session.phone_number, templates.errorMessage(lang), accessToken);
   }
@@ -905,7 +932,7 @@ async function logMessage(
         raw_payload: rawPayload,
       });
   } catch (error) {
-    console.error('[WA] Failed to log message:', error);
+    console.error(`[WA] Failed to log message: ${safeErrorMsg(error)}`);
   }
 }
 
