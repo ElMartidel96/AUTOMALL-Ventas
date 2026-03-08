@@ -28,13 +28,14 @@ async function getSellerInfo(walletAddress: string) {
   const supabase = getTypedClient();
   const { data } = await supabase
     .from('sellers')
-    .select('id, handle, business_name, phone, whatsapp, city, state, latitude, longitude')
+    .select('id, handle, business_name, phone, whatsapp, city, state, address, latitude, longitude')
     .eq('wallet_address', walletAddress.toLowerCase())
     .single();
   return data as {
     id: string; handle: string; business_name: string | null;
     phone: string | null; whatsapp: string | null;
     city: string | null; state: string | null;
+    address: string | null;
     latitude: number | null; longitude: number | null;
   } | null;
 }
@@ -963,6 +964,7 @@ export async function handleCampaignCreateStep(
         business_name: seller?.business_name || 'Dealer',
         phone: seller?.phone || null, whatsapp: seller?.whatsapp || null,
         city: seller?.city || null, state: seller?.state || null,
+        address: seller?.address || null,
         wallet_address: link.wallet_address,
       };
 

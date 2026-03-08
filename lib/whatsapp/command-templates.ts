@@ -633,6 +633,10 @@ export function campaignCreateTypeStep(lang: Lang, templates: CampaignTemplateIn
     text += `${t.emoji} *${t.name}* — ${t.description}\n`;
   }
 
+  text += lang === 'es'
+    ? `\n💡 Recomendacion: *Promo de Temporada* es la mas popular para atraer compradores por WhatsApp.`
+    : `\n💡 Tip: *Seasonal Promo* is the most popular to attract buyers via WhatsApp.`;
+
   // WhatsApp allows max 3 buttons, show top 3 templates
   const buttons: WAButton[] = templates.slice(0, 3).map(t => ({
     type: 'reply' as const,

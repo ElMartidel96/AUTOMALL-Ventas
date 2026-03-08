@@ -42,7 +42,7 @@ async function getSellerByWallet(walletAddress: string): Promise<SellerForFeed |
   const supabase = getTypedClient();
   const { data } = await supabase
     .from('sellers')
-    .select('id, handle, business_name, phone, whatsapp, city, state, wallet_address')
+    .select('id, handle, business_name, phone, whatsapp, city, state, address, wallet_address')
     .eq('wallet_address', walletAddress.toLowerCase())
     .single();
 
@@ -55,6 +55,7 @@ async function getSellerByWallet(walletAddress: string): Promise<SellerForFeed |
     whatsapp: data.whatsapp || null,
     city: data.city || null,
     state: data.state || null,
+    address: data.address || null,
     wallet_address: data.wallet_address,
   } as SellerForFeed;
 }
@@ -438,7 +439,7 @@ export async function getCampaignBySlug(slug: string): Promise<PublicCampaignDat
   // Get seller (public info only — no tokens, no wallet)
   const { data: sellerData } = await supabase
     .from('sellers')
-    .select('handle, business_name, phone, whatsapp, city, state')
+    .select('handle, business_name, phone, whatsapp, city, state, address, latitude, longitude')
     .eq('id', c.seller_id)
     .single();
 
@@ -450,8 +451,11 @@ export async function getCampaignBySlug(slug: string): Promise<PublicCampaignDat
         whatsapp: sellerData.whatsapp || null,
         city: sellerData.city || null,
         state: sellerData.state || null,
+        address: sellerData.address || null,
+        latitude: sellerData.latitude || null,
+        longitude: sellerData.longitude || null,
       }
-    : { handle: 'dealer', business_name: 'Dealer', phone: null, whatsapp: null, city: null, state: null };
+    : { handle: 'dealer', business_name: 'Dealer', phone: null, whatsapp: null, city: null, state: null, address: null, latitude: null, longitude: null };
 
   return {
     id: c.id,

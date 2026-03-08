@@ -12,9 +12,16 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import type { PublicCampaignData, PublicVehicle } from '@/lib/campaigns/types';
 import { estimateMonthly, buildWhatsAppURL } from '@/lib/campaigns/ad-copy-generator';
+import { GetDirectionsButton } from '@/components/map/GetDirectionsButton';
+
+const DynamicVehicleLocationMap = dynamic(
+  () => import('@/components/catalog/VehicleLocationMap'),
+  { ssr: false }
+);
 
 const DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || 'autosmall.org';
 
@@ -246,6 +253,41 @@ export function CampaignLanding({ data, slug }: Props) {
         </section>
       )}
 
+      {/* Dealer Location */}
+      {(seller.address || (seller.latitude && seller.longitude)) && (
+        <section className="px-4 pb-6">
+          <div className="bg-white/10 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/10 p-4">
+            {seller.address && (
+              <p className="text-gray-300 text-sm flex items-center gap-2 mb-3">
+                <span>📍</span>
+                <span>
+                  {seller.address}
+                  {seller.city && seller.state && `, ${seller.city}, ${seller.state}`}
+                </span>
+              </p>
+            )}
+            {seller.latitude && seller.longitude && (
+              <DynamicVehicleLocationMap
+                latitude={seller.latitude}
+                longitude={seller.longitude}
+                vehicleTitle={seller.business_name}
+                address={seller.address || `${seller.city}, ${seller.state}`}
+              />
+            )}
+            {seller.latitude && seller.longitude && (
+              <div className="mt-3">
+                <GetDirectionsButton
+                  destLat={seller.latitude}
+                  destLng={seller.longitude}
+                  label={seller.business_name}
+                  variant="primary"
+                />
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* Trust Signals */}
       <section className="px-4 pb-6">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -290,6 +332,13 @@ export function CampaignLanding({ data, slug }: Props) {
           <h3 className="text-white font-bold mb-3">
             {lang === 'es' ? 'Contactanos' : 'Contact Us'}
           </h3>
+
+          {seller.address && (
+            <p className="flex items-center gap-3 text-gray-300 py-2">
+              <span className="text-lg">📍</span>
+              <span className="text-sm">{seller.address}</span>
+            </p>
+          )}
 
           {seller.phone && (
             <a

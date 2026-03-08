@@ -159,6 +159,9 @@ function buildBodyEN(opts: AdCopyOptions): string {
 
   lines.push(`🚗 ${template.name_en} at ${seller.business_name}`);
   lines.push(`📍 ${seller.city || 'Houston'}, ${seller.state || 'TX'} — Local Dealer`);
+  if (seller.address) {
+    lines.push(`📌 ${seller.address}`);
+  }
   lines.push('');
 
   for (const v of vehicles) {
@@ -172,7 +175,7 @@ function buildBodyEN(opts: AdCopyOptions): string {
   }
 
   lines.push('');
-  lines.push('💬 Message us on WhatsApp for details!');
+  lines.push(`💬 ${template.cta_en || 'Message us on WhatsApp for details!'}`);
 
   if (seller.whatsapp) {
     lines.push(`📱 ${buildWhatsAppURL(seller.whatsapp)}`);
@@ -195,6 +198,9 @@ function buildBodyES(opts: AdCopyOptions): string {
 
   lines.push(`🚗 ${template.name_es} en ${seller.business_name}`);
   lines.push(`📍 ${seller.city || 'Houston'}, ${seller.state || 'TX'} — Dealer Local`);
+  if (seller.address) {
+    lines.push(`📌 ${seller.address}`);
+  }
   lines.push('');
 
   for (const v of vehicles) {
@@ -208,7 +214,7 @@ function buildBodyES(opts: AdCopyOptions): string {
   }
 
   lines.push('');
-  lines.push('💬 Escribenos por WhatsApp para mas informacion!');
+  lines.push(`💬 ${template.cta_es || 'Escribenos por WhatsApp para mas informacion!'}`);
 
   if (seller.whatsapp) {
     lines.push(`📱 ${buildWhatsAppURL(seller.whatsapp)}`);

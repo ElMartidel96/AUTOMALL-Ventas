@@ -223,6 +223,9 @@ export interface PublicSeller {
   whatsapp: string | null;
   city: string | null;
   state: string | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 // ─────────────────────────────────────────────
@@ -236,6 +239,8 @@ export interface CampaignTemplate {
   emoji: string;
   description_en: string;
   description_es: string;
+  cta_en?: string;
+  cta_es?: string;
   suggested_daily_budget: { min: number; max: number };
   suggested_duration_days: number;
   default_headline_en: string;

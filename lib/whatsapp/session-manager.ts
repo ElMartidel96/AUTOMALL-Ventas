@@ -405,6 +405,17 @@ async function handleConfirmingState(
     return;
   }
 
+  // ── Address sub-flow: if command_context has address intent, handle first ──
+  const addrCtx = session.command_context as Record<string, unknown> | null;
+  if (addrCtx?.type === 'awaiting_address') {
+    await handleAddressSubFlow(session, message, waPhoneNumberId, accessToken, link, addrCtx);
+    return;
+  }
+  if (addrCtx?.type === 'awaiting_address_save') {
+    await handleAddressSaveSubFlow(session, message, waPhoneNumberId, accessToken, link, addrCtx);
+    return;
+  }
+
   let action: string | null = null;
 
   // Check for button reply (interactive or legacy button)
@@ -464,12 +475,21 @@ async function handleConfirmingState(
     }
 
     case 'publish_catalog':
-      await createVehicleFlow(session, waPhoneNumberId, accessToken, link, false);
+    case 'publish_catalog_fb': {
+      const publishToFb = action === 'publish_catalog_fb';
+      // Check if seller has address — if not, prompt before publishing
+      const hasAddress = await checkSellerAddress(link.wallet_address);
+      if (!hasAddress) {
+        console.log(`[WA] Seller has no address → prompting before publish`);
+        await updateSession(session.id, {
+          command_context: { type: 'awaiting_address', publishToFb },
+        });
+        await safeSend(waPhoneNumberId, session.phone_number, templates.addressPrompt(lang), accessToken);
+        return;
+      }
+      await createVehicleFlow(session, waPhoneNumberId, accessToken, link, publishToFb);
       break;
-
-    case 'publish_catalog_fb':
-      await createVehicleFlow(session, waPhoneNumberId, accessToken, link, true);
-      break;
+    }
 
     case 'field_correction': {
       // Re-extract with updated text — gather all texts including this new one
@@ -507,6 +527,115 @@ async function handleConfirmingState(
           await safeSendInteractive(waPhoneNumberId, session.phone_number, text, buttons, accessToken);
         }
       }
+    }
+  }
+}
+
+// ─────────────────────────────────────────────
+// Address Sub-Flow (within confirming state)
+// ─────────────────────────────────────────────
+
+const SKIP_KEYWORDS = ['saltar', 'skip', 'no', 'sin direccion', 'no address'];
+
+async function handleAddressSubFlow(
+  session: WASession,
+  message: WAMessage,
+  waPhoneNumberId: string,
+  accessToken: string,
+  link: WAPhoneLink,
+  ctx: Record<string, unknown>
+): Promise<void> {
+  const lang = link.language;
+  const publishToFb = ctx.publishToFb as boolean;
+
+  // Only handle text messages
+  const textBody = message.type === 'text' ? message.text?.body?.trim() : null;
+  if (!textBody) return;
+
+  const textLower = textBody.toLowerCase();
+
+  // Skip → publish without address
+  if (SKIP_KEYWORDS.includes(textLower)) {
+    console.log(`[WA] Address skipped → publishing without address`);
+    await updateSession(session.id, { command_context: null });
+    await createVehicleFlow(session, waPhoneNumberId, accessToken, link, publishToFb);
+    return;
+  }
+
+  // Cancel
+  if (['cancelar', 'cancel'].includes(textLower)) {
+    await updateSession(session.id, { command_context: null });
+    try { await cleanupStagingImages(session.image_urls || []); } catch { /* best-effort */ }
+    await resetSession(session.id);
+    await safeSend(waPhoneNumberId, session.phone_number, templates.welcomeMessage(lang), accessToken);
+    return;
+  }
+
+  // Treat as address → ask to save
+  const address = textBody;
+  console.log(`[WA] Address received: "${address}"`);
+  await updateSession(session.id, {
+    command_context: { type: 'awaiting_address_save', publishToFb, address },
+  });
+  const { text, buttons } = templates.addressSaveQuestion(lang, address);
+  await safeSendInteractive(waPhoneNumberId, session.phone_number, text, buttons, accessToken);
+}
+
+async function handleAddressSaveSubFlow(
+  session: WASession,
+  message: WAMessage,
+  waPhoneNumberId: string,
+  accessToken: string,
+  link: WAPhoneLink,
+  ctx: Record<string, unknown>
+): Promise<void> {
+  const lang = link.language;
+  const publishToFb = ctx.publishToFb as boolean;
+  const address = ctx.address as string;
+
+  let action: string | null = null;
+
+  if (message.type === 'interactive' && message.interactive?.button_reply) {
+    action = message.interactive.button_reply.id;
+  } else if (message.type === 'button' && message.button?.payload) {
+    action = message.button.payload;
+  } else if (message.type === 'text' && message.text?.body) {
+    const text = message.text.body.toLowerCase().trim();
+    if (['si', 'sí', 'yes', 'guardar', 'save', '1'].includes(text)) action = 'addr_save';
+    else if (['no', 'solo', 'once', 'esta vez', '2'].includes(text)) action = 'addr_once';
+    else if (['cancelar', 'cancel'].includes(text)) action = 'confirm_cancel';
+    else action = 'addr_save'; // Default: save
+  }
+
+  switch (action) {
+    case 'addr_save': {
+      // Save address to seller + geocode
+      const { geocoded } = await saveSellerAddress(link.wallet_address, address);
+      await safeSend(waPhoneNumberId, session.phone_number, templates.addressSaved(lang, geocoded), accessToken);
+      await updateSession(session.id, { command_context: null });
+      await createVehicleFlow(session, waPhoneNumberId, accessToken, link, publishToFb);
+      break;
+    }
+
+    case 'addr_once': {
+      // Don't save to seller, just proceed with publish
+      console.log(`[WA] Address used once only: "${address}"`);
+      await updateSession(session.id, { command_context: null });
+      await createVehicleFlow(session, waPhoneNumberId, accessToken, link, publishToFb);
+      break;
+    }
+
+    case 'confirm_cancel':
+      await updateSession(session.id, { command_context: null });
+      try { await cleanupStagingImages(session.image_urls || []); } catch { /* best-effort */ }
+      await resetSession(session.id);
+      await safeSend(waPhoneNumberId, session.phone_number, templates.welcomeMessage(lang), accessToken);
+      break;
+
+    default: {
+      // Re-send the save question
+      const { text, buttons } = templates.addressSaveQuestion(lang, address);
+      await safeSendInteractive(waPhoneNumberId, session.phone_number, text, buttons, accessToken);
     }
   }
 }
@@ -1124,4 +1253,57 @@ async function checkSellerLocation(walletAddress: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+async function checkSellerAddress(walletAddress: string): Promise<boolean> {
+  try {
+    const supabase = getTypedClient();
+    const { data } = await supabase
+      .from('sellers')
+      .select('address')
+      .eq('wallet_address', walletAddress.toLowerCase())
+      .single();
+    return !!(data as Record<string, unknown> | null)?.address;
+  } catch {
+    return false;
+  }
+}
+
+async function saveSellerAddress(
+  walletAddress: string,
+  address: string
+): Promise<{ geocoded: boolean }> {
+  const supabase = getTypedClient();
+  const wallet = walletAddress.toLowerCase();
+
+  // Try geocoding
+  let latitude: number | null = null;
+  let longitude: number | null = null;
+  let geocoded = false;
+
+  try {
+    const { geocodeAddress } = await import('@/lib/geo/geocode');
+    const result = await geocodeAddress(address);
+    if (result) {
+      latitude = result.latitude;
+      longitude = result.longitude;
+      geocoded = true;
+    }
+  } catch (err) {
+    console.error(`[WA] Geocoding failed for "${address}":`, safeErrorMsg(err));
+  }
+
+  const updates: Record<string, unknown> = { address };
+  if (geocoded) {
+    updates.latitude = latitude;
+    updates.longitude = longitude;
+  }
+
+  await supabase
+    .from('sellers')
+    .update(updates)
+    .eq('wallet_address', wallet);
+
+  console.log(`[WA] Saved seller address: "${address}" (geocoded: ${geocoded})`);
+  return { geocoded };
 }

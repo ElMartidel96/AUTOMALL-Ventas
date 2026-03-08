@@ -292,6 +292,39 @@ export function missingRequiredMessage(
 }
 
 // ─────────────────────────────────────────────
+// Address Prompt (before publishing)
+// ─────────────────────────────────────────────
+
+export function addressPrompt(lang: Lang): string {
+  return lang === 'es'
+    ? `📍 No tienes direccion de negocio configurada.\n\nEscribe tu direccion para que aparezca en tus listados y campanas:\nEj: 12345 Westheimer Rd, Houston, TX\n\nO escribe "saltar" para publicar sin direccion.`
+    : `📍 You don't have a business address set.\n\nType your address so it shows on your listings and campaigns:\nEx: 12345 Westheimer Rd, Houston, TX\n\nOr type "skip" to publish without address.`;
+}
+
+export function addressSaveQuestion(lang: Lang, address: string): { text: string; buttons: WAButton[] } {
+  const text = lang === 'es'
+    ? `📍 Direccion: *${address}*\n\nGuardarla como la direccion de tu concesionaria?`
+    : `📍 Address: *${address}*\n\nSave it as your dealership address?`;
+
+  const buttons: WAButton[] = [
+    { type: 'reply', reply: { id: 'addr_save', title: lang === 'es' ? 'Si, guardar' : 'Yes, save' } },
+    { type: 'reply', reply: { id: 'addr_once', title: lang === 'es' ? 'Solo esta vez' : 'Just this once' } },
+    { type: 'reply', reply: { id: 'confirm_cancel', title: lang === 'es' ? 'Cancelar' : 'Cancel' } },
+  ];
+
+  return { text, buttons };
+}
+
+export function addressSaved(lang: Lang, geocoded: boolean): string {
+  const geo = geocoded
+    ? (lang === 'es' ? ' Ubicacion en mapa actualizada.' : ' Map location updated.')
+    : '';
+  return lang === 'es'
+    ? `✅ Direccion guardada!${geo}\n\nContinuando con la publicacion...`
+    : `✅ Address saved!${geo}\n\nContinuing with publication...`;
+}
+
+// ─────────────────────────────────────────────
 // Errors & Edge Cases
 // ─────────────────────────────────────────────
 

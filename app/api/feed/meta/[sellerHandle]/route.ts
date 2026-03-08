@@ -35,7 +35,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     // Get seller by handle
     const { data: seller, error: sellerError } = await supabase
       .from('sellers')
-      .select('id, handle, business_name, phone, whatsapp, city, state, wallet_address')
+      .select('id, handle, business_name, phone, whatsapp, city, state, address, wallet_address')
       .eq('handle', sellerHandle)
       .single();
 
@@ -51,6 +51,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       whatsapp: seller.whatsapp || null,
       city: seller.city || null,
       state: seller.state || null,
+      address: seller.address || null,
       wallet_address: seller.wallet_address,
     };
 

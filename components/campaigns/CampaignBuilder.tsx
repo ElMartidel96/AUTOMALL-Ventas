@@ -11,7 +11,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { useAccount } from '@/lib/thirdweb';
 import { getAllTemplates } from '@/lib/campaigns/campaign-templates';
 import type { CampaignType, CampaignTemplate } from '@/lib/campaigns/types';
@@ -36,6 +36,7 @@ interface Props {
 
 export function CampaignBuilder({ onCreated, onCancel }: Props) {
   const t = useTranslations('campaigns');
+  const locale = useLocale();
   const { address } = useAccount();
 
   const [step, setStep] = useState(1);
@@ -228,8 +229,8 @@ export function CampaignBuilder({ onCreated, onCancel }: Props) {
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">{tpl.emoji}</span>
                   <div>
-                    <div className="font-bold text-gray-900 dark:text-white">{tpl.name_en}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">{tpl.description_en}</div>
+                    <div className="font-bold text-gray-900 dark:text-white">{locale === 'es' ? tpl.name_es : tpl.name_en}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{locale === 'es' ? tpl.description_es : tpl.description_en}</div>
                   </div>
                 </div>
               </button>

@@ -243,5 +243,6 @@ export interface SellerForFeed {
   whatsapp: string | null;
   city: string | null;
   state: string | null;
+  address: string | null;
   wallet_address: string;
 }

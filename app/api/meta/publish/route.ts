@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
   // Get seller details
   const { data: seller } = await supabase
     .from('sellers')
-    .select('id, handle, business_name, phone, whatsapp, city, state, wallet_address')
+    .select('id, handle, business_name, phone, whatsapp, city, state, address, wallet_address')
     .eq('wallet_address', sellerAddress.toLowerCase())
     .single();
 
@@ -119,6 +119,7 @@ export async function POST(req: NextRequest) {
     whatsapp: seller.whatsapp || null,
     city: seller.city || null,
     state: seller.state || null,
+    address: seller.address || null,
     wallet_address: seller.wallet_address,
   };
 
