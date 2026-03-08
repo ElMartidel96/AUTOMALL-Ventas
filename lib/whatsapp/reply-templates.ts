@@ -206,7 +206,8 @@ export function smartConfirmation(
   lang: Lang,
   vehicle: ExtractedVehicle,
   autoFilledFields: string[],
-  sellerHandle: string
+  sellerHandle: string,
+  locationMissing?: boolean
 ): { text: string; buttons: WAButton[] } {
   const title = `${vehicle.year || '?'} ${vehicle.brand || '?'} ${vehicle.model || '?'}`;
   const trim = vehicle.trim ? ` ${vehicle.trim}` : '';
@@ -226,9 +227,15 @@ export function smartConfirmation(
     ? (lang === 'es' ? '\n(* = estimado por IA)' : '\n(* = AI estimate)')
     : '';
 
+  const locWarning = locationMissing
+    ? (lang === 'es'
+      ? '\n\nNo tienes ubicacion configurada. Ve a tu perfil en Autos MALL para agregar tu direccion.'
+      : '\n\nYou have no location configured. Go to your Autos MALL profile to add your address.')
+    : '';
+
   const text = lang === 'es'
-    ? `Listado listo:\n\n*${title}${trim}*\nPrecio: ${price}${mark('price')}\nMillaje: ${miles}${mark('mileage')}\nColor: ${color}\nTipo: ${bodyType}\nTransmision: ${trans}\nCombustible: ${fuel}\nCondicion: ${cond}\nTraccion: ${drive}${autoNote}\n\nCatalogo: ${sellerHandle}.${APP_DOMAIN}\n\nDonde publicar?\n_Envia texto para corregir_`
-    : `Listing ready:\n\n*${title}${trim}*\nPrice: ${price}${mark('price')}\nMileage: ${miles}${mark('mileage')}\nColor: ${color}\nType: ${bodyType}\nTransmission: ${trans}\nFuel: ${fuel}\nCondition: ${cond}\nDrivetrain: ${drive}${autoNote}\n\nCatalog: ${sellerHandle}.${APP_DOMAIN}\n\nWhere to publish?\n_Send text to correct_`;
+    ? `Listado listo:\n\n*${title}${trim}*\nPrecio: ${price}${mark('price')}\nMillaje: ${miles}${mark('mileage')}\nColor: ${color}\nTipo: ${bodyType}\nTransmision: ${trans}\nCombustible: ${fuel}\nCondicion: ${cond}\nTraccion: ${drive}${autoNote}${locWarning}\n\nCatalogo: ${sellerHandle}.${APP_DOMAIN}\n\nDonde publicar?\n_Envia texto para corregir_`
+    : `Listing ready:\n\n*${title}${trim}*\nPrice: ${price}${mark('price')}\nMileage: ${miles}${mark('mileage')}\nColor: ${color}\nType: ${bodyType}\nTransmission: ${trans}\nFuel: ${fuel}\nCondition: ${cond}\nDrivetrain: ${drive}${autoNote}${locWarning}\n\nCatalog: ${sellerHandle}.${APP_DOMAIN}\n\nWhere to publish?\n_Send text to correct_`;
 
   const buttons: WAButton[] = [
     { type: 'reply', reply: { id: 'publish_catalog', title: lang === 'es' ? 'Solo catalogo' : 'Catalog only' } },

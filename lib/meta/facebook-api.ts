@@ -97,55 +97,118 @@ export async function getPageAccessToken(
 // Publishing
 // ─────────────────────────────────────────────
 
-/** Publish a single-image post to a Facebook page */
+/**
+ * Download image from URL → Buffer.
+ * Used to bypass Facebook's inability to fetch images from certain CDNs
+ * (e.g. Supabase Storage URLs that return "Missing or invalid image file").
+ */
+async function downloadImageBlob(imageUrl: string): Promise<{ blob: Blob; mimeType: string }> {
+  const res = await fetch(imageUrl);
+  if (!res.ok) {
+    throw new Error(`Image download failed (${res.status}): ${imageUrl}`);
+  }
+  const mimeType = res.headers.get('content-type') || 'image/jpeg';
+  const blob = await res.blob();
+  return { blob, mimeType };
+}
+
+/** Publish a single-image post to a Facebook page.
+ *  Strategy: try URL-based upload first, fall back to binary upload. */
 export async function publishPhotoPost(
   pageId: string,
   pageAccessToken: string,
   caption: string,
   imageUrl: string
 ): Promise<FBPostResponse> {
+  // Try URL-based upload first (faster — Facebook downloads directly)
+  try {
+    const url = new URL(`${GRAPH_API}/${pageId}/photos`);
+    const body = new URLSearchParams();
+    body.set('url', imageUrl);
+    body.set('caption', caption);
+    body.set('access_token', pageAccessToken);
+
+    const res = await fetch(url.toString(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+
+    if (res.ok) return res.json();
+
+    const err = await res.json();
+    const errMsg = err.error?.message || res.statusText;
+    console.warn(`[FB-API] URL-based photo post failed: ${errMsg} — trying binary upload`);
+  } catch (urlErr) {
+    console.warn(`[FB-API] URL-based photo post error:`, urlErr);
+  }
+
+  // Fallback: download image and upload as binary (multipart/form-data)
+  console.log(`[FB-API] Binary fallback: downloading ${imageUrl}`);
+  const { blob, mimeType } = await downloadImageBlob(imageUrl);
+  const ext = mimeType.includes('png') ? 'png' : 'jpg';
+
+  const formData = new FormData();
+  formData.set('source', blob, `photo.${ext}`);
+  formData.set('caption', caption);
+  formData.set('access_token', pageAccessToken);
+
   const url = new URL(`${GRAPH_API}/${pageId}/photos`);
-
-  const body = new URLSearchParams();
-  body.set('url', imageUrl);
-  body.set('caption', caption);
-  body.set('access_token', pageAccessToken);
-
-  const res = await fetch(url.toString(), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
-  });
+  const res = await fetch(url.toString(), { method: 'POST', body: formData });
 
   if (!res.ok) {
     const err = await res.json();
-    throw new Error(`Photo post failed: ${err.error?.message || res.statusText}`);
+    throw new Error(`Photo post failed (binary): ${err.error?.message || res.statusText}`);
   }
   return res.json();
 }
 
-/** Upload unpublished photo (for carousel) */
+/** Upload unpublished photo (for carousel).
+ *  Strategy: try URL-based upload first, fall back to binary upload. */
 export async function uploadUnpublishedPhoto(
   pageId: string,
   pageAccessToken: string,
   imageUrl: string
 ): Promise<FBPhotoResponse> {
+  // Try URL-based upload first
+  try {
+    const url = new URL(`${GRAPH_API}/${pageId}/photos`);
+    const body = new URLSearchParams();
+    body.set('url', imageUrl);
+    body.set('published', 'false');
+    body.set('access_token', pageAccessToken);
+
+    const res = await fetch(url.toString(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+
+    if (res.ok) return res.json();
+
+    const err = await res.json();
+    const errMsg = err.error?.message || res.statusText;
+    console.warn(`[FB-API] URL-based photo upload failed: ${errMsg} — trying binary upload`);
+  } catch (urlErr) {
+    console.warn(`[FB-API] URL-based photo upload error:`, urlErr);
+  }
+
+  // Fallback: download and upload as binary
+  console.log(`[FB-API] Binary fallback: downloading ${imageUrl}`);
+  const { blob, mimeType } = await downloadImageBlob(imageUrl);
+  const ext = mimeType.includes('png') ? 'png' : 'jpg';
+
+  const formData = new FormData();
+  formData.set('source', blob, `photo.${ext}`);
+  formData.set('published', 'false');
+  formData.set('access_token', pageAccessToken);
+
   const url = new URL(`${GRAPH_API}/${pageId}/photos`);
-
-  const body = new URLSearchParams();
-  body.set('url', imageUrl);
-  body.set('published', 'false');
-  body.set('access_token', pageAccessToken);
-
-  const res = await fetch(url.toString(), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
-  });
+  const res = await fetch(url.toString(), { method: 'POST', body: formData });
 
   if (!res.ok) {
     const err = await res.json();
-    throw new Error(`Photo upload failed: ${err.error?.message || res.statusText}`);
+    throw new Error(`Photo upload failed (binary): ${err.error?.message || res.statusText}`);
   }
   return res.json();
 }

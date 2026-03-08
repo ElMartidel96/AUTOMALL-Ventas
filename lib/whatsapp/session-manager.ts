@@ -345,7 +345,8 @@ async function handleConfirmingState(
 
       // Show smart confirmation with publish buttons
       const sellerHandle = await getSellerHandle(link.wallet_address);
-      const { text, buttons } = templates.smartConfirmation(lang, filled, autoFilledFields, sellerHandle);
+      const sellerHasLoc = await checkSellerLocation(link.wallet_address);
+      const { text, buttons } = templates.smartConfirmation(lang, filled, autoFilledFields, sellerHandle, !sellerHasLoc);
       await safeSendInteractive(waPhoneNumberId, session.phone_number, text, buttons, accessToken);
       break;
     }
@@ -389,7 +390,8 @@ async function handleConfirmingState(
           const { text, buttons } = templates.missingRequiredMessage(lang, ef as unknown as ExtractedVehicle, missing);
           await safeSendInteractive(waPhoneNumberId, session.phone_number, text, buttons, accessToken);
         } else {
-          const { text, buttons } = templates.smartConfirmation(lang, ef as unknown as ExtractedVehicle, autoFilled, sellerHandle);
+          const hasLoc = await checkSellerLocation(link.wallet_address);
+          const { text, buttons } = templates.smartConfirmation(lang, ef as unknown as ExtractedVehicle, autoFilled, sellerHandle, !hasLoc);
           await safeSendInteractive(waPhoneNumberId, session.phone_number, text, buttons, accessToken);
         }
       }
@@ -494,6 +496,7 @@ async function runExtraction(
     console.log(`[WA] Auto-filled ${autoFilledFields.length} optional fields: ${autoFilledFields.join(', ')}`);
 
     const sellerHandle = await getSellerHandle(link.wallet_address);
+    const sellerHasLocation = await checkSellerLocation(link.wallet_address);
     await updateSession(session.id, {
       state: 'confirming',
       extracted_vehicle: { ...filled, _staged_images: stagedImages, _auto_filled: autoFilledFields },
@@ -501,7 +504,7 @@ async function runExtraction(
       expires_at: new Date(Date.now() + SESSION_EXPIRY_MS).toISOString(), // Restore normal expiry
     });
 
-    const { text, buttons } = templates.smartConfirmation(lang, filled, autoFilledFields, sellerHandle);
+    const { text, buttons } = templates.smartConfirmation(lang, filled, autoFilledFields, sellerHandle, !sellerHasLocation);
     await safeSendInteractive(waPhoneNumberId, session.phone_number, text, buttons, accessToken);
   } catch (error) {
     console.error(`[WA] Extraction failed:`, error);
@@ -908,5 +911,22 @@ async function getSellerHandle(walletAddress: string): Promise<string> {
     return (data as Record<string, unknown>)?.handle as string || 'dealer';
   } catch {
     return 'dealer';
+  }
+}
+
+async function checkSellerLocation(walletAddress: string): Promise<boolean> {
+  try {
+    const supabase = getTypedClient();
+    const { data } = await supabase
+      .from('sellers')
+      .select('city, state, latitude, longitude')
+      .eq('wallet_address', walletAddress.toLowerCase())
+      .single();
+    if (!data) return false;
+    const seller = data as Record<string, unknown>;
+    // Has location if city+state are set, OR lat/lng are set
+    return !!(seller.city && seller.state) || !!(seller.latitude && seller.longitude);
+  } catch {
+    return false;
   }
 }

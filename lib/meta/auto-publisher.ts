@@ -6,7 +6,9 @@
  *   active → sold   = "Sold" post
  *
  * Supports single-image and carousel (multi-image) posts.
- * Fire-and-forget — errors are logged but don't block the status change.
+ * Errors are logged to meta_publication_log AND re-thrown.
+ * Callers decide how to handle: inventory status endpoint uses fire-and-forget
+ * (.catch()), WhatsApp flow uses await to detect failures.
  */
 
 import { getTypedClient } from '@/lib/supabase/client';
@@ -129,6 +131,12 @@ export async function handleStatusChange(event: StatusChangeEvent): Promise<void
 
     const imageUrls = (images || []).map((img: { id: string; public_url: string; display_order: number }) => img.public_url);
 
+    console.log(`[MetaPublisher] ${postType} for ${vehicleId}: ${imageUrls.length} images`);
+    if (imageUrls.length > 0) {
+      console.log(`[MetaPublisher] Image URLs being sent to Facebook:`);
+      imageUrls.forEach((url: string, i: number) => console.log(`  [${i}] ${url}`));
+    }
+
     // Create pending log entry
     const { data: logEntry } = await supabase
       .from('meta_publication_log')
@@ -202,10 +210,9 @@ export async function handleStatusChange(event: StatusChangeEvent): Promise<void
   } catch (error) {
     console.error(`[MetaPublisher] Error publishing ${postType} for vehicle ${vehicleId}:`, error);
 
-    // Try to log the error
+    // Log the error to meta_publication_log
     try {
       const supabase = getTypedClient();
-      // Find the pending log entry and mark as failed
       await supabase
         .from('meta_publication_log')
         .update({
@@ -217,5 +224,10 @@ export async function handleStatusChange(event: StatusChangeEvent): Promise<void
     } catch {
       // Swallow — we already logged the primary error
     }
+
+    // Re-throw so callers can detect failure.
+    // Inventory status endpoint uses fire-and-forget (.catch()), so this is safe.
+    // WhatsApp flow awaits this call and needs to know if it failed.
+    throw error;
   }
 }
