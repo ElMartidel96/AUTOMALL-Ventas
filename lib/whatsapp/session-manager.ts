@@ -63,6 +63,13 @@ const RESTART_KEYWORDS = [
   '/reiniciar', '/restart', '/reset', '/nuevo', '/new',
 ];
 
+// Menu escape keywords — user can type these in ANY non-idle state to go back to main menu
+const MENU_ESCAPE_KEYWORDS = [
+  'menu', 'inicio', 'opciones', 'options', 'home',
+  'ayuda', 'help', 'volver', 'principal',
+  '/menu', '/ayuda', '/help', '/inicio',
+];
+
 // Watchdog: extraction sessions expire after 2 minutes (if function dies, session auto-resets)
 const EXTRACTION_WATCHDOG_MS = 2 * 60 * 1000;
 // Normal session expiry: 30 minutes of inactivity
@@ -145,6 +152,17 @@ export async function handleIncomingMessage(
       try { await cleanupStagingImages(session.image_urls || []); } catch { /* best-effort */ }
       await resetSession(session.id);
       await safeSend(waPhoneNumberId, session.phone_number, templates.restartConfirmation(lang), accessToken);
+      return;
+    }
+
+    // 5.5 Global menu escape — works in ANY state except idle
+    const stripped = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (session.state !== 'idle' && session.state !== 'error' && session.state !== 'complete' && MENU_ESCAPE_KEYWORDS.includes(stripped)) {
+      console.log(`[WA] Menu escape from state=${session.state}`);
+      await updateSession(session.id, { state: 'idle', command_context: null });
+      const { mainMenu } = await import('./command-templates');
+      const { text: menuText, buttons } = mainMenu(lang);
+      await safeSendInteractive(waPhoneNumberId, session.phone_number, menuText, buttons, accessToken);
       return;
     }
   }
@@ -266,11 +284,14 @@ async function handleIdleState(
       return;
     }
 
-    // No photos, no command matched → text might be vehicle details arriving before photos
-    // (WhatsApp sends text ~3s before forwarded photos). Text is already logged in wa_message_log.
-    // Show brief ack instead of menu — if photos arrive next, extraction will include this text.
-    console.log(`[WA] Text in idle, no photos, no command → brief ack (text saved for later extraction)`);
-    await safeSend(waPhoneNumberId, session.phone_number, templates.textReceivedWaitingPhotos(lang), accessToken);
+    // No photos, no command matched → show main menu so user knows their options
+    console.log(`[WA] Text in idle, no photos, no command → showing menu`);
+    const ct = await import('./command-templates');
+    const { text: menuText, buttons } = ct.mainMenu(lang);
+    const prefix = lang === 'es'
+      ? 'No entendi tu solicitud. Estas son tus opciones:\n\n'
+      : "I didn't understand your request. Here are your options:\n\n";
+    await safeSendInteractive(waPhoneNumberId, session.phone_number, prefix + menuText, buttons, accessToken);
   }
 }
 

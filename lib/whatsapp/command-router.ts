@@ -19,6 +19,11 @@ import * as ct from './command-templates';
 
 type Lang = 'en' | 'es';
 
+/** Strip diacritical marks (NFD) so "menú" matches "menu", "vehículos" matches "vehiculos", etc. */
+function stripAccents(text: string): string {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 export interface RouteResult {
   text: string;
   buttons?: WAButton[];
@@ -39,21 +44,37 @@ interface CommandDef {
 const COMMANDS: CommandDef[] = [
   {
     id: 'menu',
-    slash: ['/menu', '/ayuda', '/help'],
-    keywords_es: ['menu', 'ayuda', 'opciones'],
-    keywords_en: ['menu', 'help', 'options'],
+    slash: ['/menu', '/ayuda', '/help', '/inicio'],
+    keywords_es: ['menu', 'ayuda', 'opciones', 'inicio', 'volver', 'principal', 'que puedo hacer', 'que hay'],
+    keywords_en: ['menu', 'help', 'options', 'home', 'start', 'main', 'what can i do'],
   },
   {
     id: 'inventory',
-    slash: ['/mis_autos', '/inventario', '/inventory', '/vehicles'],
-    keywords_es: ['mis autos', 'inventario', 'mis vehiculos', 'mis carros'],
-    keywords_en: ['my vehicles', 'inventory', 'my cars', 'my listings'],
+    slash: ['/mis_autos', '/inventario', '/inventory', '/vehicles', '/autos', '/carros'],
+    keywords_es: [
+      'mis autos', 'inventario', 'mis vehiculos', 'mis carros',
+      'carros', 'autos', 'vehiculos', 'lista de carros', 'ver autos',
+      'ver inventario', 'listar', 'mis listados', 'ver carros',
+    ],
+    keywords_en: [
+      'my vehicles', 'inventory', 'my cars', 'my listings',
+      'cars', 'vehicles', 'list cars', 'view cars', 'view inventory',
+      'show cars', 'list vehicles',
+    ],
   },
   {
     id: 'leads',
     slash: ['/leads', '/clientes', '/clients'],
-    keywords_es: ['leads', 'clientes', 'contactos'],
-    keywords_en: ['leads', 'clients', 'contacts'],
+    keywords_es: [
+      'leads', 'clientes', 'contactos',
+      'compradores', 'interesados', 'clientes potenciales',
+      'mis clientes', 'mis leads', 'ver leads', 'ver clientes',
+    ],
+    keywords_en: [
+      'leads', 'clients', 'contacts',
+      'buyers', 'prospects', 'my clients', 'my leads',
+      'view leads', 'view clients',
+    ],
   },
   {
     id: 'new_lead',
@@ -64,20 +85,27 @@ const COMMANDS: CommandDef[] = [
   {
     id: 'stats',
     slash: ['/stats', '/resumen', '/summary', '/estadisticas'],
-    keywords_es: ['estadisticas', 'resumen', 'numeros', 'stats'],
-    keywords_en: ['stats', 'summary', 'numbers', 'statistics'],
+    keywords_es: [
+      'estadisticas', 'resumen', 'numeros', 'stats',
+      'como voy', 'ventas', 'reporte', 'como va', 'mi negocio',
+      'como estoy', 'resultados',
+    ],
+    keywords_en: [
+      'stats', 'summary', 'numbers', 'statistics',
+      'how am i doing', 'sales', 'report', 'my business', 'results',
+    ],
   },
   {
     id: 'facebook',
     slash: ['/fb', '/facebook'],
-    keywords_es: ['facebook', 'estado fb'],
-    keywords_en: ['facebook', 'fb status'],
+    keywords_es: ['facebook', 'estado fb', 'meta', 'mi pagina', 'pagina de facebook'],
+    keywords_en: ['facebook', 'fb status', 'meta', 'my page', 'facebook page'],
   },
   {
     id: 'referrals',
     slash: ['/referidos', '/codigo', '/referrals', '/code'],
-    keywords_es: ['referidos', 'codigo', 'mi enlace', 'mi codigo'],
-    keywords_en: ['referrals', 'code', 'my link', 'my code'],
+    keywords_es: ['referidos', 'codigo', 'mi enlace', 'mi codigo', 'codigo referido'],
+    keywords_en: ['referrals', 'code', 'my link', 'my code', 'referral code'],
   },
   {
     id: 'profile',
@@ -94,8 +122,14 @@ const COMMANDS: CommandDef[] = [
   {
     id: 'campaigns',
     slash: ['/campanas', '/campaigns', '/camp'],
-    keywords_es: ['campanas', 'campana', 'mis campanas', 'nueva campana'],
-    keywords_en: ['campaigns', 'campaign', 'my campaigns', 'new campaign'],
+    keywords_es: [
+      'campanas', 'campana', 'mis campanas', 'nueva campana',
+      'publicidad', 'anuncios', 'promocionar', 'facebook ads', 'ads', 'crear campana',
+    ],
+    keywords_en: [
+      'campaigns', 'campaign', 'my campaigns', 'new campaign',
+      'advertising', 'ads', 'promote', 'facebook ads', 'create campaign',
+    ],
   },
 ];
 
@@ -115,6 +149,7 @@ export async function routeCommand(
   buttonActionId: string | null
 ): Promise<RouteResult | null> {
   const lower = text.toLowerCase().trim();
+  const stripped = stripAccents(lower);
 
   // ── 1. Button actions (cmd_*) ──
   if (buttonActionId) {
@@ -122,7 +157,7 @@ export async function routeCommand(
   }
 
   // ── 2. Cancel sub-flow ──
-  if (currentContext && ['cancelar', 'cancel', 'menu', '/menu'].includes(lower)) {
+  if (currentContext && ['cancelar', 'cancel', 'menu', '/menu', 'inicio', 'volver'].includes(stripped)) {
     const { text: menuText, buttons } = ct.mainMenu(lang);
     return { text: ct.subFlowCancelled(lang) + '\n\n' + menuText, buttons, newContext: null };
   }
@@ -134,13 +169,13 @@ export async function routeCommand(
   }
 
   // ── 4. Slash commands ──
-  const slashMatch = matchSlashCommand(lower);
+  const slashMatch = matchSlashCommand(stripped);
   if (slashMatch) {
     return executeCommand(slashMatch, lang, link);
   }
 
   // ── 5. Keyword matching ──
-  const keywordMatch = matchKeyword(lower, lang);
+  const keywordMatch = matchKeyword(stripped, lang);
   if (keywordMatch) {
     return executeCommand(keywordMatch, lang, link);
   }
@@ -162,7 +197,7 @@ export async function routeCommand(
 
 function matchSlashCommand(text: string): string | null {
   // Exact match on slash command (ignore args after space)
-  const cmd = text.split(' ')[0];
+  const cmd = stripAccents(text.split(' ')[0]);
   for (const def of COMMANDS) {
     if (def.slash.includes(cmd)) return def.id;
   }
@@ -172,6 +207,7 @@ function matchSlashCommand(text: string): string | null {
 function matchKeyword(text: string, lang: Lang): string | null {
   // Sort by longest keyword first for greedy matching
   const allMatches: Array<{ id: string; length: number }> = [];
+  const strippedText = stripAccents(text);
 
   for (const def of COMMANDS) {
     const keywords = lang === 'es'
@@ -179,7 +215,7 @@ function matchKeyword(text: string, lang: Lang): string | null {
       : [...def.keywords_en, ...def.keywords_es];
 
     for (const kw of keywords) {
-      if (text.includes(kw)) {
+      if (strippedText.includes(stripAccents(kw))) {
         allMatches.push({ id: def.id, length: kw.length });
       }
     }

@@ -17,13 +17,13 @@ const APP_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || 'autosmall.org';
 
 export function mainMenu(lang: Lang): { text: string; buttons: WAButton[] } {
   const text = lang === 'es'
-    ? `*Autos MALL* — Menu Principal:\n\n📷 *Nuevo vehiculo* — Envia fotos + detalles\n🚗 *Mis autos* — Ver tu inventario\n👥 *Leads* — Gestionar clientes\n📊 *Stats* — Resumen de tu negocio\n\nMas: /referidos, /perfil, /fb, /soporte`
-    : `*Autos MALL* — Main Menu:\n\n📷 *New vehicle* — Send photos + details\n🚗 *My vehicles* — View your inventory\n👥 *Leads* — Manage clients\n📊 *Stats* — Business summary\n\nMore: /referrals, /profile, /fb, /support`;
+    ? `*Autos MALL* — Menu Principal:\n\n📷 *Nuevo vehiculo* — Envia fotos + detalles\n🚗 *Mis autos* — Ver tu inventario\n📢 *Campanas* — Campanas de Facebook\n👥 *Leads* — Gestionar clientes\n📊 *Stats* — Resumen de tu negocio\n\nMas: /referidos, /perfil, /fb, /soporte`
+    : `*Autos MALL* — Main Menu:\n\n📷 *New vehicle* — Send photos + details\n🚗 *My vehicles* — View your inventory\n📢 *Campaigns* — Facebook campaigns\n👥 *Leads* — Manage clients\n📊 *Stats* — Business summary\n\nMore: /referrals, /profile, /fb, /support`;
 
   const buttons: WAButton[] = [
     { type: 'reply', reply: { id: 'cmd_inventory', title: lang === 'es' ? 'Mis autos' : 'My vehicles' } },
+    { type: 'reply', reply: { id: 'cmd_campaigns', title: lang === 'es' ? 'Campanas' : 'Campaigns' } },
     { type: 'reply', reply: { id: 'cmd_leads', title: 'Leads' } },
-    { type: 'reply', reply: { id: 'cmd_stats', title: 'Stats' } },
   ];
 
   return { text, buttons };
