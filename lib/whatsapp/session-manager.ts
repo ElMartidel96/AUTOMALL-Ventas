@@ -254,16 +254,23 @@ async function handleIdleState(
       return;
     }
 
-    // No photos, no command matched → show main menu
-    const { mainMenu } = await import('./command-templates');
-    const { text: menuText, buttons } = mainMenu(lang);
-    await updateSession(session.id, { command_context: null });
-    await safeSendInteractive(waPhoneNumberId, session.phone_number, menuText, buttons, accessToken);
+    // No photos, no command matched → text might be vehicle details arriving before photos
+    // (WhatsApp sends text ~3s before forwarded photos). Text is already logged in wa_message_log.
+    // Show brief ack instead of menu — if photos arrive next, extraction will include this text.
+    console.log(`[WA] Text in idle, no photos, no command → brief ack (text saved for later extraction)`);
+    await safeSend(waPhoneNumberId, session.phone_number, templates.textReceivedWaitingPhotos(lang), accessToken);
   }
 }
 
-// Throttle: only ack every Nth photo to avoid WhatsApp rate limit (131056)
-const PHOTO_ACK_INTERVAL = 5;
+// Custom ack schedule to avoid WhatsApp rate limit (131056) while keeping seller informed
+// Ack at: 1, 5, 9, 13, then every 2 odd (15, 17, 19...)
+function shouldAckPhoto(count: number): boolean {
+  if (count === 1) return true;
+  if (count < 5) return false;
+  if (count === 5 || count === 9 || count === 13) return true;
+  if (count > 13 && count % 2 === 1) return true;
+  return false;
+}
 
 async function handleCollectingState(
   session: WASession,
@@ -286,9 +293,9 @@ async function handleCollectingState(
       return;
     }
 
-    // Throttled acks: only ack every 5th photo to prevent rate limit
+    // Throttled acks: custom schedule (1, 5, 9, 13, then every 2 odd) to prevent rate limit
     // (1st photo ack comes from handleIdleState when transitioning idle → collecting)
-    if (imageCount % PHOTO_ACK_INTERVAL === 0) {
+    if (shouldAckPhoto(imageCount)) {
       console.log(`[WA] → Photo ack #${imageCount} (collecting, throttled)`);
       await safeSend(waPhoneNumberId, session.phone_number, templates.photoReceived(link.language, imageCount), accessToken);
     } else {

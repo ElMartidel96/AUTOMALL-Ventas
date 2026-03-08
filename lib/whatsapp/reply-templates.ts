@@ -22,9 +22,20 @@ export function welcomeMessage(lang: Lang): string {
 }
 
 export function photoReceived(lang: Lang, count: number): string {
+  if (count === 1) {
+    return lang === 'es'
+      ? `Foto recibida! Sigue enviando fotos del vehiculo. Cuando termines, escribe los detalles (marca, modelo, ano, precio, millaje).`
+      : `Photo received! Keep sending photos of the vehicle. When done, write the details (brand, model, year, price, mileage).`;
+  }
   return lang === 'es'
-    ? `Foto recibida! (${count} ${count === 1 ? 'foto' : 'fotos'}). Envia mas fotos o escribe los detalles del vehiculo para continuar.`
-    : `Photo received! (${count} ${count === 1 ? 'photo' : 'photos'}). Send more photos or write the vehicle details to continue.`;
+    ? `${count} o mas fotos recibidas. Envia mas fotos o escribe los detalles del vehiculo para continuar.`
+    : `${count} or more photos received. Send more photos or write the vehicle details to continue.`;
+}
+
+export function textReceivedWaitingPhotos(lang: Lang): string {
+  return lang === 'es'
+    ? `Recibido! Ahora envia las fotos del vehiculo para crear tu listado.`
+    : `Got it! Now send the vehicle photos to create your listing.`;
 }
 
 export function maxImagesReached(lang: Lang, max: number = 20): string {

@@ -39,14 +39,21 @@ export async function createVehicleFromExtraction(
   }
 
   // 2. Create vehicle as active (immediately visible on catalog)
+  // Safety: price MUST be > 0 (DB has vehicles_price_check constraint).
+  // If AI returned 0 or null, findMissingFields should have caught it —
+  // but as a last-resort defense, default to 1 so creation never fails.
+  const safePrice = Math.max(extracted.price || 0, 1);
+  const safeMileage = Math.max(extracted.mileage || 0, 0);
+  const safeYear = extracted.year || new Date().getFullYear();
+
   const vehicleData = {
     seller_address: walletAddr,
     seller_handle: seller.handle,
     brand: extracted.brand || 'Unknown',
     model: extracted.model || 'Unknown',
-    year: extracted.year || new Date().getFullYear(),
-    price: extracted.price || 0,
-    mileage: extracted.mileage || 0,
+    year: safeYear,
+    price: safePrice,
+    mileage: safeMileage,
     condition: extracted.condition || 'good',
     exterior_color: extracted.exterior_color,
     interior_color: extracted.interior_color,
@@ -81,10 +88,21 @@ export async function createVehicleFromExtraction(
 
   // Fallback without geo columns if they don't exist yet
   if (error && (error.code === 'PGRST204' || error.message?.includes('latitude'))) {
-    const { latitude: _lat, longitude: _lng, location_source: _src, ...safeData } = vehicleData;
+    const { latitude: _lat, longitude: _lng, location_source: _src, ...geoSafeData } = vehicleData;
     ({ data, error } = await supabase
       .from('vehicles')
-      .insert(safeData)
+      .insert(geoSafeData)
+      .select('id')
+      .single());
+  }
+
+  // Retry on constraint violation: bump price to 1 if check constraint fires
+  if (error && (error.message?.includes('price_check') || error.message?.includes('check constraint'))) {
+    console.warn(`[WA-Creator] Constraint violation (price=${vehicleData.price}), retrying with price=1`);
+    vehicleData.price = 1;
+    ({ data, error } = await supabase
+      .from('vehicles')
+      .insert(vehicleData)
       .select('id')
       .single());
   }

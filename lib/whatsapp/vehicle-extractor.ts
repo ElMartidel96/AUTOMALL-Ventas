@@ -183,8 +183,8 @@ function validateExtraction(vehicle: ExtractedVehicle): ExtractedVehicle {
     v.year = null;
   }
 
-  // Price: must be positive and reasonable
-  if (v.price !== null && (v.price < 0 || v.price > 500000)) {
+  // Price: must be positive and reasonable (0 is invalid — DB has vehicles_price_check)
+  if (v.price !== null && (v.price <= 0 || v.price > 500000)) {
     v.price = null;
   }
 
@@ -232,10 +232,16 @@ export const REQUIRED_FIELDS: (keyof ExtractedVehicle)[] = [
   'mileage',
 ];
 
+// Numeric required fields where 0 is invalid (e.g. price=0 triggers DB constraint)
+const NUMERIC_REQUIRED: Set<keyof ExtractedVehicle> = new Set(['price', 'year', 'mileage']);
+
 export function findMissingFields(vehicle: ExtractedVehicle): string[] {
   return REQUIRED_FIELDS.filter((field) => {
     const value = vehicle[field];
-    return value === null || value === undefined;
+    if (value === null || value === undefined) return true;
+    // Treat 0 as missing for numeric fields (price=0 violates vehicles_price_check)
+    if (NUMERIC_REQUIRED.has(field) && value === 0) return true;
+    return false;
   });
 }
 
