@@ -20,6 +20,8 @@ import {
   updateFBObjectStatus,
   deleteFBCampaignObject,
   getAdInsights,
+  verifyAdAccountAccess,
+  verifyTokenPermissions,
 } from '@/lib/meta/facebook-api';
 import { buildTargeting } from '@/lib/meta/targeting-helper';
 import { buildFBCaption, generateAdCopy, buildLandingURL } from './ad-copy-generator';
@@ -686,21 +688,17 @@ export async function publishToFacebook(
     let adStatus: 'active' | 'organic_only' | 'error' | 'missing_requirements' = 'organic_only';
     let adMessage: string | null = null;
 
-    const adAccountId = (conn as MetaConnection & { ad_account_id?: string | null }).ad_account_id;
-    const hasAdsPermission = conn.permissions?.includes('ads_management');
+    const adAccountId = conn.ad_account_id;
     const hasBudget = campaign.daily_budget_usd && campaign.daily_budget_usd >= 1;
     const sellerPhone = seller.whatsapp || seller.phone;
+    const userToken = conn.fb_user_access_token;
 
     if (hasBudget) {
-      // User WANTS a paid ad — check requirements and report EXACTLY what's missing
+      // User WANTS a paid ad — check LOCAL requirements first
       const missingReqs: string[] = [];
-      const userToken = conn.fb_user_access_token;
 
       if (!adAccountId) {
         missingReqs.push('NO_AD_ACCOUNT: Reconecta Facebook en tu perfil para autorizar permisos de anuncios / Reconnect Facebook in your profile to authorize ad permissions');
-      }
-      if (!hasAdsPermission) {
-        missingReqs.push('NO_ADS_PERMISSION: Reconecta Facebook y aprueba el permiso "ads_management" / Reconnect Facebook and approve "ads_management" permission');
       }
       if (!userToken) {
         missingReqs.push('NO_USER_TOKEN: Reconecta Facebook — se necesita el token de usuario para el Marketing API / Reconnect Facebook — user token needed for Marketing API');
@@ -710,6 +708,38 @@ export async function publishToFacebook(
       }
       if (!fbPostId) {
         missingReqs.push('NO_POST: El post organico fallo, no se puede crear el ad sin el post base / Organic post failed, cannot create ad without base post');
+      }
+
+      // ── Pre-flight verification with Facebook API (LIVE checks) ──
+      if (missingReqs.length === 0 && userToken && adAccountId) {
+        console.log(`[CampaignService] Pre-flight check: token=${userToken.substring(0, 8)}... adAccount=${adAccountId}`);
+
+        // 10-PRE-A: Verify token permissions in real-time
+        const permCheck = await verifyTokenPermissions(userToken);
+        console.log(`[CampaignService] Token permissions: valid=${permCheck.tokenValid} granted=[${permCheck.granted.join(',')}] declined=[${permCheck.declined.join(',')}]`);
+
+        if (!permCheck.tokenValid) {
+          missingReqs.push('TOKEN_EXPIRED: El token de Facebook ha expirado. Reconecta Facebook en tu perfil / Facebook token expired. Reconnect Facebook in your profile');
+        } else if (!permCheck.granted.includes('ads_management')) {
+          const declinedNote = permCheck.declined.includes('ads_management')
+            ? ' (permiso RECHAZADO por el usuario)'
+            : ' (permiso NO otorgado — puede requerir App Review en developers.facebook.com)';
+          missingReqs.push(`NO_ADS_PERMISSION: El token no tiene permiso "ads_management"${declinedNote} / Token lacks "ads_management" permission${declinedNote}`);
+        }
+
+        // 10-PRE-B: Verify ad account is accessible
+        if (missingReqs.length === 0) {
+          const acctCheck = await verifyAdAccountAccess(adAccountId, userToken);
+          console.log(`[CampaignService] Ad account check: accessible=${acctCheck.accessible} status=${acctCheck.accountStatus} name="${acctCheck.name}"`);
+
+          if (!acctCheck.accessible) {
+            missingReqs.push(`AD_ACCOUNT_INACCESSIBLE: No se puede acceder al ad account ${adAccountId}. Error: ${acctCheck.error || 'unknown'} / Cannot access ad account`);
+          } else if (acctCheck.accountStatus !== 1) {
+            const statusMap: Record<number, string> = { 2: 'DISABLED', 3: 'UNSETTLED', 7: 'PENDING_RISK_REVIEW', 8: 'PENDING_SETTLEMENT', 9: 'IN_GRACE_PERIOD', 100: 'PENDING_CLOSURE', 101: 'CLOSED', 201: 'ANY_ACTIVE', 202: 'ANY_CLOSED' };
+            const statusName = statusMap[acctCheck.accountStatus] || `UNKNOWN(${acctCheck.accountStatus})`;
+            missingReqs.push(`AD_ACCOUNT_NOT_ACTIVE: Ad account status=${statusName}. Verifica en business.facebook.com / Check business.facebook.com`);
+          }
+        }
       }
 
       if (missingReqs.length > 0) {
@@ -723,7 +753,7 @@ export async function publishToFacebook(
           .update({ fb_ad_status: 'error' })
           .eq('id', campaignId);
       } else {
-        // All requirements met — CREATE the ad
+        // All pre-flight checks passed — CREATE the ad
         // IMPORTANT: Marketing API uses USER token (not page token)
         try {
           await supabase

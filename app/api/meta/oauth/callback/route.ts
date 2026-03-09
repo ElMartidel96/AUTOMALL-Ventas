@@ -89,16 +89,21 @@ export async function GET(request: NextRequest) {
     } catch {
       grantedPermissions = ['pages_manage_posts', 'pages_read_engagement', 'pages_show_list'];
     }
+    console.log(`[MetaOAuth] Granted permissions: [${grantedPermissions.join(', ')}]`);
+    console.log(`[MetaOAuth] User token (first 8): ${longLivedUserToken.substring(0, 8)}...`);
 
     // Discover ad account (best-effort — only if ads_management was granted)
     let adAccountId: string | null = null;
     if (grantedPermissions.includes('ads_management')) {
       try {
         const adAccounts = await getUserAdAccounts(longLivedUserToken);
+        console.log(`[MetaOAuth] Ad accounts found: ${adAccounts.length}`, adAccounts.map(a => `${a.id}(status=${a.account_status})`));
         if (adAccounts.length > 0) adAccountId = adAccounts[0].id;
-      } catch {
-        // OK — organic only mode, no ad account available
+      } catch (adErr) {
+        console.error(`[MetaOAuth] Ad account discovery failed:`, adErr);
       }
+    } else {
+      console.warn(`[MetaOAuth] ads_management NOT granted — ad account discovery skipped`);
     }
 
     // If only one page, connect it directly

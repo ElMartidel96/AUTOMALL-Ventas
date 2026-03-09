@@ -27,6 +27,48 @@ const APP_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || 'autosmall.org';
 const CALLBACK_URL = `https://${APP_DOMAIN}/api/meta/oauth/callback`;
 
 // ─────────────────────────────────────────────
+// Error Extraction — FULL Facebook error details
+// ─────────────────────────────────────────────
+
+interface FBAPIError {
+  message: string;
+  type?: string;
+  code?: number;
+  error_subcode?: number;
+  fbtrace_id?: string;
+  error_user_title?: string;
+  error_user_msg?: string;
+}
+
+function _extractFBError(responseBody: unknown): FBAPIError {
+  const body = responseBody as { error?: Record<string, unknown> };
+  const e = body?.error || {};
+  return {
+    message: (e.message as string) || 'Unknown error',
+    type: (e.type as string) || undefined,
+    code: (e.code as number) || undefined,
+    error_subcode: (e.error_subcode as number) || undefined,
+    fbtrace_id: (e.fbtrace_id as string) || undefined,
+    error_user_title: (e.error_user_title as string) || undefined,
+    error_user_msg: (e.error_user_msg as string) || undefined,
+  };
+}
+
+function _formatFBError(prefix: string, fbErr: FBAPIError): string {
+  const parts = [prefix];
+  parts.push(fbErr.message);
+  if (fbErr.code) parts.push(`(code=${fbErr.code})`);
+  if (fbErr.error_subcode) parts.push(`(subcode=${fbErr.error_subcode})`);
+  if (fbErr.type) parts.push(`[${fbErr.type}]`);
+  if (fbErr.error_user_msg) parts.push(`— ${fbErr.error_user_msg}`);
+  return parts.join(' ');
+}
+
+function _logFBError(tag: string, fbErr: FBAPIError): void {
+  console.error(`[FB-API] ${tag}:`, JSON.stringify(fbErr));
+}
+
+// ─────────────────────────────────────────────
 // OAuth Token Exchange
 // ─────────────────────────────────────────────
 
@@ -350,6 +392,7 @@ const FB_PERMISSIONS = [
   'pages_show_list',
   'ads_management',
   'ads_read',
+  'business_management',
 ];
 
 export function buildOAuthUrl(state: string): string {
@@ -416,11 +459,79 @@ export async function getUserAdAccounts(userAccessToken: string): Promise<FBAdAc
   const res = await fetch(url.toString());
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(`Failed to get ad accounts: ${(err as { error?: { message?: string } }).error?.message || res.statusText}`);
+    const fbErr = _extractFBError(err);
+    _logFBError('getUserAdAccounts', fbErr);
+    throw new Error(_formatFBError('Failed to get ad accounts:', fbErr));
   }
   const data = await res.json();
   // Only return active accounts (account_status === 1)
   return ((data.data || []) as FBAdAccount[]).filter(a => a.account_status === 1);
+}
+
+/**
+ * Pre-flight check: verify the token can access the ad account.
+ * Returns diagnostic info about the ad account.
+ */
+export async function verifyAdAccountAccess(
+  adAccountId: string,
+  accessToken: string
+): Promise<{
+  accessible: boolean;
+  accountStatus: number;
+  name: string;
+  error?: string;
+}> {
+  const accountId = adAccountId.replace(/^act_/, '');
+  const url = new URL(`${GRAPH_API}/act_${accountId}`);
+  url.searchParams.set('fields', 'id,name,account_status,disable_reason,funding_source_details');
+  url.searchParams.set('access_token', accessToken);
+
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    const fbErr = _extractFBError(err);
+    _logFBError('verifyAdAccountAccess', fbErr);
+    return {
+      accessible: false,
+      accountStatus: 0,
+      name: '',
+      error: _formatFBError('', fbErr),
+    };
+  }
+
+  const data = await res.json();
+  return {
+    accessible: true,
+    accountStatus: data.account_status || 0,
+    name: data.name || '',
+  };
+}
+
+/**
+ * Pre-flight check: verify token permissions in real-time.
+ * Returns which of the requested permissions are actually granted.
+ */
+export async function verifyTokenPermissions(
+  accessToken: string
+): Promise<{ granted: string[]; declined: string[]; tokenValid: boolean }> {
+  const url = new URL(`${GRAPH_API}/me/permissions`);
+  url.searchParams.set('access_token', accessToken);
+
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    const fbErr = _extractFBError(err);
+    _logFBError('verifyTokenPermissions', fbErr);
+    // Token invalid or expired
+    return { granted: [], declined: [], tokenValid: false };
+  }
+
+  const data = await res.json();
+  const perms = (data.data || []) as Array<{ permission: string; status: string }>;
+  const granted = perms.filter(p => p.status === 'granted').map(p => p.permission);
+  const declined = perms.filter(p => p.status === 'declined').map(p => p.permission);
+
+  return { granted, declined, tokenValid: true };
 }
 
 /** Create a Facebook campaign with OUTCOME_ENGAGEMENT objective */
@@ -447,7 +558,9 @@ export async function createFBCampaign(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(`Create campaign failed: ${(err as { error?: { message?: string } }).error?.message || res.statusText}`);
+    const fbErr = _extractFBError(err);
+    _logFBError(`createFBCampaign(act_${accountId})`, fbErr);
+    throw new Error(_formatFBError('Create campaign failed:', fbErr));
   }
   return res.json();
 }
@@ -496,7 +609,9 @@ export async function createFBAdSet(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(`Create adset failed: ${(err as { error?: { message?: string } }).error?.message || res.statusText}`);
+    const fbErr = _extractFBError(err);
+    _logFBError(`createFBAdSet(act_${accountId})`, fbErr);
+    throw new Error(_formatFBError('Create adset failed:', fbErr));
   }
   return res.json();
 }
@@ -523,7 +638,9 @@ export async function createFBAdCreative(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(`Create ad creative failed: ${(err as { error?: { message?: string } }).error?.message || res.statusText}`);
+    const fbErr = _extractFBError(err);
+    _logFBError(`createFBAdCreative(act_${accountId})`, fbErr);
+    throw new Error(_formatFBError('Create ad creative failed:', fbErr));
   }
   return res.json();
 }
@@ -552,7 +669,9 @@ export async function createFBAd(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(`Create ad failed: ${(err as { error?: { message?: string } }).error?.message || res.statusText}`);
+    const fbErr = _extractFBError(err);
+    _logFBError(`createFBAd(act_${accountId})`, fbErr);
+    throw new Error(_formatFBError('Create ad failed:', fbErr));
   }
   return res.json();
 }
@@ -577,7 +696,9 @@ export async function updateFBObjectStatus(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(`Update status failed for ${objectId}: ${(err as { error?: { message?: string } }).error?.message || res.statusText}`);
+    const fbErr = _extractFBError(err);
+    _logFBError(`updateFBObjectStatus(${objectId}, ${status})`, fbErr);
+    throw new Error(_formatFBError(`Update status failed for ${objectId}:`, fbErr));
   }
 }
 
@@ -594,15 +715,16 @@ export async function deleteFBCampaignObject(
   if (res.ok) return;
 
   const err = await res.json().catch(() => ({ error: { code: 0, message: res.statusText } }));
-  const code = (err as { error?: { code?: number } }).error?.code;
+  const fbErr = _extractFBError(err);
 
   // Already deleted — treat as success
-  if (code === 100 || code === 803) {
-    console.log(`[FB-API] Campaign ${campaignId} already deleted (code ${code})`);
+  if (fbErr.code === 100 || fbErr.code === 803) {
+    console.log(`[FB-API] Campaign ${campaignId} already deleted (code ${fbErr.code})`);
     return;
   }
 
-  throw new Error(`Delete campaign failed: ${(err as { error?: { message?: string } }).error?.message || res.statusText}`);
+  _logFBError(`deleteFBCampaignObject(${campaignId})`, fbErr);
+  throw new Error(_formatFBError('Delete campaign failed:', fbErr));
 }
 
 /** Get ad insights (spend, impressions, reach, clicks, conversations) */
@@ -617,7 +739,8 @@ export async function getAdInsights(
   const res = await fetch(url.toString());
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    console.warn(`[FB-API] Ad insights failed for ${adId}: ${(err as { error?: { message?: string } }).error?.message || res.statusText}`);
+    const fbErr = _extractFBError(err);
+    console.warn(`[FB-API] Ad insights failed for ${adId}:`, JSON.stringify(fbErr));
     return null;
   }
 
