@@ -324,7 +324,7 @@ function UserDropdown({ fullWidth = false }: { fullWidth?: boolean }) {
   const displayName = user?.display_name || profile?.display_name || displayAddress;
 
   const handleCopyReferral = async () => {
-    const link = generateLink() || `${window.location.origin}?ref=${referralCode || ''}`;
+    const link = generateLink() || `${window.location.origin}/ref/${referralCode || ''}`;
     if (link) {
       await navigator.clipboard.writeText(link);
       setCopied(true);

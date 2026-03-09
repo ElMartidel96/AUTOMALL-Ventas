@@ -60,8 +60,8 @@ function deleteCookie(name: string) {
 
 // Referral code validation
 function isValidReferralCode(code: string): boolean {
-  // CG-XXXXXX format or custom alphanumeric 4-20 chars
-  return /^CG-[A-F0-9]{6}$/i.test(code) || /^[A-Za-z0-9]{4,20}$/.test(code);
+  // AM-XXXXXX format (AutoMALL) or legacy CG-XXXXXX, or custom alphanumeric 4-20 chars
+  return /^(AM|CG)-[A-F0-9]{6}$/i.test(code) || /^[A-Za-z0-9]{4,20}$/.test(code);
 }
 
 interface ReferralTrackerProps {

@@ -1,10 +1,8 @@
 /**
- * 🤝 REFERRAL HOOKS
+ * Referral Hooks
  *
- * React hooks for the CryptoGift DAO referral system.
+ * React hooks for the AutoMALL referral system.
  * Provides easy-to-use interfaces for referral management.
- *
- * @version 1.0.0
  */
 
 'use client';
@@ -440,7 +438,7 @@ export function useRegisterReferralConversion() {
 }
 
 /**
- * Hook to activate a referral when they receive CGC tokens
+ * Hook to activate a referral
  */
 export function useActivateReferral() {
   const queryClient = useQueryClient();
@@ -493,14 +491,15 @@ export function useActivationStatus(wallet?: string) {
  * Hook to generate referral link with UTM parameters
  */
 export function useReferralLink(code?: string) {
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://cryptogift-dao.com';
+  const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || 'autosmall.org';
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : `https://${appDomain}`;
 
   const generateLink = useCallback(
     (options?: { source?: string; medium?: string; campaign?: string }) => {
       if (!code) return '';
 
-      const url = new URL(baseUrl);
-      url.searchParams.set('ref', code);
+      // Use clean /ref/CODE path format
+      const url = new URL(`${baseUrl}/ref/${code}`);
 
       if (options?.source) url.searchParams.set('utm_source', options.source);
       if (options?.medium) url.searchParams.set('utm_medium', options.medium);
@@ -525,7 +524,7 @@ export function useReferralLink(code?: string) {
 
   const shareOnTwitter = useCallback(() => {
     if (!links?.twitter) return;
-    const text = `Join CryptoGift DAO and earn CGC tokens! Use my referral link:`;
+    const text = `Check out Autos MALL — the best deals on cars in Houston! Use my personal link:`;
     window.open(
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(links.twitter)}`,
       '_blank'
@@ -534,7 +533,7 @@ export function useReferralLink(code?: string) {
 
   const shareOnTelegram = useCallback(() => {
     if (!links?.telegram) return;
-    const text = `Join CryptoGift DAO and earn CGC tokens!`;
+    const text = `Check out Autos MALL — the best deals on cars in Houston!`;
     window.open(
       `https://t.me/share/url?url=${encodeURIComponent(links.telegram)}&text=${encodeURIComponent(text)}`,
       '_blank'

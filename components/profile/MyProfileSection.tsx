@@ -98,7 +98,7 @@ export function MyProfileSection({
         {/* Referral Link CopyPanel */}
         <CopyPanel
           label={t('myReferralLink')}
-          value={referralCode ? `autosmall.org?ref=${referralCode}` : t('generating')}
+          value={referralCode ? `autosmall.org/ref/${referralCode}` : t('generating')}
           fullUrl={referralLink || ''}
           icon={<Link2 className="w-4 h-4" />}
           disabled={!referralLink}

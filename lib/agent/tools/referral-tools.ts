@@ -45,7 +45,7 @@ async function getMyReferralCode(_input: z.infer<typeof GetMyReferralCodeInput>,
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://autosmall.org'
   return {
     code: data.code,
-    link: `${baseUrl}?ref=${data.code}`,
+    link: `${baseUrl}/ref/${data.code}`,
     total_referrals: data.total_referrals,
     click_count: data.click_count,
     conversion_rate: data.conversion_rate,

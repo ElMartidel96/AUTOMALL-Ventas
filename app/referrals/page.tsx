@@ -187,8 +187,8 @@ function ReferralsDashboard({ isBuyer, isDealer }: { isBuyer: boolean; isDealer:
   // Use API-generated code or fallback to generated code
   const referralCode = code.code || generateReferralCode(address || '');
   const referralLink = links.links?.default || (typeof window !== 'undefined'
-    ? `${window.location.origin}?ref=${referralCode}`
-    : `https://www.${APP_DOMAIN}?ref=${referralCode}`);
+    ? `${window.location.origin}/ref/${referralCode}`
+    : `https://${APP_DOMAIN}/ref/${referralCode}`);
 
   const navigateToTab = useCallback((tab: typeof activeTab) => {
     // Buyers don't have network or rewards tabs — redirect to history
@@ -316,15 +316,15 @@ function ReferralsDashboard({ isBuyer, isDealer }: { isBuyer: boolean; isDealer:
 
             {/* Share Buttons */}
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" className="dark:border-slate-600">
+              <Button variant="outline" size="sm" className="dark:border-slate-600" onClick={() => links.shareOnTwitter?.()}>
                 <Twitter className="h-4 w-4 mr-2" />
                 {t('share.twitter')}
               </Button>
-              <Button variant="outline" size="sm" className="dark:border-slate-600">
+              <Button variant="outline" size="sm" className="dark:border-slate-600" onClick={() => links.shareOnTelegram?.()}>
                 <Send className="h-4 w-4 mr-2" />
                 {t('share.telegram')}
               </Button>
-              <Button variant="outline" size="sm" className="dark:border-slate-600">
+              <Button variant="outline" size="sm" className="dark:border-slate-600" onClick={() => handleCopy(referralLink)}>
                 <MessageCircle className="h-4 w-4 mr-2" />
                 {t('share.discord')}
               </Button>
