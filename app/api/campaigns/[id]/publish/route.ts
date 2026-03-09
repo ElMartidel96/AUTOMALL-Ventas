@@ -50,6 +50,7 @@ export async function POST(
       permalink: result.permalink,
       fb_ad_id: result.fbAdId,
       ad_status: result.adStatus,
+      ad_message: result.adMessage,
     });
   } catch (err) {
     console.error('[API] POST /api/campaigns/[id]/publish error:', err);

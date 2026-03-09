@@ -14,6 +14,112 @@ const SUPPORT_WA = 'https://wa.me/12814680109';
 const SUPPORT_NAME = 'Rafael Gonzalez';
 
 // ─────────────────────────────────────────────
+// Ad Error Diagnosis — classifies FB API errors
+// ─────────────────────────────────────────────
+
+function _diagnoseAdError(errorMsg: string, lang: Lang): { diagnosis: string; isSystemError: boolean } {
+  const lower = errorMsg.toLowerCase();
+
+  // Token / permission errors — user can fix
+  if (lower.includes('oauthexception') || lower.includes('access token') || lower.includes('token has expired')) {
+    return {
+      diagnosis: lang === 'es'
+        ? '🔑 Tu token de Facebook expiro o no tiene permisos.\n\n👉 Ve a tu perfil web > Facebook & WhatsApp > Desconecta y reconecta.'
+        : '🔑 Your Facebook token expired or lacks permissions.\n\n👉 Go to your web profile > Facebook & WhatsApp > Disconnect and reconnect.',
+      isSystemError: false,
+    };
+  }
+
+  // Ad account disabled/restricted
+  if (lower.includes('ad account') && (lower.includes('disabled') || lower.includes('unsettled') || lower.includes('restricted'))) {
+    return {
+      diagnosis: lang === 'es'
+        ? '🚫 Tu cuenta de anuncios de Facebook esta deshabilitada o restringida.\n\n👉 Ve a business.facebook.com > Configuracion > Cuentas de anuncios para revisar el estado.'
+        : '🚫 Your Facebook ad account is disabled or restricted.\n\n👉 Go to business.facebook.com > Settings > Ad accounts to check its status.',
+      isSystemError: false,
+    };
+  }
+
+  // Payment method missing
+  if (lower.includes('payment') || lower.includes('billing') || lower.includes('funding')) {
+    return {
+      diagnosis: lang === 'es'
+        ? '💳 Tu cuenta de anuncios no tiene metodo de pago.\n\n👉 Ve a Facebook Ads Manager > Configuracion de pago > Agrega tarjeta o PayPal.'
+        : '💳 Your ad account has no payment method.\n\n👉 Go to Facebook Ads Manager > Payment settings > Add a card or PayPal.',
+      isSystemError: false,
+    };
+  }
+
+  // Daily budget too low
+  if (lower.includes('budget') || lower.includes('minimum') || lower.includes('daily_budget')) {
+    return {
+      diagnosis: lang === 'es'
+        ? '💰 El presupuesto diario es menor al minimo de Facebook ($1 USD).\n\n👉 Crea la campana con un presupuesto mas alto.'
+        : '💰 The daily budget is below Facebook minimum ($1 USD).\n\n👉 Create the campaign with a higher budget.',
+      isSystemError: false,
+    };
+  }
+
+  // Page not published or not eligible
+  if (lower.includes('page') && (lower.includes('not published') || lower.includes('not eligible') || lower.includes('unpublished'))) {
+    return {
+      diagnosis: lang === 'es'
+        ? '📄 Tu pagina de Facebook no esta publicada o no es elegible para anuncios.\n\n👉 Ve a Facebook > Tu pagina > Configuracion > Asegurate de que este publicada.'
+        : '📄 Your Facebook page is not published or not eligible for ads.\n\n👉 Go to Facebook > Your page > Settings > Make sure it is published.',
+      isSystemError: false,
+    };
+  }
+
+  // Targeting too narrow or invalid
+  if (lower.includes('targeting') || lower.includes('audience') || lower.includes('reach')) {
+    return {
+      diagnosis: lang === 'es'
+        ? '🎯 El area de targeting es demasiado especifica o hay un error en la configuracion de audiencia.\n\n👉 Contacta soporte para ajustar la configuracion.'
+        : '🎯 The targeting area is too narrow or there is an audience configuration error.\n\n👉 Contact support to adjust the configuration.',
+      isSystemError: true,
+    };
+  }
+
+  // Rate limit
+  if (lower.includes('rate limit') || lower.includes('too many') || lower.includes('throttl')) {
+    return {
+      diagnosis: lang === 'es'
+        ? '⏳ Facebook tiene un limite de solicitudes. Espera unos minutos e intenta de nuevo.'
+        : '⏳ Facebook has a rate limit. Wait a few minutes and try again.',
+      isSystemError: false,
+    };
+  }
+
+  // Object story ID / creative issues — system error
+  if (lower.includes('object_story_id') || lower.includes('creative') || lower.includes('story')) {
+    return {
+      diagnosis: lang === 'es'
+        ? '⚙️ Error interno al vincular el post organico con el anuncio pagado (object_story_id).\nEsto es un error del sistema.'
+        : '⚙️ Internal error linking organic post with paid ad (object_story_id).\nThis is a system error.',
+      isSystemError: true,
+    };
+  }
+
+  // WhatsApp number not verified
+  if (lower.includes('whatsapp') || lower.includes('phone_number')) {
+    return {
+      diagnosis: lang === 'es'
+        ? '📱 El numero de WhatsApp no esta verificado en tu cuenta de anuncios de Facebook.\n\n👉 Ve a Facebook Business > WhatsApp accounts para verificar tu numero.'
+        : '📱 The WhatsApp number is not verified in your Facebook ad account.\n\n👉 Go to Facebook Business > WhatsApp accounts to verify your number.',
+      isSystemError: false,
+    };
+  }
+
+  // Unknown / generic — system error, send to support
+  return {
+    diagnosis: lang === 'es'
+      ? `⚙️ Error desconocido de Facebook:\n"${errorMsg.slice(0, 200)}"\n\nEsto puede ser un error temporal o un problema de configuracion.`
+      : `⚙️ Unknown Facebook error:\n"${errorMsg.slice(0, 200)}"\n\nThis may be a temporary error or a configuration issue.`,
+    isSystemError: true,
+  };
+}
+
+// ─────────────────────────────────────────────
 // Main Menu
 // ─────────────────────────────────────────────
 
@@ -759,8 +865,9 @@ export function campaignPublished(
   name: string,
   permalink: string | null,
   landingSlug: string,
-  adStatus?: 'active' | 'organic_only' | 'error',
-  dailyBudget?: number | null
+  adStatus?: 'active' | 'organic_only' | 'error' | 'missing_requirements',
+  dailyBudget?: number | null,
+  adMessage?: string | null
 ): string {
   const landingUrl = `autosmall.org/w/${landingSlug}`;
   const fbLink = permalink || 'Facebook';
@@ -769,16 +876,62 @@ export function campaignPublished(
   if (adStatus === 'active') {
     const budgetStr = dailyBudget ? `$${dailyBudget}` : '$?';
     adNote = lang === 'es'
-      ? `\n💰 Ad pagado ACTIVO — ${budgetStr}/dia en Houston area`
-      : `\n💰 Paid ad ACTIVE — ${budgetStr}/day in Houston area`;
+      ? `\n\n💰 *ANUNCIO PAGADO ACTIVO*\n${budgetStr}/dia — Houston area\nRevisa en Facebook Ads Manager.`
+      : `\n\n💰 *PAID AD ACTIVE*\n${budgetStr}/day — Houston area\nCheck in Facebook Ads Manager.`;
   } else if (adStatus === 'organic_only') {
+    // No budget set — just organic, not an error
     adNote = lang === 'es'
-      ? '\n📋 Post organico (sin presupuesto para ad)'
-      : '\n📋 Organic post (no budget for ad)';
+      ? '\n\n📋 Post organico publicado (sin presupuesto asignado)'
+      : '\n\n📋 Organic post published (no budget assigned)';
   } else if (adStatus === 'error') {
+    // FB API failed — diagnose the cause and give actionable steps
+    const errorMsg = adMessage?.replace('FB_API_ERROR: ', '') || '';
+    const { diagnosis, isSystemError } = _diagnoseAdError(errorMsg, lang);
+
+    if (isSystemError) {
+      // System/internal error — pre-build support message with report
+      const reportText = encodeURIComponent(
+        `Error con anuncio pagado en campana "${name}".\n\nError: ${errorMsg}\n\nCampana: ${landingUrl}\nPresupuesto: $${dailyBudget || '?'}/dia`
+      );
+      const supportLink = `https://wa.me/12814680109?text=${reportText}`;
+
+      adNote = lang === 'es'
+        ? `\n\n❌ *ANUNCIO PAGADO FALLO*\n${diagnosis}\n\n📞 Reporta este error a soporte (mensaje pre-armado):\n${supportLink}`
+        : `\n\n❌ *PAID AD FAILED*\n${diagnosis}\n\n📞 Report this error to support (pre-filled message):\n${supportLink}`;
+    } else {
+      // User-fixable error — give clear instructions
+      adNote = lang === 'es'
+        ? `\n\n❌ *ANUNCIO PAGADO FALLO*\n${diagnosis}\n\n🔄 Corrige el problema y vuelve a publicar.`
+        : `\n\n❌ *PAID AD FAILED*\n${diagnosis}\n\n🔄 Fix the issue and publish again.`;
+    }
+  } else if (adStatus === 'missing_requirements') {
+    // Prerequisites missing — tell user EXACTLY what to fix
+    const fixes: string[] = [];
+    if (adMessage?.includes('NO_AD_ACCOUNT')) {
+      fixes.push(lang === 'es'
+        ? '1️⃣ Ve a tu perfil web > Facebook & WhatsApp\n2️⃣ Desconecta y vuelve a conectar Facebook\n3️⃣ Aprueba TODOS los permisos incluyendo "Gestion de anuncios"\n4️⃣ Tu cuenta de Facebook debe tener una cuenta de anuncios activa'
+        : '1️⃣ Go to your web profile > Facebook & WhatsApp\n2️⃣ Disconnect and reconnect Facebook\n3️⃣ Approve ALL permissions including "Ads management"\n4️⃣ Your Facebook account must have an active ad account');
+    }
+    if (adMessage?.includes('NO_ADS_PERMISSION')) {
+      fixes.push(lang === 'es'
+        ? '1️⃣ Ve a tu perfil web > Facebook & WhatsApp\n2️⃣ Desconecta y vuelve a conectar\n3️⃣ Cuando Facebook pida permisos, asegurate de aprobar "Gestion de anuncios (ads_management)"'
+        : '1️⃣ Go to your web profile > Facebook & WhatsApp\n2️⃣ Disconnect and reconnect\n3️⃣ When Facebook asks for permissions, make sure to approve "Ads management (ads_management)"');
+    }
+    if (adMessage?.includes('NO_PHONE')) {
+      fixes.push(lang === 'es'
+        ? '1️⃣ Escribe /perfil\n2️⃣ Edita tu telefono/WhatsApp\n3️⃣ Los anuncios Click-to-WhatsApp necesitan un numero para recibir mensajes'
+        : '1️⃣ Type /profile\n2️⃣ Edit your phone/WhatsApp\n3️⃣ Click-to-WhatsApp ads need a number to receive messages');
+    }
+    if (adMessage?.includes('NO_POST')) {
+      fixes.push(lang === 'es'
+        ? '🔄 El post organico no se creo. Intenta publicar de nuevo.'
+        : '🔄 The organic post was not created. Try publishing again.');
+    }
+    const fixList = fixes.join('\n\n');
+
     adNote = lang === 'es'
-      ? '\n⚠️ Post organico OK, anuncio pagado fallo'
-      : '\n⚠️ Organic post OK, paid ad failed';
+      ? `\n\n❌ *ANUNCIO PAGADO NO CREADO*\nTienes presupuesto de $${dailyBudget}/dia pero faltan requisitos:\n\n${fixList}`
+      : `\n\n❌ *PAID AD NOT CREATED*\nYou have a $${dailyBudget}/day budget but requirements are missing:\n\n${fixList}`;
   }
 
   return lang === 'es'

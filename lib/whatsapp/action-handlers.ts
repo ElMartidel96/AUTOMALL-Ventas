@@ -1065,7 +1065,7 @@ export async function handleCampaignCreateStep(
           try {
             const result = await publishToFacebook(campaign.id, link.wallet_address);
             return {
-              text: ct.campaignPublished(lang, campaignName, result.permalink, campaign.landing_slug || '', result.adStatus, (data.budget as number) || null),
+              text: ct.campaignPublished(lang, campaignName, result.permalink, campaign.landing_slug || '', result.adStatus, (data.budget as number) || null, result.adMessage),
               newContext: null,
             };
           } catch (fbErr) {
@@ -1108,7 +1108,7 @@ export async function handleCampaignPublish(
 
     const result = await publishToFacebook(campaignId, link.wallet_address);
     return {
-      text: ct.campaignPublished(lang, campaign.name, result.permalink, campaign.landing_slug || '', result.adStatus, campaign.daily_budget_usd),
+      text: ct.campaignPublished(lang, campaign.name, result.permalink, campaign.landing_slug || '', result.adStatus, campaign.daily_budget_usd, result.adMessage),
       newContext: null,
     };
   } catch (err) {

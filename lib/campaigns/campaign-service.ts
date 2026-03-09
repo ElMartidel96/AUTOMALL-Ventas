@@ -552,7 +552,8 @@ export async function publishToFacebook(
   fbPostId: string | null;
   permalink: string | null;
   fbAdId: string | null;
-  adStatus: 'active' | 'organic_only' | 'error';
+  adStatus: 'active' | 'organic_only' | 'error' | 'missing_requirements';
+  adMessage: string | null;
 }> {
   const supabase = getTypedClient();
   const wallet = walletAddress.toLowerCase();
@@ -568,6 +569,7 @@ export async function publishToFacebook(
       permalink: campaign.fb_permalink_url,
       fbAdId: campaign.fb_ad_id || null,
       adStatus: campaign.fb_ad_status === 'active' ? 'active' : campaign.fb_ad_status === 'error' ? 'error' : 'organic_only',
+      adMessage: null,
     };
   }
 
@@ -677,92 +679,120 @@ export async function publishToFacebook(
 
     console.log(`[CampaignService] Published campaign ${campaignId} → FB post ${fbPostId}`);
 
-    // ── 10. Paid ad creation (hybrid: organic post → ad creative) ──
+    // ── 10. Paid ad creation — ALWAYS attempt if budget is set ──
     let fbAdId: string | null = null;
-    let adStatus: 'active' | 'organic_only' | 'error' = 'organic_only';
+    let adStatus: 'active' | 'organic_only' | 'error' | 'missing_requirements' = 'organic_only';
+    let adMessage: string | null = null;
 
-    const hasAdAccount = !!(conn as MetaConnection & { ad_account_id?: string | null }).ad_account_id;
     const adAccountId = (conn as MetaConnection & { ad_account_id?: string | null }).ad_account_id;
     const hasAdsPermission = conn.permissions?.includes('ads_management');
     const hasBudget = campaign.daily_budget_usd && campaign.daily_budget_usd >= 1;
     const sellerPhone = seller.whatsapp || seller.phone;
 
-    if (hasAdAccount && adAccountId && hasAdsPermission && hasBudget && sellerPhone && fbPostId) {
-      try {
-        await supabase
-          .from('campaigns')
-          .update({ fb_ad_status: 'creating' })
-          .eq('id', campaignId);
+    if (hasBudget) {
+      // User WANTS a paid ad — check requirements and report EXACTLY what's missing
+      const missingReqs: string[] = [];
 
-        // 10a. Build targeting
-        const targeting = buildTargeting(seller.city, seller.state, 50);
+      if (!adAccountId) {
+        missingReqs.push('NO_AD_ACCOUNT: Reconecta Facebook en tu perfil para autorizar permisos de anuncios / Reconnect Facebook in your profile to authorize ad permissions');
+      }
+      if (!hasAdsPermission) {
+        missingReqs.push('NO_ADS_PERMISSION: Reconecta Facebook y aprueba el permiso "ads_management" / Reconnect Facebook and approve "ads_management" permission');
+      }
+      if (!sellerPhone) {
+        missingReqs.push('NO_PHONE: Agrega tu numero de WhatsApp en /perfil antes de crear ads CTWA / Add your WhatsApp number in /profile before creating CTWA ads');
+      }
+      if (!fbPostId) {
+        missingReqs.push('NO_POST: El post organico fallo, no se puede crear el ad sin el post base / Organic post failed, cannot create ad without base post');
+      }
 
-        // 10b. Create campaign
-        const fbCampaign = await createFBCampaign(adAccountId, conn.fb_page_access_token, {
-          name: `AutoMALL — ${campaign.name}`,
-        });
+      if (missingReqs.length > 0) {
+        // Requirements not met — report ALL missing items
+        adStatus = 'missing_requirements';
+        adMessage = missingReqs.join(' | ');
+        console.error(`[CampaignService] Ad BLOCKED for ${campaignId} — missing: ${missingReqs.map(r => r.split(':')[0]).join(', ')}`);
 
-        // 10c. Create adset with CTWA optimization
-        const dailyBudgetCents = Math.round(campaign.daily_budget_usd! * 100);
-        const fbAdSet = await createFBAdSet(adAccountId, conn.fb_page_access_token, {
-          name: `${campaign.name} — Houston Area`,
-          campaignId: fbCampaign.id,
-          dailyBudgetCents,
-          pageId: conn.fb_page_id,
-          whatsappNumber: sellerPhone,
-          targeting,
-        });
-
-        // 10d. Create ad creative using the organic post
-        const objectStoryId = `${conn.fb_page_id}_${fbPostId.split('_').pop()}`;
-        const fbCreative = await createFBAdCreative(adAccountId, conn.fb_page_access_token, {
-          name: `Creative — ${campaign.name}`,
-          objectStoryId,
-        });
-
-        // 10e. Create ad
-        const fbAd = await createFBAd(adAccountId, conn.fb_page_access_token, {
-          name: `Ad — ${campaign.name}`,
-          adsetId: fbAdSet.id,
-          creativeId: fbCreative.id,
-        });
-
-        // 10f. Activate all objects (campaign → adset → ad)
-        await updateFBObjectStatus(fbCampaign.id, conn.fb_page_access_token, 'ACTIVE');
-        await updateFBObjectStatus(fbAdSet.id, conn.fb_page_access_token, 'ACTIVE');
-        await updateFBObjectStatus(fbAd.id, conn.fb_page_access_token, 'ACTIVE');
-
-        // 10g. Save IDs to DB
-        await supabase
-          .from('campaigns')
-          .update({
-            fb_campaign_id: fbCampaign.id,
-            fb_adset_id: fbAdSet.id,
-            fb_ad_id: fbAd.id,
-            fb_creative_id: fbCreative.id,
-            fb_ad_status: 'active',
-          })
-          .eq('id', campaignId);
-
-        fbAdId = fbAd.id;
-        adStatus = 'active';
-        console.log(`[CampaignService] Paid ad created for ${campaignId} → FB ad ${fbAd.id}`);
-      } catch (adErr) {
-        console.error(`[CampaignService] Paid ad creation failed for ${campaignId}:`, safeErrorMsg(adErr));
-        adStatus = 'error';
         await supabase
           .from('campaigns')
           .update({ fb_ad_status: 'error' })
           .eq('id', campaignId);
-        // Organic post still exists — no exception thrown
-      }
-    } else {
-      if (!hasAdAccount) console.log(`[CampaignService] No ad_account_id — organic only for ${campaignId}`);
-      else if (!hasBudget) console.log(`[CampaignService] No budget — organic only for ${campaignId}`);
-      else if (!sellerPhone) console.log(`[CampaignService] No WhatsApp/phone — organic only for ${campaignId}`);
-    }
+      } else {
+        // All requirements met — CREATE the ad
+        try {
+          await supabase
+            .from('campaigns')
+            .update({ fb_ad_status: 'creating' })
+            .eq('id', campaignId);
 
-    return { fbPostId, permalink, fbAdId, adStatus };
+          // 10a. Build targeting
+          const targeting = buildTargeting(seller.city, seller.state, 50);
+
+          // 10b. Create campaign
+          const fbCampaign = await createFBCampaign(adAccountId!, conn.fb_page_access_token, {
+            name: `AutoMALL — ${campaign.name}`,
+          });
+
+          // 10c. Create adset with CTWA optimization
+          const dailyBudgetCents = Math.round(campaign.daily_budget_usd! * 100);
+          const fbAdSet = await createFBAdSet(adAccountId!, conn.fb_page_access_token, {
+            name: `${campaign.name} — Houston Area`,
+            campaignId: fbCampaign.id,
+            dailyBudgetCents,
+            pageId: conn.fb_page_id,
+            whatsappNumber: sellerPhone!,
+            targeting,
+          });
+
+          // 10d. Create ad creative using the organic post
+          const objectStoryId = `${conn.fb_page_id}_${fbPostId!.split('_').pop()}`;
+          const fbCreative = await createFBAdCreative(adAccountId!, conn.fb_page_access_token, {
+            name: `Creative — ${campaign.name}`,
+            objectStoryId,
+          });
+
+          // 10e. Create ad
+          const fbAd = await createFBAd(adAccountId!, conn.fb_page_access_token, {
+            name: `Ad — ${campaign.name}`,
+            adsetId: fbAdSet.id,
+            creativeId: fbCreative.id,
+          });
+
+          // 10f. Activate all objects (campaign → adset → ad)
+          await updateFBObjectStatus(fbCampaign.id, conn.fb_page_access_token, 'ACTIVE');
+          await updateFBObjectStatus(fbAdSet.id, conn.fb_page_access_token, 'ACTIVE');
+          await updateFBObjectStatus(fbAd.id, conn.fb_page_access_token, 'ACTIVE');
+
+          // 10g. Save IDs to DB
+          await supabase
+            .from('campaigns')
+            .update({
+              fb_campaign_id: fbCampaign.id,
+              fb_adset_id: fbAdSet.id,
+              fb_ad_id: fbAd.id,
+              fb_creative_id: fbCreative.id,
+              fb_ad_status: 'active',
+            })
+            .eq('id', campaignId);
+
+          fbAdId = fbAd.id;
+          adStatus = 'active';
+          adMessage = null;
+          console.log(`[CampaignService] Paid ad ACTIVE for ${campaignId} → FB ad ${fbAd.id}`);
+        } catch (adErr) {
+          const errorDetail = safeErrorMsg(adErr);
+          console.error(`[CampaignService] Paid ad FAILED for ${campaignId}:`, errorDetail);
+          adStatus = 'error';
+          adMessage = `FB_API_ERROR: ${errorDetail}`;
+          await supabase
+            .from('campaigns')
+            .update({ fb_ad_status: 'error' })
+            .eq('id', campaignId);
+        }
+      }
+    }
+    // No budget → organic_only is fine, no error needed
+
+    return { fbPostId, permalink, fbAdId, adStatus, adMessage };
   } catch (err) {
     // Rollback status on failure
     await supabase
