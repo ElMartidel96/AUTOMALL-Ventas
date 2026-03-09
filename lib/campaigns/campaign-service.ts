@@ -603,6 +603,73 @@ export async function publishToFacebook(
     .eq('wallet_address', wallet);
 
   try {
+    // ── ALL-OR-NOTHING: If campaign has budget, pre-flight checks BEFORE organic post ──
+    const adAccountId = conn.ad_account_id;
+    const hasBudget = campaign.daily_budget_usd && campaign.daily_budget_usd >= 1;
+    const sellerPhone = seller.whatsapp || seller.phone;
+    const userToken = conn.fb_user_access_token;
+
+    if (hasBudget) {
+      const missingReqs: string[] = [];
+
+      if (!adAccountId) {
+        missingReqs.push('NO_AD_ACCOUNT: Reconecta Facebook en tu perfil para autorizar permisos de anuncios / Reconnect Facebook in your profile to authorize ad permissions');
+      }
+      if (!userToken) {
+        missingReqs.push('NO_USER_TOKEN: Reconecta Facebook — se necesita el token de usuario para el Marketing API / Reconnect Facebook — user token needed for Marketing API');
+      }
+      if (!sellerPhone) {
+        missingReqs.push('NO_PHONE: Agrega tu numero de WhatsApp en /perfil antes de crear ads CTWA / Add your WhatsApp number in /profile before creating CTWA ads');
+      }
+
+      // Live pre-flight checks with Facebook API
+      if (missingReqs.length === 0 && userToken && adAccountId) {
+        console.log(`[CampaignService] Pre-flight check: token=${userToken.substring(0, 8)}... adAccount=${adAccountId}`);
+
+        const permCheck = await verifyTokenPermissions(userToken);
+        console.log(`[CampaignService] Token permissions: valid=${permCheck.tokenValid} granted=[${permCheck.granted.join(',')}] declined=[${permCheck.declined.join(',')}]`);
+
+        if (!permCheck.tokenValid) {
+          missingReqs.push('TOKEN_EXPIRED: El token de Facebook ha expirado. Reconecta Facebook en tu perfil / Facebook token expired. Reconnect Facebook in your profile');
+        } else if (!permCheck.granted.includes('ads_management')) {
+          const declinedNote = permCheck.declined.includes('ads_management')
+            ? ' (permiso RECHAZADO por el usuario)'
+            : ' (permiso NO otorgado — puede requerir App Review en developers.facebook.com)';
+          missingReqs.push(`NO_ADS_PERMISSION: El token no tiene permiso "ads_management"${declinedNote} / Token lacks "ads_management" permission${declinedNote}`);
+        }
+
+        if (missingReqs.length === 0) {
+          const acctCheck = await verifyAdAccountAccess(adAccountId, userToken);
+          console.log(`[CampaignService] Ad account check: accessible=${acctCheck.accessible} status=${acctCheck.accountStatus} tasks=[${acctCheck.permittedTasks.join(',')}] canCreateAds=${acctCheck.canCreateAds} name="${acctCheck.name}"`);
+
+          if (!acctCheck.accessible) {
+            missingReqs.push(`AD_ACCOUNT_INACCESSIBLE: No se puede acceder al ad account ${adAccountId}. Error: ${acctCheck.error || 'unknown'} / Cannot access ad account`);
+          } else if (acctCheck.accountStatus !== 1) {
+            const statusMap: Record<number, string> = { 2: 'DISABLED', 3: 'UNSETTLED', 7: 'PENDING_RISK_REVIEW', 8: 'PENDING_SETTLEMENT', 9: 'IN_GRACE_PERIOD', 100: 'PENDING_CLOSURE', 101: 'CLOSED', 201: 'ANY_ACTIVE', 202: 'ANY_CLOSED' };
+            const statusName = statusMap[acctCheck.accountStatus] || `UNKNOWN(${acctCheck.accountStatus})`;
+            missingReqs.push(`AD_ACCOUNT_NOT_ACTIVE: Ad account status=${statusName}. Verifica en business.facebook.com / Check business.facebook.com`);
+          } else if (!acctCheck.canCreateAds) {
+            const tasksStr = acctCheck.permittedTasks.length > 0 ? acctCheck.permittedTasks.join(',') : 'NONE';
+            missingReqs.push(`AD_ACCOUNT_READ_ONLY: Tu rol en "${acctCheck.name}" solo tiene permisos [${tasksStr}] (solo lectura). Necesitas MANAGE o ADVERTISE para crear anuncios. Cambia tu rol en business.facebook.com / Your permissions on "${acctCheck.name}" are [${tasksStr}] (read-only). Need MANAGE or ADVERTISE.`);
+          }
+        }
+      }
+
+      // ALL-OR-NOTHING: If pre-flight checks fail, ABORT — no organic post either
+      if (missingReqs.length > 0) {
+        const missingCodes = missingReqs.map(r => r.split(':')[0]).join(', ');
+        console.error(`[CampaignService] ALL-OR-NOTHING ABORT for ${campaignId} — missing: ${missingCodes}`);
+        // Reset status to draft (nothing was published)
+        await supabase
+          .from('campaigns')
+          .update({ fb_publish_status: 'failed', fb_ad_status: 'error' })
+          .eq('id', campaignId);
+        throw new Error(`Ad requirements not met — campaign NOT published. Missing: ${missingCodes}. Details: ${missingReqs.join(' | ')}`);
+      }
+
+      console.log(`[CampaignService] All pre-flight checks PASSED for ${campaignId} — proceeding to publish`);
+    }
+
     // 5. Build caption
     const caption = buildFBCaption({
       campaignType: campaign.type,
@@ -619,7 +686,7 @@ export async function publishToFacebook(
       throw new Error('No vehicle images available. Add photos to your vehicles first.');
     }
 
-    // 7. Publish to FB
+    // 7. Publish organic post to FB
     let fbPostId: string | null = null;
 
     if (imageUrls.length === 1) {
@@ -683,152 +750,108 @@ export async function publishToFacebook(
 
     console.log(`[CampaignService] Published campaign ${campaignId} → FB post ${fbPostId}`);
 
-    // ── 10. Paid ad creation — ALWAYS attempt if budget is set ──
+    // ── 10. Paid ad creation (pre-flight already passed above) ──
     let fbAdId: string | null = null;
     let adStatus: 'active' | 'organic_only' | 'error' | 'missing_requirements' = 'organic_only';
     let adMessage: string | null = null;
 
-    const adAccountId = conn.ad_account_id;
-    const hasBudget = campaign.daily_budget_usd && campaign.daily_budget_usd >= 1;
-    const sellerPhone = seller.whatsapp || seller.phone;
-    const userToken = conn.fb_user_access_token;
-
-    if (hasBudget) {
-      // User WANTS a paid ad — check LOCAL requirements first
-      const missingReqs: string[] = [];
-
-      if (!adAccountId) {
-        missingReqs.push('NO_AD_ACCOUNT: Reconecta Facebook en tu perfil para autorizar permisos de anuncios / Reconnect Facebook in your profile to authorize ad permissions');
-      }
-      if (!userToken) {
-        missingReqs.push('NO_USER_TOKEN: Reconecta Facebook — se necesita el token de usuario para el Marketing API / Reconnect Facebook — user token needed for Marketing API');
-      }
-      if (!sellerPhone) {
-        missingReqs.push('NO_PHONE: Agrega tu numero de WhatsApp en /perfil antes de crear ads CTWA / Add your WhatsApp number in /profile before creating CTWA ads');
-      }
-      if (!fbPostId) {
-        missingReqs.push('NO_POST: El post organico fallo, no se puede crear el ad sin el post base / Organic post failed, cannot create ad without base post');
-      }
-
-      // ── Pre-flight verification with Facebook API (LIVE checks) ──
-      if (missingReqs.length === 0 && userToken && adAccountId) {
-        console.log(`[CampaignService] Pre-flight check: token=${userToken.substring(0, 8)}... adAccount=${adAccountId}`);
-
-        // 10-PRE-A: Verify token permissions in real-time
-        const permCheck = await verifyTokenPermissions(userToken);
-        console.log(`[CampaignService] Token permissions: valid=${permCheck.tokenValid} granted=[${permCheck.granted.join(',')}] declined=[${permCheck.declined.join(',')}]`);
-
-        if (!permCheck.tokenValid) {
-          missingReqs.push('TOKEN_EXPIRED: El token de Facebook ha expirado. Reconecta Facebook en tu perfil / Facebook token expired. Reconnect Facebook in your profile');
-        } else if (!permCheck.granted.includes('ads_management')) {
-          const declinedNote = permCheck.declined.includes('ads_management')
-            ? ' (permiso RECHAZADO por el usuario)'
-            : ' (permiso NO otorgado — puede requerir App Review en developers.facebook.com)';
-          missingReqs.push(`NO_ADS_PERMISSION: El token no tiene permiso "ads_management"${declinedNote} / Token lacks "ads_management" permission${declinedNote}`);
-        }
-
-        // 10-PRE-B: Verify ad account is accessible
-        if (missingReqs.length === 0) {
-          const acctCheck = await verifyAdAccountAccess(adAccountId, userToken);
-          console.log(`[CampaignService] Ad account check: accessible=${acctCheck.accessible} status=${acctCheck.accountStatus} role=${acctCheck.userRole ?? '?'} canCreateAds=${acctCheck.canCreateAds} name="${acctCheck.name}"`);
-
-          if (!acctCheck.accessible) {
-            missingReqs.push(`AD_ACCOUNT_INACCESSIBLE: No se puede acceder al ad account ${adAccountId}. Error: ${acctCheck.error || 'unknown'} / Cannot access ad account`);
-          } else if (acctCheck.accountStatus !== 1) {
-            const statusMap: Record<number, string> = { 2: 'DISABLED', 3: 'UNSETTLED', 7: 'PENDING_RISK_REVIEW', 8: 'PENDING_SETTLEMENT', 9: 'IN_GRACE_PERIOD', 100: 'PENDING_CLOSURE', 101: 'CLOSED', 201: 'ANY_ACTIVE', 202: 'ANY_CLOSED' };
-            const statusName = statusMap[acctCheck.accountStatus] || `UNKNOWN(${acctCheck.accountStatus})`;
-            missingReqs.push(`AD_ACCOUNT_NOT_ACTIVE: Ad account status=${statusName}. Verifica en business.facebook.com / Check business.facebook.com`);
-          } else if (!acctCheck.canCreateAds) {
-            const roleMap: Record<number, string> = { 1001: 'ADMIN', 1002: 'ADVERTISER', 1003: 'ANALYST', 1004: 'SALES' };
-            const roleName = acctCheck.userRole ? (roleMap[acctCheck.userRole] || `UNKNOWN(${acctCheck.userRole})`) : 'NO_ROLE';
-            missingReqs.push(`AD_ACCOUNT_READ_ONLY: Tu rol en "${acctCheck.name}" es ${roleName} (solo lectura). Necesitas rol ADMIN o ADVERTISER para crear anuncios. Cambia tu rol en business.facebook.com / Your role on "${acctCheck.name}" is ${roleName} (read-only). Need ADMIN or ADVERTISER role.`);
-          }
-        }
-      }
-
-      if (missingReqs.length > 0) {
-        // Requirements not met — report ALL missing items
-        adStatus = 'missing_requirements';
-        adMessage = missingReqs.join(' | ');
-        console.error(`[CampaignService] Ad BLOCKED for ${campaignId} — missing: ${missingReqs.map(r => r.split(':')[0]).join(', ')}`);
-
+    if (hasBudget && adAccountId && userToken && sellerPhone && fbPostId) {
+      try {
         await supabase
           .from('campaigns')
-          .update({ fb_ad_status: 'error' })
+          .update({ fb_ad_status: 'creating' })
           .eq('id', campaignId);
-      } else {
-        // All pre-flight checks passed — CREATE the ad
-        // IMPORTANT: Marketing API uses USER token (not page token)
+
+        // 10a. Build targeting
+        const targeting = buildTargeting(seller.city, seller.state, 50);
+
+        // 10b. Create campaign (USER token for Marketing API)
+        const fbCampaign = await createFBCampaign(adAccountId, userToken, {
+          name: `AutoMALL — ${campaign.name}`,
+        });
+
+        // 10c. Create adset with CTWA optimization
+        const dailyBudgetCents = Math.round(campaign.daily_budget_usd! * 100);
+        const fbAdSet = await createFBAdSet(adAccountId, userToken, {
+          name: `${campaign.name} — Houston Area`,
+          campaignId: fbCampaign.id,
+          dailyBudgetCents,
+          pageId: conn.fb_page_id,
+          whatsappNumber: sellerPhone,
+          targeting,
+        });
+
+        // 10d. Create ad creative using the organic post
+        const objectStoryId = `${conn.fb_page_id}_${fbPostId.split('_').pop()}`;
+        const fbCreative = await createFBAdCreative(adAccountId, userToken, {
+          name: `Creative — ${campaign.name}`,
+          objectStoryId,
+        });
+
+        // 10e. Create ad
+        const fbAd = await createFBAd(adAccountId, userToken, {
+          name: `Ad — ${campaign.name}`,
+          adsetId: fbAdSet.id,
+          creativeId: fbCreative.id,
+        });
+
+        // 10f. Activate all objects (campaign → adset → ad)
+        await updateFBObjectStatus(fbCampaign.id, userToken, 'ACTIVE');
+        await updateFBObjectStatus(fbAdSet.id, userToken, 'ACTIVE');
+        await updateFBObjectStatus(fbAd.id, userToken, 'ACTIVE');
+
+        // 10g. Save IDs to DB
+        await supabase
+          .from('campaigns')
+          .update({
+            fb_campaign_id: fbCampaign.id,
+            fb_adset_id: fbAdSet.id,
+            fb_ad_id: fbAd.id,
+            fb_creative_id: fbCreative.id,
+            fb_ad_status: 'active',
+          })
+          .eq('id', campaignId);
+
+        fbAdId = fbAd.id;
+        adStatus = 'active';
+        adMessage = null;
+        console.log(`[CampaignService] Paid ad ACTIVE for ${campaignId} → FB ad ${fbAd.id}`);
+      } catch (adErr) {
+        // ALL-OR-NOTHING: Ad creation failed AFTER organic post → ROLLBACK organic post
+        const errorDetail = safeErrorMsg(adErr);
+        console.error(`[CampaignService] Paid ad FAILED for ${campaignId}: ${errorDetail} — ROLLING BACK organic post`);
+
+        // Delete the organic post from Facebook
+        try {
+          await deletePost(fbPostId, conn.fb_page_access_token);
+          console.log(`[CampaignService] Rollback: deleted organic post ${fbPostId} from FB`);
+        } catch (delErr) {
+          console.error(`[CampaignService] Rollback: failed to delete organic post ${fbPostId}:`, safeErrorMsg(delErr));
+        }
+
+        // Reset campaign to unpublished state
+        await supabase
+          .from('campaigns')
+          .update({
+            fb_publish_status: 'failed',
+            fb_post_ids: [],
+            fb_published_at: null,
+            fb_permalink_url: null,
+            fb_ad_status: 'error',
+            status: campaign.status === 'active' ? 'draft' : campaign.status,
+          })
+          .eq('id', campaignId);
+
+        // Update publication log
         try {
           await supabase
-            .from('campaigns')
-            .update({ fb_ad_status: 'creating' })
-            .eq('id', campaignId);
+            .from('meta_publication_log')
+            .update({ status: 'deleted' })
+            .eq('campaign_id', campaignId)
+            .eq('fb_post_id', fbPostId);
+        } catch { /* best effort */ }
 
-          // 10a. Build targeting
-          const targeting = buildTargeting(seller.city, seller.state, 50);
-
-          // 10b. Create campaign (USER token for Marketing API)
-          const fbCampaign = await createFBCampaign(adAccountId!, userToken!, {
-            name: `AutoMALL — ${campaign.name}`,
-          });
-
-          // 10c. Create adset with CTWA optimization
-          const dailyBudgetCents = Math.round(campaign.daily_budget_usd! * 100);
-          const fbAdSet = await createFBAdSet(adAccountId!, userToken!, {
-            name: `${campaign.name} — Houston Area`,
-            campaignId: fbCampaign.id,
-            dailyBudgetCents,
-            pageId: conn.fb_page_id,
-            whatsappNumber: sellerPhone!,
-            targeting,
-          });
-
-          // 10d. Create ad creative using the organic post
-          const objectStoryId = `${conn.fb_page_id}_${fbPostId!.split('_').pop()}`;
-          const fbCreative = await createFBAdCreative(adAccountId!, userToken!, {
-            name: `Creative — ${campaign.name}`,
-            objectStoryId,
-          });
-
-          // 10e. Create ad
-          const fbAd = await createFBAd(adAccountId!, userToken!, {
-            name: `Ad — ${campaign.name}`,
-            adsetId: fbAdSet.id,
-            creativeId: fbCreative.id,
-          });
-
-          // 10f. Activate all objects (campaign → adset → ad)
-          await updateFBObjectStatus(fbCampaign.id, userToken!, 'ACTIVE');
-          await updateFBObjectStatus(fbAdSet.id, userToken!, 'ACTIVE');
-          await updateFBObjectStatus(fbAd.id, userToken!, 'ACTIVE');
-
-          // 10g. Save IDs to DB
-          await supabase
-            .from('campaigns')
-            .update({
-              fb_campaign_id: fbCampaign.id,
-              fb_adset_id: fbAdSet.id,
-              fb_ad_id: fbAd.id,
-              fb_creative_id: fbCreative.id,
-              fb_ad_status: 'active',
-            })
-            .eq('id', campaignId);
-
-          fbAdId = fbAd.id;
-          adStatus = 'active';
-          adMessage = null;
-          console.log(`[CampaignService] Paid ad ACTIVE for ${campaignId} → FB ad ${fbAd.id}`);
-        } catch (adErr) {
-          const errorDetail = safeErrorMsg(adErr);
-          console.error(`[CampaignService] Paid ad FAILED for ${campaignId}:`, errorDetail);
-          adStatus = 'error';
-          adMessage = `FB_API_ERROR: ${errorDetail}`;
-          await supabase
-            .from('campaigns')
-            .update({ fb_ad_status: 'error' })
-            .eq('id', campaignId);
-        }
+        throw new Error(`Paid ad creation failed — campaign rolled back. Error: ${errorDetail}`);
       }
     }
     // No budget → organic_only is fine, no error needed

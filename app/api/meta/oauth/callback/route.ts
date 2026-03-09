@@ -99,14 +99,14 @@ export async function GET(request: NextRequest) {
       try {
         const adAccounts = await getUserAdAccounts(longLivedUserToken);
         console.log(`[MetaOAuth] Ad accounts found: ${adAccounts.length}`, adAccounts.map(a =>
-          `${a.id}(status=${a.account_status},role=${a.user_role ?? '?'},name="${a.name}")`
+          `${a.id}(status=${a.account_status},tasks=${a.permitted_tasks?.join('/') || 'none'},name="${a.name}")`
         ));
 
-        // Pick a WRITABLE account (ADMIN/ADVERTISER), not Read-Only
+        // Pick a WRITABLE account (MANAGE/ADVERTISE), not Read-Only
         const best = pickWritableAdAccount(adAccounts);
         if (best) {
           adAccountId = best.id;
-          console.log(`[MetaOAuth] Selected ad account: ${best.id} (role=${best.user_role}, name="${best.name}")`);
+          console.log(`[MetaOAuth] Selected ad account: ${best.id} (tasks=${best.permitted_tasks?.join('/') || 'none'}, name="${best.name}")`);
         } else {
           console.warn(`[MetaOAuth] No writable ad account found — all ${adAccounts.length} accounts are read-only. Organic-only mode.`);
         }

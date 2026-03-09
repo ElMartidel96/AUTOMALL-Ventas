@@ -450,46 +450,74 @@ export async function getGrantedPermissions(userAccessToken: string): Promise<st
 // Marketing API — Paid Ad Management
 // ─────────────────────────────────────────────
 
-/** Discover active ad accounts for the user, sorted by write-access first */
+/**
+ * Discover ad accounts the user can ADVERTISE on.
+ * Uses permitted_tasks (v22.0) instead of deprecated user_role.
+ * Falls back to /me/adaccounts if assigned_ad_accounts fails.
+ */
 export async function getUserAdAccounts(userAccessToken: string): Promise<FBAdAccount[]> {
-  const url = new URL(`${GRAPH_API}/me/adaccounts`);
-  url.searchParams.set('fields', 'id,name,account_status,user_role,capabilities');
-  url.searchParams.set('access_token', userAccessToken);
+  // Try v22.0 endpoint first: /me/assigned_ad_accounts (includes permitted_tasks)
+  let accounts = await _fetchAdAccounts(
+    `${GRAPH_API}/me/assigned_ad_accounts`,
+    'id,name,account_status,permitted_tasks',
+    userAccessToken,
+  );
+
+  // Fallback: /me/adaccounts (basic fields only — no deprecated user_role)
+  if (accounts === null) {
+    console.warn('[FB-API] assigned_ad_accounts failed, falling back to /me/adaccounts');
+    accounts = await _fetchAdAccounts(
+      `${GRAPH_API}/me/adaccounts`,
+      'id,name,account_status',
+      userAccessToken,
+    );
+  }
+
+  if (accounts === null) {
+    throw new Error('Failed to get ad accounts from both endpoints');
+  }
+
+  // Only active accounts
+  return accounts.filter(a => a.account_status === 1);
+}
+
+async function _fetchAdAccounts(
+  endpoint: string,
+  fields: string,
+  token: string,
+): Promise<FBAdAccount[] | null> {
+  const url = new URL(endpoint);
+  url.searchParams.set('fields', fields);
+  url.searchParams.set('access_token', token);
 
   const res = await fetch(url.toString());
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     const fbErr = _extractFBError(err);
-    _logFBError('getUserAdAccounts', fbErr);
-    throw new Error(_formatFBError('Failed to get ad accounts:', fbErr));
+    _logFBError(`_fetchAdAccounts(${endpoint.split('/').pop()})`, fbErr);
+    return null; // Signal failure so caller can try fallback
   }
   const data = await res.json();
-  const all = ((data.data || []) as FBAdAccount[]).filter(a => a.account_status === 1);
-
-  // Sort: ADMIN (1001) and ADVERTISER (1002) first — these can create ads
-  // ANALYST (1003) and SALES (1004) are read-only
-  all.sort((a, b) => {
-    const aWrite = (a.user_role === 1001 || a.user_role === 1002) ? 0 : 1;
-    const bWrite = (b.user_role === 1001 || b.user_role === 1002) ? 0 : 1;
-    return aWrite - bWrite;
-  });
-
-  return all;
+  return (data.data || []) as FBAdAccount[];
 }
 
 /**
  * Pick the BEST ad account for creating ads.
- * Filters for ADMIN/ADVERTISER role (can create ads), excludes read-only.
- * Returns null if no writable account found.
+ * Uses permitted_tasks (MANAGE/ADVERTISE) from v22.0 API.
+ * Falls back to name heuristic if tasks aren't available.
  */
 export function pickWritableAdAccount(accounts: FBAdAccount[]): FBAdAccount | null {
-  // 1. Prefer accounts with ADMIN (1001) or ADVERTISER (1002) role
+  // 1. Prefer accounts with ADVERTISE or MANAGE permitted_tasks
   const writable = accounts.filter(a =>
-    a.user_role === 1001 || a.user_role === 1002
+    a.permitted_tasks?.includes('ADVERTISE') || a.permitted_tasks?.includes('MANAGE')
   );
-  if (writable.length > 0) return writable[0];
+  if (writable.length > 0) {
+    // Prefer MANAGE (full admin) over just ADVERTISE
+    const admin = writable.find(a => a.permitted_tasks?.includes('MANAGE'));
+    return admin || writable[0];
+  }
 
-  // 2. If user_role is not returned (older API?), try accounts that DON'T have "Read-Only" in name
+  // 2. If permitted_tasks not available (fallback endpoint), use name heuristic
   const notReadOnly = accounts.filter(a =>
     !a.name?.toLowerCase().includes('read-only') &&
     !a.name?.toLowerCase().includes('solo lectura')
@@ -502,7 +530,7 @@ export function pickWritableAdAccount(accounts: FBAdAccount[]): FBAdAccount | nu
 
 /**
  * Pre-flight check: verify the token can access the ad account.
- * Returns diagnostic info about the ad account.
+ * Uses permitted_tasks (v22.0) instead of deprecated user_role.
  */
 export async function verifyAdAccountAccess(
   adAccountId: string,
@@ -511,13 +539,13 @@ export async function verifyAdAccountAccess(
   accessible: boolean;
   accountStatus: number;
   name: string;
-  userRole?: number;
+  permittedTasks: string[];
   canCreateAds: boolean;
   error?: string;
 }> {
   const accountId = adAccountId.replace(/^act_/, '');
   const url = new URL(`${GRAPH_API}/act_${accountId}`);
-  url.searchParams.set('fields', 'id,name,account_status,user_role,disable_reason,capabilities');
+  url.searchParams.set('fields', 'id,name,account_status,permitted_tasks,disable_reason');
   url.searchParams.set('access_token', accessToken);
 
   const res = await fetch(url.toString());
@@ -529,21 +557,22 @@ export async function verifyAdAccountAccess(
       accessible: false,
       accountStatus: 0,
       name: '',
+      permittedTasks: [],
       canCreateAds: false,
       error: _formatFBError('', fbErr),
     };
   }
 
   const data = await res.json();
-  const userRole = data.user_role as number | undefined;
-  // ADMIN (1001) and ADVERTISER (1002) can create ads
-  const canCreateAds = userRole === 1001 || userRole === 1002;
+  const permittedTasks = (data.permitted_tasks || []) as string[];
+  // MANAGE or ADVERTISE can create ads (v22.0 permitted_tasks)
+  const canCreateAds = permittedTasks.includes('MANAGE') || permittedTasks.includes('ADVERTISE');
 
   return {
     accessible: true,
     accountStatus: data.account_status || 0,
     name: data.name || '',
-    userRole,
+    permittedTasks,
     canCreateAds,
   };
 }
