@@ -381,6 +381,29 @@ export async function getFBUserId(accessToken: string): Promise<string> {
 }
 
 // ─────────────────────────────────────────────
+// Permission Detection
+// ─────────────────────────────────────────────
+
+/** Query Facebook to get actually granted permissions (not hardcoded) */
+export async function getGrantedPermissions(userAccessToken: string): Promise<string[]> {
+  const url = new URL(`${GRAPH_API}/me/permissions`);
+  url.searchParams.set('access_token', userAccessToken);
+
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    console.warn('[FB-API] Failed to get permissions, using requested list');
+    return FB_PERMISSIONS; // fallback to requested
+  }
+
+  const data = await res.json();
+  const granted = ((data.data || []) as Array<{ permission: string; status: string }>)
+    .filter(p => p.status === 'granted')
+    .map(p => p.permission);
+
+  return granted;
+}
+
+// ─────────────────────────────────────────────
 // Marketing API — Paid Ad Management
 // ─────────────────────────────────────────────
 

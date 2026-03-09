@@ -52,6 +52,7 @@ export interface MetaConnection {
   fb_page_id: string;
   fb_page_name: string;
   fb_page_access_token: string;
+  fb_user_access_token: string | null;
   waba_id: string | null;
   catalog_id: string | null;
   ad_account_id: string | null;

@@ -228,10 +228,11 @@ export async function unpublishFromFacebook(
   if (!connection) throw new Error('Facebook not connected');
   const conn = connection as unknown as MetaConnection;
 
-  // Delete paid ad structure first (if exists)
+  // Delete paid ad structure first (if exists) — requires USER token
   if (campaign.fb_campaign_id) {
+    const adToken = conn.fb_user_access_token || conn.fb_page_access_token;
     try {
-      await deleteFBCampaignObject(campaign.fb_campaign_id, conn.fb_page_access_token);
+      await deleteFBCampaignObject(campaign.fb_campaign_id, adToken);
       console.log(`[CampaignService] Deleted FB ad campaign ${campaign.fb_campaign_id}`);
     } catch (err) {
       console.error(`[CampaignService] Failed to delete FB ad campaign:`, safeErrorMsg(err));
@@ -422,8 +423,9 @@ export async function getCampaignFullStats(
 
   if (campaign.fb_ad_id && campaign.fb_ad_status && campaign.fb_ad_status !== 'none' && connection) {
     const conn = connection as unknown as MetaConnection;
+    const adToken = conn.fb_user_access_token || conn.fb_page_access_token;
     try {
-      const insights = await getAdInsights(campaign.fb_ad_id, conn.fb_page_access_token);
+      const insights = await getAdInsights(campaign.fb_ad_id, adToken);
       if (insights) {
         const spend = parseFloat(insights.spend) || 0;
         const conversations = (insights.actions || [])
@@ -692,12 +694,16 @@ export async function publishToFacebook(
     if (hasBudget) {
       // User WANTS a paid ad — check requirements and report EXACTLY what's missing
       const missingReqs: string[] = [];
+      const userToken = conn.fb_user_access_token;
 
       if (!adAccountId) {
         missingReqs.push('NO_AD_ACCOUNT: Reconecta Facebook en tu perfil para autorizar permisos de anuncios / Reconnect Facebook in your profile to authorize ad permissions');
       }
       if (!hasAdsPermission) {
         missingReqs.push('NO_ADS_PERMISSION: Reconecta Facebook y aprueba el permiso "ads_management" / Reconnect Facebook and approve "ads_management" permission');
+      }
+      if (!userToken) {
+        missingReqs.push('NO_USER_TOKEN: Reconecta Facebook — se necesita el token de usuario para el Marketing API / Reconnect Facebook — user token needed for Marketing API');
       }
       if (!sellerPhone) {
         missingReqs.push('NO_PHONE: Agrega tu numero de WhatsApp en /perfil antes de crear ads CTWA / Add your WhatsApp number in /profile before creating CTWA ads');
@@ -718,6 +724,7 @@ export async function publishToFacebook(
           .eq('id', campaignId);
       } else {
         // All requirements met — CREATE the ad
+        // IMPORTANT: Marketing API uses USER token (not page token)
         try {
           await supabase
             .from('campaigns')
@@ -727,14 +734,14 @@ export async function publishToFacebook(
           // 10a. Build targeting
           const targeting = buildTargeting(seller.city, seller.state, 50);
 
-          // 10b. Create campaign
-          const fbCampaign = await createFBCampaign(adAccountId!, conn.fb_page_access_token, {
+          // 10b. Create campaign (USER token for Marketing API)
+          const fbCampaign = await createFBCampaign(adAccountId!, userToken!, {
             name: `AutoMALL — ${campaign.name}`,
           });
 
           // 10c. Create adset with CTWA optimization
           const dailyBudgetCents = Math.round(campaign.daily_budget_usd! * 100);
-          const fbAdSet = await createFBAdSet(adAccountId!, conn.fb_page_access_token, {
+          const fbAdSet = await createFBAdSet(adAccountId!, userToken!, {
             name: `${campaign.name} — Houston Area`,
             campaignId: fbCampaign.id,
             dailyBudgetCents,
@@ -745,22 +752,22 @@ export async function publishToFacebook(
 
           // 10d. Create ad creative using the organic post
           const objectStoryId = `${conn.fb_page_id}_${fbPostId!.split('_').pop()}`;
-          const fbCreative = await createFBAdCreative(adAccountId!, conn.fb_page_access_token, {
+          const fbCreative = await createFBAdCreative(adAccountId!, userToken!, {
             name: `Creative — ${campaign.name}`,
             objectStoryId,
           });
 
           // 10e. Create ad
-          const fbAd = await createFBAd(adAccountId!, conn.fb_page_access_token, {
+          const fbAd = await createFBAd(adAccountId!, userToken!, {
             name: `Ad — ${campaign.name}`,
             adsetId: fbAdSet.id,
             creativeId: fbCreative.id,
           });
 
           // 10f. Activate all objects (campaign → adset → ad)
-          await updateFBObjectStatus(fbCampaign.id, conn.fb_page_access_token, 'ACTIVE');
-          await updateFBObjectStatus(fbAdSet.id, conn.fb_page_access_token, 'ACTIVE');
-          await updateFBObjectStatus(fbAd.id, conn.fb_page_access_token, 'ACTIVE');
+          await updateFBObjectStatus(fbCampaign.id, userToken!, 'ACTIVE');
+          await updateFBObjectStatus(fbAdSet.id, userToken!, 'ACTIVE');
+          await updateFBObjectStatus(fbAd.id, userToken!, 'ACTIVE');
 
           // 10g. Save IDs to DB
           await supabase
@@ -829,10 +836,11 @@ export async function pauseFBAd(
 
   if (!connection) throw new Error('Facebook not connected');
   const conn = connection as unknown as MetaConnection;
+  const adToken = conn.fb_user_access_token || conn.fb_page_access_token;
 
-  await updateFBObjectStatus(campaign.fb_ad_id, conn.fb_page_access_token, 'PAUSED');
-  await updateFBObjectStatus(campaign.fb_adset_id, conn.fb_page_access_token, 'PAUSED');
-  await updateFBObjectStatus(campaign.fb_campaign_id, conn.fb_page_access_token, 'PAUSED');
+  await updateFBObjectStatus(campaign.fb_ad_id, adToken, 'PAUSED');
+  await updateFBObjectStatus(campaign.fb_adset_id, adToken, 'PAUSED');
+  await updateFBObjectStatus(campaign.fb_campaign_id, adToken, 'PAUSED');
 
   await supabase
     .from('campaigns')
@@ -862,10 +870,11 @@ export async function resumeFBAd(
 
   if (!connection) throw new Error('Facebook not connected');
   const conn = connection as unknown as MetaConnection;
+  const adToken = conn.fb_user_access_token || conn.fb_page_access_token;
 
-  await updateFBObjectStatus(campaign.fb_campaign_id, conn.fb_page_access_token, 'ACTIVE');
-  await updateFBObjectStatus(campaign.fb_adset_id, conn.fb_page_access_token, 'ACTIVE');
-  await updateFBObjectStatus(campaign.fb_ad_id, conn.fb_page_access_token, 'ACTIVE');
+  await updateFBObjectStatus(campaign.fb_campaign_id, adToken, 'ACTIVE');
+  await updateFBObjectStatus(campaign.fb_adset_id, adToken, 'ACTIVE');
+  await updateFBObjectStatus(campaign.fb_ad_id, adToken, 'ACTIVE');
 
   await supabase
     .from('campaigns')
@@ -893,8 +902,9 @@ export async function deleteFBAd(
 
   if (!connection) throw new Error('Facebook not connected');
   const conn = connection as unknown as MetaConnection;
+  const adToken = conn.fb_user_access_token || conn.fb_page_access_token;
 
-  await deleteFBCampaignObject(campaign.fb_campaign_id, conn.fb_page_access_token);
+  await deleteFBCampaignObject(campaign.fb_campaign_id, adToken);
 
   await supabase
     .from('campaigns')

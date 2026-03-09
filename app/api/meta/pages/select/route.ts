@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     const pendingData = JSON.parse(Buffer.from(metaPending, 'base64url').toString());
-    const { user_token, fb_user_id, seller_id, wallet_address, pages } = pendingData;
+    const { user_token, fb_user_id, seller_id, wallet_address, pages, ad_account_id, permissions } = pendingData;
 
     // Verify the selected page is in the list
     const selectedPage = pages.find((p: { id: string; name: string }) => p.id === parsed.data.pageId);
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = getTypedClient();
 
-    // Upsert connection
+    // Upsert connection — store both page token (organic) and user token (Marketing API)
     const { error } = await supabase
       .from('seller_meta_connections')
       .upsert(
@@ -61,7 +61,9 @@ export async function POST(request: NextRequest) {
           fb_page_id: selectedPage.id,
           fb_page_name: selectedPage.name,
           fb_page_access_token: pageAccessToken,
-          permissions: ['pages_manage_posts', 'pages_read_engagement', 'pages_show_list'],
+          fb_user_access_token: user_token,
+          permissions: permissions || ['pages_manage_posts', 'pages_read_engagement', 'pages_show_list'],
+          ad_account_id: ad_account_id || null,
           is_active: true,
           connected_at: new Date().toISOString(),
         },
