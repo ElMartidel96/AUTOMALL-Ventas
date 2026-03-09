@@ -640,18 +640,19 @@ export async function publishToFacebook(
 
         if (missingReqs.length === 0) {
           const acctCheck = await verifyAdAccountAccess(adAccountId, userToken);
-          console.log(`[CampaignService] Ad account check: accessible=${acctCheck.accessible} status=${acctCheck.accountStatus} tasks=[${acctCheck.permittedTasks.join(',')}] canCreateAds=${acctCheck.canCreateAds} name="${acctCheck.name}"`);
+          console.log(`[CampaignService] Ad account check: accessible=${acctCheck.accessible} status=${acctCheck.accountStatus} disable_reason=${acctCheck.disableReason} name="${acctCheck.name}"`);
 
           if (!acctCheck.accessible) {
             missingReqs.push(`AD_ACCOUNT_INACCESSIBLE: No se puede acceder al ad account ${adAccountId}. Error: ${acctCheck.error || 'unknown'} / Cannot access ad account`);
           } else if (acctCheck.accountStatus !== 1) {
             const statusMap: Record<number, string> = { 2: 'DISABLED', 3: 'UNSETTLED', 7: 'PENDING_RISK_REVIEW', 8: 'PENDING_SETTLEMENT', 9: 'IN_GRACE_PERIOD', 100: 'PENDING_CLOSURE', 101: 'CLOSED', 201: 'ANY_ACTIVE', 202: 'ANY_CLOSED' };
             const statusName = statusMap[acctCheck.accountStatus] || `UNKNOWN(${acctCheck.accountStatus})`;
-            missingReqs.push(`AD_ACCOUNT_NOT_ACTIVE: Ad account status=${statusName}. Verifica en business.facebook.com / Check business.facebook.com`);
-          } else if (!acctCheck.canCreateAds) {
-            const tasksStr = acctCheck.permittedTasks.length > 0 ? acctCheck.permittedTasks.join(',') : 'NONE';
-            missingReqs.push(`AD_ACCOUNT_READ_ONLY: Tu rol en "${acctCheck.name}" solo tiene permisos [${tasksStr}] (solo lectura). Necesitas MANAGE o ADVERTISE para crear anuncios. Cambia tu rol en business.facebook.com / Your permissions on "${acctCheck.name}" are [${tasksStr}] (read-only). Need MANAGE or ADVERTISE.`);
+            const disableNote = acctCheck.disableReason ? ` (disable_reason=${acctCheck.disableReason})` : '';
+            missingReqs.push(`AD_ACCOUNT_NOT_ACTIVE: Ad account "${acctCheck.name}" status=${statusName}${disableNote}. Verifica en business.facebook.com / Check business.facebook.com`);
           }
+          // NOTE: We do NOT check canCreateAds here — permitted_tasks/user_role are not
+          // available on individual GET /act_{id}. The actual createFBCampaign() call will
+          // fail with a clear error if the user lacks permission on this account.
         }
       }
 

@@ -503,34 +503,67 @@ async function _fetchAdAccounts(
 
 /**
  * Pick the BEST ad account for creating ads.
- * Uses permitted_tasks (MANAGE/ADVERTISE) from v22.0 API.
- * Falls back to name heuristic if tasks aren't available.
+ * Strategy:
+ *   1. If permitted_tasks available (assigned_ad_accounts worked), use MANAGE/ADVERTISE
+ *   2. Otherwise: brand-aware name heuristic — prefer "Autos MALL LLC" style names
+ *      - Filter out "Read-Only", "Solo Lectura", "Test"
+ *      - Prefer accounts matching brand ("Autos MALL", "AutoMALL")
+ *      - Exclude other projects ("CryptoGift")
  */
 export function pickWritableAdAccount(accounts: FBAdAccount[]): FBAdAccount | null {
-  // 1. Prefer accounts with ADVERTISE or MANAGE permitted_tasks
-  const writable = accounts.filter(a =>
-    a.permitted_tasks?.includes('ADVERTISE') || a.permitted_tasks?.includes('MANAGE')
-  );
-  if (writable.length > 0) {
-    // Prefer MANAGE (full admin) over just ADVERTISE
-    const admin = writable.find(a => a.permitted_tasks?.includes('MANAGE'));
-    return admin || writable[0];
+  if (accounts.length === 0) return null;
+
+  // 1. If permitted_tasks available, use them (only from /me/assigned_ad_accounts)
+  const withTasks = accounts.filter(a => a.permitted_tasks && a.permitted_tasks.length > 0);
+  if (withTasks.length > 0) {
+    const writable = withTasks.filter(a =>
+      a.permitted_tasks!.includes('ADVERTISE') || a.permitted_tasks!.includes('MANAGE')
+    );
+    if (writable.length > 0) {
+      const admin = writable.find(a => a.permitted_tasks!.includes('MANAGE'));
+      return admin || writable[0];
+    }
   }
 
-  // 2. If permitted_tasks not available (fallback endpoint), use name heuristic
-  const notReadOnly = accounts.filter(a =>
-    !a.name?.toLowerCase().includes('read-only') &&
-    !a.name?.toLowerCase().includes('solo lectura')
-  );
-  if (notReadOnly.length > 0) return notReadOnly[0];
+  // 2. Name-based heuristic (fallback when permitted_tasks unavailable)
+  const viable = accounts.filter(a => {
+    const name = (a.name || '').toLowerCase();
+    if (name.includes('read-only') || name.includes('solo lectura')) return false;
+    if (name.includes('test')) return false;
+    return true;
+  });
 
-  // 3. No writable account found
-  return null;
+  if (viable.length === 0) return null;
+
+  // 2a. Prefer accounts matching our brand name
+  const branded = viable.find(a => {
+    const name = (a.name || '').toLowerCase();
+    return (name.includes('autos mall') || name.includes('autosmall') || name.includes('automall'))
+      && !name.includes('read-only');
+  });
+  if (branded) return branded;
+
+  // 2b. Exclude accounts from other known projects
+  const notOtherProject = viable.filter(a => {
+    const name = (a.name || '').toLowerCase();
+    return !name.includes('cryptogift') && !name.includes('crypto gift')
+      && !name.includes('crypto') && !name.includes('dao');
+  });
+  if (notOtherProject.length > 0) return notOtherProject[0];
+
+  // 2c. Last resort: first viable account
+  return viable[0];
 }
 
 /**
  * Pre-flight check: verify the token can access the ad account.
- * Uses permitted_tasks (v22.0) instead of deprecated user_role.
+ *
+ * IMPORTANT: Only uses fields that exist on individual ad account objects:
+ *   id, name, account_status, disable_reason
+ *
+ * permitted_tasks and user_role do NOT exist on GET /act_{id} —
+ * they only exist on /me/assigned_ad_accounts (which requires Advanced Access).
+ * Actual ad creation permission is tested by the createFBCampaign call itself.
  */
 export async function verifyAdAccountAccess(
   adAccountId: string,
@@ -539,13 +572,12 @@ export async function verifyAdAccountAccess(
   accessible: boolean;
   accountStatus: number;
   name: string;
-  permittedTasks: string[];
-  canCreateAds: boolean;
+  disableReason: number;
   error?: string;
 }> {
   const accountId = adAccountId.replace(/^act_/, '');
   const url = new URL(`${GRAPH_API}/act_${accountId}`);
-  url.searchParams.set('fields', 'id,name,account_status,permitted_tasks,disable_reason');
+  url.searchParams.set('fields', 'id,name,account_status,disable_reason');
   url.searchParams.set('access_token', accessToken);
 
   const res = await fetch(url.toString());
@@ -557,23 +589,17 @@ export async function verifyAdAccountAccess(
       accessible: false,
       accountStatus: 0,
       name: '',
-      permittedTasks: [],
-      canCreateAds: false,
+      disableReason: 0,
       error: _formatFBError('', fbErr),
     };
   }
 
   const data = await res.json();
-  const permittedTasks = (data.permitted_tasks || []) as string[];
-  // MANAGE or ADVERTISE can create ads (v22.0 permitted_tasks)
-  const canCreateAds = permittedTasks.includes('MANAGE') || permittedTasks.includes('ADVERTISE');
-
   return {
     accessible: true,
     accountStatus: data.account_status || 0,
     name: data.name || '',
-    permittedTasks,
-    canCreateAds,
+    disableReason: data.disable_reason || 0,
   };
 }
 
