@@ -730,7 +730,7 @@ export async function publishToFacebook(
         // 10-PRE-B: Verify ad account is accessible
         if (missingReqs.length === 0) {
           const acctCheck = await verifyAdAccountAccess(adAccountId, userToken);
-          console.log(`[CampaignService] Ad account check: accessible=${acctCheck.accessible} status=${acctCheck.accountStatus} name="${acctCheck.name}"`);
+          console.log(`[CampaignService] Ad account check: accessible=${acctCheck.accessible} status=${acctCheck.accountStatus} role=${acctCheck.userRole ?? '?'} canCreateAds=${acctCheck.canCreateAds} name="${acctCheck.name}"`);
 
           if (!acctCheck.accessible) {
             missingReqs.push(`AD_ACCOUNT_INACCESSIBLE: No se puede acceder al ad account ${adAccountId}. Error: ${acctCheck.error || 'unknown'} / Cannot access ad account`);
@@ -738,6 +738,10 @@ export async function publishToFacebook(
             const statusMap: Record<number, string> = { 2: 'DISABLED', 3: 'UNSETTLED', 7: 'PENDING_RISK_REVIEW', 8: 'PENDING_SETTLEMENT', 9: 'IN_GRACE_PERIOD', 100: 'PENDING_CLOSURE', 101: 'CLOSED', 201: 'ANY_ACTIVE', 202: 'ANY_CLOSED' };
             const statusName = statusMap[acctCheck.accountStatus] || `UNKNOWN(${acctCheck.accountStatus})`;
             missingReqs.push(`AD_ACCOUNT_NOT_ACTIVE: Ad account status=${statusName}. Verifica en business.facebook.com / Check business.facebook.com`);
+          } else if (!acctCheck.canCreateAds) {
+            const roleMap: Record<number, string> = { 1001: 'ADMIN', 1002: 'ADVERTISER', 1003: 'ANALYST', 1004: 'SALES' };
+            const roleName = acctCheck.userRole ? (roleMap[acctCheck.userRole] || `UNKNOWN(${acctCheck.userRole})`) : 'NO_ROLE';
+            missingReqs.push(`AD_ACCOUNT_READ_ONLY: Tu rol en "${acctCheck.name}" es ${roleName} (solo lectura). Necesitas rol ADMIN o ADVERTISER para crear anuncios. Cambia tu rol en business.facebook.com / Your role on "${acctCheck.name}" is ${roleName} (read-only). Need ADMIN or ADVERTISER role.`);
           }
         }
       }

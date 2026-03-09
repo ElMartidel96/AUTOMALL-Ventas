@@ -450,10 +450,10 @@ export async function getGrantedPermissions(userAccessToken: string): Promise<st
 // Marketing API — Paid Ad Management
 // ─────────────────────────────────────────────
 
-/** Discover active ad accounts for the user */
+/** Discover active ad accounts for the user, sorted by write-access first */
 export async function getUserAdAccounts(userAccessToken: string): Promise<FBAdAccount[]> {
   const url = new URL(`${GRAPH_API}/me/adaccounts`);
-  url.searchParams.set('fields', 'id,name,account_status');
+  url.searchParams.set('fields', 'id,name,account_status,user_role,capabilities');
   url.searchParams.set('access_token', userAccessToken);
 
   const res = await fetch(url.toString());
@@ -464,8 +464,40 @@ export async function getUserAdAccounts(userAccessToken: string): Promise<FBAdAc
     throw new Error(_formatFBError('Failed to get ad accounts:', fbErr));
   }
   const data = await res.json();
-  // Only return active accounts (account_status === 1)
-  return ((data.data || []) as FBAdAccount[]).filter(a => a.account_status === 1);
+  const all = ((data.data || []) as FBAdAccount[]).filter(a => a.account_status === 1);
+
+  // Sort: ADMIN (1001) and ADVERTISER (1002) first — these can create ads
+  // ANALYST (1003) and SALES (1004) are read-only
+  all.sort((a, b) => {
+    const aWrite = (a.user_role === 1001 || a.user_role === 1002) ? 0 : 1;
+    const bWrite = (b.user_role === 1001 || b.user_role === 1002) ? 0 : 1;
+    return aWrite - bWrite;
+  });
+
+  return all;
+}
+
+/**
+ * Pick the BEST ad account for creating ads.
+ * Filters for ADMIN/ADVERTISER role (can create ads), excludes read-only.
+ * Returns null if no writable account found.
+ */
+export function pickWritableAdAccount(accounts: FBAdAccount[]): FBAdAccount | null {
+  // 1. Prefer accounts with ADMIN (1001) or ADVERTISER (1002) role
+  const writable = accounts.filter(a =>
+    a.user_role === 1001 || a.user_role === 1002
+  );
+  if (writable.length > 0) return writable[0];
+
+  // 2. If user_role is not returned (older API?), try accounts that DON'T have "Read-Only" in name
+  const notReadOnly = accounts.filter(a =>
+    !a.name?.toLowerCase().includes('read-only') &&
+    !a.name?.toLowerCase().includes('solo lectura')
+  );
+  if (notReadOnly.length > 0) return notReadOnly[0];
+
+  // 3. No writable account found
+  return null;
 }
 
 /**
@@ -479,11 +511,13 @@ export async function verifyAdAccountAccess(
   accessible: boolean;
   accountStatus: number;
   name: string;
+  userRole?: number;
+  canCreateAds: boolean;
   error?: string;
 }> {
   const accountId = adAccountId.replace(/^act_/, '');
   const url = new URL(`${GRAPH_API}/act_${accountId}`);
-  url.searchParams.set('fields', 'id,name,account_status,disable_reason,funding_source_details');
+  url.searchParams.set('fields', 'id,name,account_status,user_role,disable_reason,capabilities');
   url.searchParams.set('access_token', accessToken);
 
   const res = await fetch(url.toString());
@@ -495,15 +529,22 @@ export async function verifyAdAccountAccess(
       accessible: false,
       accountStatus: 0,
       name: '',
+      canCreateAds: false,
       error: _formatFBError('', fbErr),
     };
   }
 
   const data = await res.json();
+  const userRole = data.user_role as number | undefined;
+  // ADMIN (1001) and ADVERTISER (1002) can create ads
+  const canCreateAds = userRole === 1001 || userRole === 1002;
+
   return {
     accessible: true,
     accountStatus: data.account_status || 0,
     name: data.name || '',
+    userRole,
+    canCreateAds,
   };
 }
 

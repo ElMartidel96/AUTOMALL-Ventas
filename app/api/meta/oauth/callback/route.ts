@@ -17,6 +17,7 @@ import {
   getPageAccessToken,
   getFBUserId,
   getUserAdAccounts,
+  pickWritableAdAccount,
   getGrantedPermissions,
 } from '@/lib/meta/facebook-api';
 import { FEATURE_META_INTEGRATION } from '@/lib/config/features';
@@ -97,8 +98,18 @@ export async function GET(request: NextRequest) {
     if (grantedPermissions.includes('ads_management')) {
       try {
         const adAccounts = await getUserAdAccounts(longLivedUserToken);
-        console.log(`[MetaOAuth] Ad accounts found: ${adAccounts.length}`, adAccounts.map(a => `${a.id}(status=${a.account_status})`));
-        if (adAccounts.length > 0) adAccountId = adAccounts[0].id;
+        console.log(`[MetaOAuth] Ad accounts found: ${adAccounts.length}`, adAccounts.map(a =>
+          `${a.id}(status=${a.account_status},role=${a.user_role ?? '?'},name="${a.name}")`
+        ));
+
+        // Pick a WRITABLE account (ADMIN/ADVERTISER), not Read-Only
+        const best = pickWritableAdAccount(adAccounts);
+        if (best) {
+          adAccountId = best.id;
+          console.log(`[MetaOAuth] Selected ad account: ${best.id} (role=${best.user_role}, name="${best.name}")`);
+        } else {
+          console.warn(`[MetaOAuth] No writable ad account found — all ${adAccounts.length} accounts are read-only. Organic-only mode.`);
+        }
       } catch (adErr) {
         console.error(`[MetaOAuth] Ad account discovery failed:`, adErr);
       }

@@ -212,6 +212,10 @@ export interface FBAdAccount {
   id: string;
   name: string;
   account_status: number;
+  /** 1001=ADMIN, 1002=ADVERTISER, 1003=ANALYST, 1004=SALES */
+  user_role?: number;
+  /** Capabilities: e.g. MANAGE, ANALYZE */
+  capabilities?: string[];
 }
 export interface FBAdInsightsData {
   impressions: string;
