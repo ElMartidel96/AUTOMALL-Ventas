@@ -38,6 +38,7 @@ interface FBAPIError {
   fbtrace_id?: string;
   error_user_title?: string;
   error_user_msg?: string;
+  error_data?: unknown;
 }
 
 function _extractFBError(responseBody: unknown): FBAPIError {
@@ -51,6 +52,7 @@ function _extractFBError(responseBody: unknown): FBAPIError {
     fbtrace_id: (e.fbtrace_id as string) || undefined,
     error_user_title: (e.error_user_title as string) || undefined,
     error_user_msg: (e.error_user_msg as string) || undefined,
+    error_data: e.error_data || undefined,
   };
 }
 
@@ -661,7 +663,16 @@ export async function createFBCampaign(
   return res.json();
 }
 
-/** Create a Facebook AdSet optimized for WhatsApp conversations */
+/**
+ * Create a Facebook AdSet.
+ *
+ * Modes:
+ * - **Boost Post** (default): optimization_goal='POST_ENGAGEMENT', no destination_type.
+ *   Promotes an existing organic post. No WABA required.
+ * - **CTWA**: optimization_goal='CONVERSATIONS', destination_type='WHATSAPP'.
+ *   Requires a WhatsApp Business Account (WABA) linked to Meta Business Manager.
+ *   Pass whatsappNumber + set optimizationGoal/destinationType explicitly.
+ */
 export async function createFBAdSet(
   adAccountId: string,
   accessToken: string,
@@ -670,32 +681,44 @@ export async function createFBAdSet(
     campaignId: string;
     dailyBudgetCents: number;
     pageId: string;
-    whatsappNumber: string;
     targeting: FBTargeting;
+    optimizationGoal?: string;
+    destinationType?: string;
+    whatsappNumber?: string;
     startTime?: string;
   }
 ): Promise<FBAdSetResponse> {
   const accountId = adAccountId.replace(/^act_/, '');
   const url = new URL(`${GRAPH_API}/act_${accountId}/adsets`);
 
+  const optimizationGoal = opts.optimizationGoal || 'POST_ENGAGEMENT';
+
+  // Build promoted_object based on destination type
+  const promotedObject: Record<string, string> = { page_id: opts.pageId };
+  if (opts.destinationType === 'WHATSAPP' && opts.whatsappNumber) {
+    promotedObject.whatsapp_phone_number = opts.whatsappNumber;
+  }
+
   const body = new URLSearchParams();
   body.set('name', opts.name);
   body.set('campaign_id', opts.campaignId);
-  body.set('optimization_goal', 'CONVERSATIONS');
-  body.set('destination_type', 'WHATSAPP');
+  body.set('optimization_goal', optimizationGoal);
+  if (opts.destinationType) {
+    body.set('destination_type', opts.destinationType);
+  }
   body.set('billing_event', 'IMPRESSIONS');
   body.set('bid_strategy', 'LOWEST_COST_WITHOUT_CAP');
   body.set('daily_budget', opts.dailyBudgetCents.toString());
-  body.set('promoted_object', JSON.stringify({
-    page_id: opts.pageId,
-    whatsapp_phone_number: opts.whatsappNumber,
-  }));
+  body.set('promoted_object', JSON.stringify(promotedObject));
   body.set('targeting', JSON.stringify(opts.targeting));
   body.set('status', 'PAUSED');
   if (opts.startTime) {
     body.set('start_time', opts.startTime);
   }
   body.set('access_token', accessToken);
+
+  // Debug: log full request (sans token)
+  console.log(`[FB-API] createFBAdSet request: account=act_${accountId} optimization=${optimizationGoal} destination=${opts.destinationType || '(none)'} budget=${opts.dailyBudgetCents} promoted_object=${JSON.stringify(promotedObject)} targeting_cities=${JSON.stringify(opts.targeting.geo_locations.cities)}`);
 
   const res = await fetch(url.toString(), {
     method: 'POST',
@@ -707,6 +730,9 @@ export async function createFBAdSet(
     const err = await res.json().catch(() => ({}));
     const fbErr = _extractFBError(err);
     _logFBError(`createFBAdSet(act_${accountId})`, fbErr);
+    if (fbErr.error_data) {
+      console.error(`[FB-API] createFBAdSet error_data:`, JSON.stringify(fbErr.error_data));
+    }
     throw new Error(_formatFBError('Create adset failed:', fbErr));
   }
   return res.json();

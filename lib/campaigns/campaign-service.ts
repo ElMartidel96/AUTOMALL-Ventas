@@ -606,7 +606,6 @@ export async function publishToFacebook(
     // ── ALL-OR-NOTHING: If campaign has budget, pre-flight checks BEFORE organic post ──
     const adAccountId = conn.ad_account_id;
     const hasBudget = campaign.daily_budget_usd && campaign.daily_budget_usd >= 1;
-    const sellerPhone = seller.whatsapp || seller.phone;
     const userToken = conn.fb_user_access_token;
 
     if (hasBudget) {
@@ -617,9 +616,6 @@ export async function publishToFacebook(
       }
       if (!userToken) {
         missingReqs.push('NO_USER_TOKEN: Reconecta Facebook — se necesita el token de usuario para el Marketing API / Reconnect Facebook — user token needed for Marketing API');
-      }
-      if (!sellerPhone) {
-        missingReqs.push('NO_PHONE: Agrega tu numero de WhatsApp en /perfil antes de crear ads CTWA / Add your WhatsApp number in /profile before creating CTWA ads');
       }
 
       // Live pre-flight checks with Facebook API
@@ -756,7 +752,7 @@ export async function publishToFacebook(
     let adStatus: 'active' | 'organic_only' | 'error' | 'missing_requirements' = 'organic_only';
     let adMessage: string | null = null;
 
-    if (hasBudget && adAccountId && userToken && sellerPhone && fbPostId) {
+    if (hasBudget && adAccountId && userToken && fbPostId) {
       try {
         await supabase
           .from('campaigns')
@@ -771,14 +767,16 @@ export async function publishToFacebook(
           name: `AutoMALL — ${campaign.name}`,
         });
 
-        // 10c. Create adset with CTWA optimization
+        // 10c. Create adset — Boost Post mode (promotes organic post)
+        // NOTE: CTWA (destination_type='WHATSAPP') requires a WhatsApp Business Account (WABA)
+        // linked to Meta Business Manager. Until WABA is set up, we use POST_ENGAGEMENT
+        // which boosts the organic post (already has WhatsApp contact in caption).
         const dailyBudgetCents = Math.round(campaign.daily_budget_usd! * 100);
         const fbAdSet = await createFBAdSet(adAccountId, userToken, {
           name: `${campaign.name} — Houston Area`,
           campaignId: fbCampaign.id,
           dailyBudgetCents,
           pageId: conn.fb_page_id,
-          whatsappNumber: sellerPhone,
           targeting,
         });
 
