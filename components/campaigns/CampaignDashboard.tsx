@@ -3,7 +3,8 @@
 /**
  * Campaign Dashboard — List + Stats + Actions
  *
- * Shows all campaigns with status, metrics, and quick actions.
+ * Shows all campaigns with status, metrics, quick actions,
+ * FB post permalink, landing link, and delete with FB cleanup.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -38,6 +39,7 @@ export function CampaignDashboard({ onCreateNew }: Props) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<CampaignStatus | 'all'>('all');
   const [publishing, setPublishing] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const fetchCampaigns = useCallback(async () => {
     if (!address) return;
@@ -98,6 +100,30 @@ export function CampaignDashboard({ onCreateNew }: Props) {
       }
     } catch (err) {
       console.error('Status toggle failed:', err);
+    }
+  };
+
+  const handleDelete = async (campaign: Campaign) => {
+    if (!address || deleting) return;
+    const hasFBPosts = campaign.fb_post_ids.length > 0;
+    if (!confirm(t('deleteConfirm'))) return;
+
+    setDeleting(campaign.id);
+    try {
+      const url = hasFBPosts
+        ? `/api/campaigns/${campaign.id}?deleteFromFB=true`
+        : `/api/campaigns/${campaign.id}`;
+      const res = await fetch(url, {
+        method: 'DELETE',
+        headers: { 'x-wallet-address': address },
+      });
+      if (res.ok) {
+        await fetchCampaigns();
+      }
+    } catch (err) {
+      console.error('Delete failed:', err);
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -170,66 +196,131 @@ export function CampaignDashboard({ onCreateNew }: Props) {
       ) : (
         <div className="space-y-3">
           {filtered.map(campaign => (
-            <div
+            <CampaignCard
               key={campaign.id}
-              className="glass-card p-4 hover:border-am-orange/30 transition-colors"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span>{STATUS_EMOJI[campaign.status] || ''}</span>
-                    <span>{FB_STATUS_EMOJI[campaign.fb_publish_status] || ''}</span>
-                    <h3 className="font-bold text-gray-900 dark:text-white truncate">
-                      {campaign.name}
-                    </h3>
-                  </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {campaign.vehicle_ids.length} {t('vehicles')} •{' '}
-                    {campaign.daily_budget_usd ? `$${campaign.daily_budget_usd}/${t('day')}` : t('noBudget')}
-                  </p>
-                  {campaign.landing_slug && (
-                    <a
-                      href={`/w/${campaign.landing_slug}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-am-blue dark:text-am-blue-light hover:underline mt-1 inline-block"
-                    >
-                      🔗 /w/{campaign.landing_slug}
-                    </a>
-                  )}
-                </div>
-
-                <div className="flex gap-2 ml-3 flex-shrink-0">
-                  {campaign.fb_publish_status !== 'published' && campaign.status !== 'archived' && (
-                    <button
-                      onClick={() => handlePublish(campaign.id)}
-                      disabled={publishing === campaign.id}
-                      className="px-3 py-1.5 bg-[#1877F2] hover:bg-[#166FE5] text-white text-xs rounded-lg font-medium transition-colors disabled:opacity-50"
-                    >
-                      {publishing === campaign.id ? '...' : 'FB'}
-                    </button>
-                  )}
-                  {campaign.status === 'active' && (
-                    <button
-                      onClick={() => handleToggleStatus(campaign.id, 'paused')}
-                      className="px-3 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 text-xs rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
-                    >
-                      {t('pause')}
-                    </button>
-                  )}
-                  {campaign.status === 'paused' && (
-                    <button
-                      onClick={() => handleToggleStatus(campaign.id, 'active')}
-                      className="px-3 py-1.5 bg-am-green/20 text-am-green text-xs rounded-lg font-medium hover:bg-am-green/30 transition-colors"
-                    >
-                      {t('resume')}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
+              campaign={campaign}
+              t={t}
+              publishing={publishing}
+              deleting={deleting}
+              onPublish={handlePublish}
+              onToggleStatus={handleToggleStatus}
+              onDelete={handleDelete}
+            />
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Campaign Card (extracted for clarity)
+// ─────────────────────────────────────────────
+
+interface CardProps {
+  campaign: Campaign;
+  t: ReturnType<typeof useTranslations<'campaigns'>>;
+  publishing: string | null;
+  deleting: string | null;
+  onPublish: (id: string) => void;
+  onToggleStatus: (id: string, s: CampaignStatus) => void;
+  onDelete: (c: Campaign) => void;
+}
+
+function CampaignCard({ campaign, t, publishing, deleting, onPublish, onToggleStatus, onDelete }: CardProps) {
+  const isPublished = campaign.fb_publish_status === 'published';
+  const pubDate = campaign.fb_published_at
+    ? new Date(campaign.fb_published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : null;
+
+  return (
+    <div className="glass-card p-4 hover:border-am-orange/30 transition-colors">
+      {/* Header row */}
+      <div className="flex items-start justify-between">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span>{STATUS_EMOJI[campaign.status] || ''}</span>
+            <span>{FB_STATUS_EMOJI[campaign.fb_publish_status] || ''}</span>
+            <h3 className="font-bold text-gray-900 dark:text-white truncate">
+              {campaign.name}
+            </h3>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            {campaign.vehicle_ids.length} {t('vehicles')}
+            {pubDate && (
+              <span> • {t('publishedOn')} {pubDate}</span>
+            )}
+          </p>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex gap-2 ml-3 flex-shrink-0">
+          {!isPublished && campaign.status !== 'archived' && (
+            <button
+              onClick={() => onPublish(campaign.id)}
+              disabled={publishing === campaign.id}
+              className="px-3 py-1.5 bg-[#1877F2] hover:bg-[#166FE5] text-white text-xs rounded-lg font-medium transition-colors disabled:opacity-50"
+            >
+              {publishing === campaign.id ? '...' : 'FB'}
+            </button>
+          )}
+          {campaign.status === 'active' && (
+            <button
+              onClick={() => onToggleStatus(campaign.id, 'paused')}
+              className="px-3 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 text-xs rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
+            >
+              {t('pause')}
+            </button>
+          )}
+          {campaign.status === 'paused' && (
+            <button
+              onClick={() => onToggleStatus(campaign.id, 'active')}
+              className="px-3 py-1.5 bg-am-green/20 text-am-green text-xs rounded-lg font-medium hover:bg-am-green/30 transition-colors"
+            >
+              {t('resume')}
+            </button>
+          )}
+          {campaign.status !== 'archived' && (
+            <button
+              onClick={() => onDelete(campaign)}
+              disabled={deleting === campaign.id}
+              className="px-3 py-1.5 bg-red-500/10 text-red-500 text-xs rounded-lg font-medium hover:bg-red-500/20 transition-colors disabled:opacity-50"
+            >
+              {deleting === campaign.id ? '...' : t('delete')}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Links row */}
+      <div className="flex flex-wrap items-center gap-3 mt-2">
+        {campaign.landing_slug && (
+          <a
+            href={`/w/${campaign.landing_slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-am-blue dark:text-am-blue-light hover:underline flex items-center gap-1"
+          >
+            🔗 {t('landingPage')}: /w/{campaign.landing_slug}
+          </a>
+        )}
+        {isPublished && campaign.fb_permalink_url && (
+          <a
+            href={campaign.fb_permalink_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-[#1877F2] hover:underline flex items-center gap-1"
+          >
+            📱 {t('viewOnFB')}
+          </a>
+        )}
+      </div>
+
+      {/* Organic note for published campaigns */}
+      {isPublished && (
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-2 italic">
+          {t('organicNote')}
+        </p>
       )}
     </div>
   );

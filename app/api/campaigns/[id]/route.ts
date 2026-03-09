@@ -11,6 +11,7 @@ import {
   getCampaignById,
   updateCampaign,
   deleteCampaign,
+  getCampaignFullStats,
 } from '@/lib/campaigns/campaign-service';
 import type { CampaignType, CampaignStatus, CaptionLanguage } from '@/lib/campaigns/types';
 
@@ -53,6 +54,18 @@ export async function GET(
   const campaign = await getCampaignById(id, wallet);
 
   if (!campaign) return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
+
+  // Include full stats if requested
+  const includeStats = req.nextUrl.searchParams.get('stats') === 'true';
+  if (includeStats) {
+    try {
+      const stats = await getCampaignFullStats(id, wallet);
+      return NextResponse.json({ campaign, stats });
+    } catch {
+      // Stats fetch failed — return campaign without stats
+      return NextResponse.json({ campaign, stats: null });
+    }
+  }
 
   return NextResponse.json({ campaign });
 }
@@ -126,9 +139,12 @@ export async function DELETE(
 
   const { id } = await params;
 
+  // Check if user wants to delete FB posts too
+  const deleteFromFB = req.nextUrl.searchParams.get('deleteFromFB') === 'true';
+
   try {
-    await deleteCampaign(id, wallet);
-    return NextResponse.json({ success: true });
+    const result = await deleteCampaign(id, wallet, deleteFromFB);
+    return NextResponse.json({ success: true, deletedPostsCount: result.deletedPostsCount });
   } catch (err) {
     console.error('[API] DELETE /api/campaigns/[id] error:', err);
     return NextResponse.json({ error: 'Failed to delete campaign' }, { status: 500 });

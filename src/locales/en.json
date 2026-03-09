@@ -3347,6 +3347,17 @@
     "next": "Next",
     "create": "Create",
     "createAndPublish": "Create + FB",
-    "fbPublishFailed": "Campaign created but Facebook publish failed. Check your FB connection in your profile."
+    "fbPublishFailed": "Campaign created but Facebook publish failed. Check your FB connection in your profile.",
+    "organicNote": "Organic post on your Facebook page (not a paid ad)",
+    "viewOnFB": "View on Facebook",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this campaign? Facebook posts will also be removed.",
+    "deleting": "Deleting...",
+    "deleted": "Campaign deleted",
+    "publishedOn": "Published",
+    "landingPage": "Landing",
+    "fbPost": "FB Post",
+    "noStats": "No data yet",
+    "loadingStats": "Loading stats..."
   }
 }

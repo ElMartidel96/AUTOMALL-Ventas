@@ -3347,6 +3347,17 @@
     "next": "Siguiente",
     "create": "Crear",
     "createAndPublish": "Crear + FB",
-    "fbPublishFailed": "Campana creada pero fallo la publicacion en Facebook. Verifica tu conexion de FB en tu perfil."
+    "fbPublishFailed": "Campana creada pero fallo la publicacion en Facebook. Verifica tu conexion de FB en tu perfil.",
+    "organicNote": "Post organico en tu pagina de Facebook (no es un anuncio pagado)",
+    "viewOnFB": "Ver en Facebook",
+    "delete": "Eliminar",
+    "deleteConfirm": "Eliminar esta campana? Los posts de Facebook tambien seran borrados.",
+    "deleting": "Eliminando...",
+    "deleted": "Campana eliminada",
+    "publishedOn": "Publicado",
+    "landingPage": "Landing",
+    "fbPost": "Post FB",
+    "noStats": "Sin datos aun",
+    "loadingStats": "Cargando stats..."
   }
 }
