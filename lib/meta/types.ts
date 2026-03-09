@@ -54,6 +54,7 @@ export interface MetaConnection {
   fb_page_access_token: string;
   waba_id: string | null;
   catalog_id: string | null;
+  ad_account_id: string | null;
   permissions: string[];
   auto_publish_on_active: boolean;
   auto_publish_on_sold: boolean;
@@ -197,6 +198,28 @@ export interface MetaPublicationWithEngagement extends MetaPublicationLog {
 // ─────────────────────────────────────────────
 // OAuth State
 // ─────────────────────────────────────────────
+
+// ─────────────────────────────────────────────
+// Marketing API Responses
+// ─────────────────────────────────────────────
+
+export interface FBCampaignResponse { id: string; }
+export interface FBAdSetResponse { id: string; }
+export interface FBAdCreativeResponse { id: string; }
+export interface FBAdResponse { id: string; }
+export interface FBAdAccount {
+  id: string;
+  name: string;
+  account_status: number;
+}
+export interface FBAdInsightsData {
+  impressions: string;
+  reach: string;
+  clicks: string;
+  spend: string;
+  actions?: Array<{ action_type: string; value: string }>;
+  cost_per_action_type?: Array<{ action_type: string; value: string }>;
+}
 
 export interface MetaOAuthState {
   wallet_address: string;

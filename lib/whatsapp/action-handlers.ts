@@ -788,6 +788,7 @@ export async function handleCampaignDetail(
       daily_budget: campaign.daily_budget_usd,
       fb_publish_status: campaign.fb_publish_status,
       fb_permalink_url: campaign.fb_permalink_url,
+      fb_ad_status: campaign.fb_ad_status,
       landing_slug: campaign.landing_slug,
       metrics: {
         page_views: metrics.page_views,
@@ -1064,7 +1065,7 @@ export async function handleCampaignCreateStep(
           try {
             const result = await publishToFacebook(campaign.id, link.wallet_address);
             return {
-              text: ct.campaignPublished(lang, campaignName, result.permalink, campaign.landing_slug || ''),
+              text: ct.campaignPublished(lang, campaignName, result.permalink, campaign.landing_slug || '', result.adStatus, (data.budget as number) || null),
               newContext: null,
             };
           } catch (fbErr) {
@@ -1107,7 +1108,7 @@ export async function handleCampaignPublish(
 
     const result = await publishToFacebook(campaignId, link.wallet_address);
     return {
-      text: ct.campaignPublished(lang, campaign.name, result.permalink, campaign.landing_slug || ''),
+      text: ct.campaignPublished(lang, campaign.name, result.permalink, campaign.landing_slug || '', result.adStatus, campaign.daily_budget_usd),
       newContext: null,
     };
   } catch (err) {
@@ -1127,13 +1128,27 @@ export async function handleCampaignToggleStatus(
   newStatus: 'active' | 'paused'
 ): Promise<CommandResult> {
   try {
-    const { updateCampaign, getCampaignById } = await import('@/lib/campaigns/campaign-service');
+    const { updateCampaign, getCampaignById, pauseFBAd, resumeFBAd } = await import('@/lib/campaigns/campaign-service');
     const campaign = await getCampaignById(campaignId, link.wallet_address);
     if (!campaign) {
       return { text: lang === 'es' ? 'Campana no encontrada.' : 'Campaign not found.', newContext: null };
     }
 
     await updateCampaign(campaignId, link.wallet_address, { status: newStatus });
+
+    // Also pause/resume the paid ad if it exists
+    if (campaign.fb_ad_id && campaign.fb_ad_status && campaign.fb_ad_status !== 'none' && campaign.fb_ad_status !== 'error') {
+      try {
+        if (newStatus === 'paused') {
+          await pauseFBAd(campaignId, link.wallet_address);
+        } else if (newStatus === 'active') {
+          await resumeFBAd(campaignId, link.wallet_address);
+        }
+      } catch (adErr) {
+        console.error('[WA-CMD] Ad toggle error (non-fatal):', adErr);
+      }
+    }
+
     return { text: ct.campaignStatusChanged(lang, campaign.name, newStatus), newContext: null };
   } catch (err) {
     console.error('[WA-CMD] Campaign toggle error:', err);
@@ -1225,6 +1240,7 @@ export async function handleCampaignStats(
       name: campaign.name,
       landing: stats.landing,
       fb: stats.fb,
+      ad: stats.ad,
       publishedAt: stats.publishedAt,
     });
 

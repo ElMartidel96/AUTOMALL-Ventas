@@ -16,6 +16,7 @@ import {
   getUserPages,
   getPageAccessToken,
   getFBUserId,
+  getUserAdAccounts,
 } from '@/lib/meta/facebook-api';
 import { FEATURE_META_INTEGRATION } from '@/lib/config/features';
 import type { MetaOAuthState } from '@/lib/meta/types';
@@ -80,6 +81,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Discover ad account (best-effort)
+    let adAccountId: string | null = null;
+    try {
+      const adAccounts = await getUserAdAccounts(longLivedUserToken);
+      if (adAccounts.length > 0) adAccountId = adAccounts[0].id;
+    } catch {
+      // OK — organic only mode, no ad account available
+    }
+
     // If only one page, connect it directly
     if (pages.length === 1) {
       const page = pages[0];
@@ -99,7 +109,8 @@ export async function GET(request: NextRequest) {
             fb_page_id: page.id,
             fb_page_name: page.name,
             fb_page_access_token: pageAccessToken,
-            permissions: ['pages_manage_posts', 'pages_read_engagement', 'pages_show_list'],
+            permissions: ['pages_manage_posts', 'pages_read_engagement', 'pages_show_list', 'ads_management', 'ads_read'],
+            ad_account_id: adAccountId,
             is_active: true,
             connected_at: new Date().toISOString(),
           },
@@ -121,6 +132,7 @@ export async function GET(request: NextRequest) {
         seller_id: state.seller_id,
         wallet_address: state.wallet_address,
         pages: pagesData,
+        ad_account_id: adAccountId,
       })
     ).toString('base64url');
 

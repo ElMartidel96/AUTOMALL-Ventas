@@ -11,7 +11,14 @@ import type {
   FBPage,
   FBPostResponse,
   FBPhotoResponse,
+  FBAdAccount,
+  FBCampaignResponse,
+  FBAdSetResponse,
+  FBAdCreativeResponse,
+  FBAdResponse,
+  FBAdInsightsData,
 } from './types';
+import type { FBTargeting } from './targeting-helper';
 
 const GRAPH_API = 'https://graph.facebook.com/v22.0';
 const META_APP_ID = process.env.META_APP_ID || '';
@@ -341,6 +348,8 @@ const FB_PERMISSIONS = [
   'pages_manage_posts',
   'pages_read_engagement',
   'pages_show_list',
+  'ads_management',
+  'ads_read',
 ];
 
 export function buildOAuthUrl(state: string): string {
@@ -369,4 +378,227 @@ export async function getFBUserId(accessToken: string): Promise<string> {
   }
   const data = await res.json();
   return data.id;
+}
+
+// ─────────────────────────────────────────────
+// Marketing API — Paid Ad Management
+// ─────────────────────────────────────────────
+
+/** Discover active ad accounts for the user */
+export async function getUserAdAccounts(userAccessToken: string): Promise<FBAdAccount[]> {
+  const url = new URL(`${GRAPH_API}/me/adaccounts`);
+  url.searchParams.set('fields', 'id,name,account_status');
+  url.searchParams.set('access_token', userAccessToken);
+
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Failed to get ad accounts: ${(err as { error?: { message?: string } }).error?.message || res.statusText}`);
+  }
+  const data = await res.json();
+  // Only return active accounts (account_status === 1)
+  return ((data.data || []) as FBAdAccount[]).filter(a => a.account_status === 1);
+}
+
+/** Create a Facebook campaign with OUTCOME_ENGAGEMENT objective */
+export async function createFBCampaign(
+  adAccountId: string,
+  accessToken: string,
+  opts: { name: string }
+): Promise<FBCampaignResponse> {
+  const accountId = adAccountId.replace(/^act_/, '');
+  const url = new URL(`${GRAPH_API}/act_${accountId}/campaigns`);
+
+  const body = new URLSearchParams();
+  body.set('name', opts.name);
+  body.set('objective', 'OUTCOME_ENGAGEMENT');
+  body.set('status', 'PAUSED');
+  body.set('special_ad_categories', '[]');
+  body.set('access_token', accessToken);
+
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Create campaign failed: ${(err as { error?: { message?: string } }).error?.message || res.statusText}`);
+  }
+  return res.json();
+}
+
+/** Create a Facebook AdSet optimized for WhatsApp conversations */
+export async function createFBAdSet(
+  adAccountId: string,
+  accessToken: string,
+  opts: {
+    name: string;
+    campaignId: string;
+    dailyBudgetCents: number;
+    pageId: string;
+    whatsappNumber: string;
+    targeting: FBTargeting;
+    startTime?: string;
+  }
+): Promise<FBAdSetResponse> {
+  const accountId = adAccountId.replace(/^act_/, '');
+  const url = new URL(`${GRAPH_API}/act_${accountId}/adsets`);
+
+  const body = new URLSearchParams();
+  body.set('name', opts.name);
+  body.set('campaign_id', opts.campaignId);
+  body.set('optimization_goal', 'CONVERSATIONS');
+  body.set('destination_type', 'WHATSAPP');
+  body.set('billing_event', 'IMPRESSIONS');
+  body.set('bid_strategy', 'LOWEST_COST_WITHOUT_CAP');
+  body.set('daily_budget', opts.dailyBudgetCents.toString());
+  body.set('promoted_object', JSON.stringify({
+    page_id: opts.pageId,
+    whatsapp_phone_number: opts.whatsappNumber,
+  }));
+  body.set('targeting', JSON.stringify(opts.targeting));
+  body.set('status', 'PAUSED');
+  if (opts.startTime) {
+    body.set('start_time', opts.startTime);
+  }
+  body.set('access_token', accessToken);
+
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Create adset failed: ${(err as { error?: { message?: string } }).error?.message || res.statusText}`);
+  }
+  return res.json();
+}
+
+/** Create an ad creative using an existing organic post (object_story_id) */
+export async function createFBAdCreative(
+  adAccountId: string,
+  accessToken: string,
+  opts: { name: string; objectStoryId: string }
+): Promise<FBAdCreativeResponse> {
+  const accountId = adAccountId.replace(/^act_/, '');
+  const url = new URL(`${GRAPH_API}/act_${accountId}/adcreatives`);
+
+  const body = new URLSearchParams();
+  body.set('name', opts.name);
+  body.set('object_story_id', opts.objectStoryId);
+  body.set('access_token', accessToken);
+
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Create ad creative failed: ${(err as { error?: { message?: string } }).error?.message || res.statusText}`);
+  }
+  return res.json();
+}
+
+/** Create an ad that links an adset with a creative */
+export async function createFBAd(
+  adAccountId: string,
+  accessToken: string,
+  opts: { name: string; adsetId: string; creativeId: string }
+): Promise<FBAdResponse> {
+  const accountId = adAccountId.replace(/^act_/, '');
+  const url = new URL(`${GRAPH_API}/act_${accountId}/ads`);
+
+  const body = new URLSearchParams();
+  body.set('name', opts.name);
+  body.set('adset_id', opts.adsetId);
+  body.set('creative', JSON.stringify({ creative_id: opts.creativeId }));
+  body.set('status', 'PAUSED');
+  body.set('access_token', accessToken);
+
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Create ad failed: ${(err as { error?: { message?: string } }).error?.message || res.statusText}`);
+  }
+  return res.json();
+}
+
+/** Update the status of a campaign, adset, or ad */
+export async function updateFBObjectStatus(
+  objectId: string,
+  accessToken: string,
+  status: 'ACTIVE' | 'PAUSED' | 'DELETED'
+): Promise<void> {
+  const url = new URL(`${GRAPH_API}/${objectId}`);
+
+  const body = new URLSearchParams();
+  body.set('status', status);
+  body.set('access_token', accessToken);
+
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Update status failed for ${objectId}: ${(err as { error?: { message?: string } }).error?.message || res.statusText}`);
+  }
+}
+
+/** Delete a Facebook campaign object (cascades to adset/ad) */
+export async function deleteFBCampaignObject(
+  campaignId: string,
+  accessToken: string
+): Promise<void> {
+  const url = new URL(`${GRAPH_API}/${campaignId}`);
+  url.searchParams.set('access_token', accessToken);
+
+  const res = await fetch(url.toString(), { method: 'DELETE' });
+
+  if (res.ok) return;
+
+  const err = await res.json().catch(() => ({ error: { code: 0, message: res.statusText } }));
+  const code = (err as { error?: { code?: number } }).error?.code;
+
+  // Already deleted — treat as success
+  if (code === 100 || code === 803) {
+    console.log(`[FB-API] Campaign ${campaignId} already deleted (code ${code})`);
+    return;
+  }
+
+  throw new Error(`Delete campaign failed: ${(err as { error?: { message?: string } }).error?.message || res.statusText}`);
+}
+
+/** Get ad insights (spend, impressions, reach, clicks, conversations) */
+export async function getAdInsights(
+  adId: string,
+  accessToken: string
+): Promise<FBAdInsightsData | null> {
+  const url = new URL(`${GRAPH_API}/${adId}/insights`);
+  url.searchParams.set('fields', 'impressions,reach,clicks,spend,actions,cost_per_action_type');
+  url.searchParams.set('access_token', accessToken);
+
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    console.warn(`[FB-API] Ad insights failed for ${adId}: ${(err as { error?: { message?: string } }).error?.message || res.statusText}`);
+    return null;
+  }
+
+  const data = await res.json();
+  if (!data.data || data.data.length === 0) return null;
+  return data.data[0] as FBAdInsightsData;
 }

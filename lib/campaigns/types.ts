@@ -32,6 +32,8 @@ export type FBPublishStatus =
 
 export type CaptionLanguage = 'en' | 'es' | 'both';
 
+export type FBAdStatus = 'none' | 'creating' | 'paused' | 'active' | 'completed' | 'error';
+
 export type CampaignEventType =
   | 'page_view'
   | 'vehicle_view'
@@ -77,6 +79,11 @@ export interface Campaign {
   fb_published_at: string | null;
   fb_publish_status: FBPublishStatus;
   fb_permalink_url: string | null;
+  fb_campaign_id: string | null;
+  fb_adset_id: string | null;
+  fb_ad_id: string | null;
+  fb_creative_id: string | null;
+  fb_ad_status: FBAdStatus;
   created_at: string;
   updated_at: string;
 }
@@ -119,6 +126,11 @@ export interface CampaignUpdate {
   end_date?: string | null;
   caption_language?: CaptionLanguage;
   target_audience_notes?: string | null;
+  fb_campaign_id?: string | null;
+  fb_adset_id?: string | null;
+  fb_ad_id?: string | null;
+  fb_creative_id?: string | null;
+  fb_ad_status?: FBAdStatus;
 }
 
 // ─────────────────────────────────────────────

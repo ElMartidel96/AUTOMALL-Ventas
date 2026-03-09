@@ -13,7 +13,15 @@ import {
   publishCarouselPost,
   deletePost,
   fetchPostEngagement,
+  createFBCampaign,
+  createFBAdSet,
+  createFBAdCreative,
+  createFBAd,
+  updateFBObjectStatus,
+  deleteFBCampaignObject,
+  getAdInsights,
 } from '@/lib/meta/facebook-api';
+import { buildTargeting } from '@/lib/meta/targeting-helper';
 import { buildFBCaption, generateAdCopy, buildLandingURL } from './ad-copy-generator';
 import { getTemplate } from './campaign-templates';
 import type {
@@ -220,6 +228,16 @@ export async function unpublishFromFacebook(
   if (!connection) throw new Error('Facebook not connected');
   const conn = connection as unknown as MetaConnection;
 
+  // Delete paid ad structure first (if exists)
+  if (campaign.fb_campaign_id) {
+    try {
+      await deleteFBCampaignObject(campaign.fb_campaign_id, conn.fb_page_access_token);
+      console.log(`[CampaignService] Deleted FB ad campaign ${campaign.fb_campaign_id}`);
+    } catch (err) {
+      console.error(`[CampaignService] Failed to delete FB ad campaign:`, safeErrorMsg(err));
+    }
+  }
+
   let deletedCount = 0;
   for (const postId of campaign.fb_post_ids) {
     try {
@@ -241,13 +259,18 @@ export async function unpublishFromFacebook(
     console.error('[CampaignService] Failed to update publication log:', safeErrorMsg(logErr));
   }
 
-  // Clear FB data from campaign
+  // Clear FB data from campaign (organic + paid)
   await supabase
     .from('campaigns')
     .update({
       fb_post_ids: [],
       fb_publish_status: 'unpublished',
       fb_permalink_url: null,
+      fb_campaign_id: null,
+      fb_adset_id: null,
+      fb_ad_id: null,
+      fb_creative_id: null,
+      fb_ad_status: 'none',
     })
     .eq('id', campaignId)
     .eq('wallet_address', wallet);
@@ -299,6 +322,15 @@ export async function getCampaignFullStats(
     shares: number;
     clicks: number;
   };
+  ad: {
+    status: string;
+    spend: number;
+    impressions: number;
+    reach: number;
+    clicks: number;
+    conversations: number;
+    costPerConversation: number;
+  } | null;
   publishedAt: string | null;
 }> {
   const supabase = getTypedClient();
@@ -320,7 +352,7 @@ export async function getCampaignFullStats(
   };
 
   if (!campaign || campaign.fb_post_ids.length === 0) {
-    return { landing, fb: fbResult, publishedAt: campaign?.fb_published_at || null };
+    return { landing, fb: fbResult, ad: null, publishedAt: campaign?.fb_published_at || null };
   }
 
   fbResult.published = true;
@@ -377,9 +409,57 @@ export async function getCampaignFullStats(
     }
   }
 
+  // Paid ad insights
+  let adResult: {
+    status: string;
+    spend: number;
+    impressions: number;
+    reach: number;
+    clicks: number;
+    conversations: number;
+    costPerConversation: number;
+  } | null = null;
+
+  if (campaign.fb_ad_id && campaign.fb_ad_status && campaign.fb_ad_status !== 'none' && connection) {
+    const conn = connection as unknown as MetaConnection;
+    try {
+      const insights = await getAdInsights(campaign.fb_ad_id, conn.fb_page_access_token);
+      if (insights) {
+        const spend = parseFloat(insights.spend) || 0;
+        const conversations = (insights.actions || [])
+          .filter(a => a.action_type === 'onsite_conversion.messaging_conversation_started_7d')
+          .reduce((sum, a) => sum + parseInt(a.value, 10), 0);
+        const costPerConv = (insights.cost_per_action_type || [])
+          .find(a => a.action_type === 'onsite_conversion.messaging_conversation_started_7d');
+
+        adResult = {
+          status: campaign.fb_ad_status,
+          spend,
+          impressions: parseInt(insights.impressions, 10) || 0,
+          reach: parseInt(insights.reach, 10) || 0,
+          clicks: parseInt(insights.clicks, 10) || 0,
+          conversations,
+          costPerConversation: costPerConv ? parseFloat(costPerConv.value) : 0,
+        };
+      } else {
+        adResult = {
+          status: campaign.fb_ad_status,
+          spend: 0, impressions: 0, reach: 0, clicks: 0, conversations: 0, costPerConversation: 0,
+        };
+      }
+    } catch (err) {
+      console.error(`[CampaignService] Ad insights failed for ${campaign.fb_ad_id}:`, safeErrorMsg(err));
+      adResult = {
+        status: campaign.fb_ad_status,
+        spend: 0, impressions: 0, reach: 0, clicks: 0, conversations: 0, costPerConversation: 0,
+      };
+    }
+  }
+
   return {
     landing,
     fb: fbResult,
+    ad: adResult,
     publishedAt: campaign.fb_published_at,
   };
 }
@@ -468,7 +548,12 @@ export async function getVehicleFBPostCount(
 export async function publishToFacebook(
   campaignId: string,
   walletAddress: string
-): Promise<{ fbPostId: string | null; permalink: string | null }> {
+): Promise<{
+  fbPostId: string | null;
+  permalink: string | null;
+  fbAdId: string | null;
+  adStatus: 'active' | 'organic_only' | 'error';
+}> {
   const supabase = getTypedClient();
   const wallet = walletAddress.toLowerCase();
 
@@ -481,6 +566,8 @@ export async function publishToFacebook(
     return {
       fbPostId: campaign.fb_post_ids[0],
       permalink: campaign.fb_permalink_url,
+      fbAdId: campaign.fb_ad_id || null,
+      adStatus: campaign.fb_ad_status === 'active' ? 'active' : campaign.fb_ad_status === 'error' ? 'error' : 'organic_only',
     };
   }
 
@@ -589,7 +676,93 @@ export async function publishToFacebook(
     }
 
     console.log(`[CampaignService] Published campaign ${campaignId} → FB post ${fbPostId}`);
-    return { fbPostId, permalink };
+
+    // ── 10. Paid ad creation (hybrid: organic post → ad creative) ──
+    let fbAdId: string | null = null;
+    let adStatus: 'active' | 'organic_only' | 'error' = 'organic_only';
+
+    const hasAdAccount = !!(conn as MetaConnection & { ad_account_id?: string | null }).ad_account_id;
+    const adAccountId = (conn as MetaConnection & { ad_account_id?: string | null }).ad_account_id;
+    const hasAdsPermission = conn.permissions?.includes('ads_management');
+    const hasBudget = campaign.daily_budget_usd && campaign.daily_budget_usd >= 1;
+    const sellerPhone = seller.whatsapp || seller.phone;
+
+    if (hasAdAccount && adAccountId && hasAdsPermission && hasBudget && sellerPhone && fbPostId) {
+      try {
+        await supabase
+          .from('campaigns')
+          .update({ fb_ad_status: 'creating' })
+          .eq('id', campaignId);
+
+        // 10a. Build targeting
+        const targeting = buildTargeting(seller.city, seller.state, 50);
+
+        // 10b. Create campaign
+        const fbCampaign = await createFBCampaign(adAccountId, conn.fb_page_access_token, {
+          name: `AutoMALL — ${campaign.name}`,
+        });
+
+        // 10c. Create adset with CTWA optimization
+        const dailyBudgetCents = Math.round(campaign.daily_budget_usd! * 100);
+        const fbAdSet = await createFBAdSet(adAccountId, conn.fb_page_access_token, {
+          name: `${campaign.name} — Houston Area`,
+          campaignId: fbCampaign.id,
+          dailyBudgetCents,
+          pageId: conn.fb_page_id,
+          whatsappNumber: sellerPhone,
+          targeting,
+        });
+
+        // 10d. Create ad creative using the organic post
+        const objectStoryId = `${conn.fb_page_id}_${fbPostId.split('_').pop()}`;
+        const fbCreative = await createFBAdCreative(adAccountId, conn.fb_page_access_token, {
+          name: `Creative — ${campaign.name}`,
+          objectStoryId,
+        });
+
+        // 10e. Create ad
+        const fbAd = await createFBAd(adAccountId, conn.fb_page_access_token, {
+          name: `Ad — ${campaign.name}`,
+          adsetId: fbAdSet.id,
+          creativeId: fbCreative.id,
+        });
+
+        // 10f. Activate all objects (campaign → adset → ad)
+        await updateFBObjectStatus(fbCampaign.id, conn.fb_page_access_token, 'ACTIVE');
+        await updateFBObjectStatus(fbAdSet.id, conn.fb_page_access_token, 'ACTIVE');
+        await updateFBObjectStatus(fbAd.id, conn.fb_page_access_token, 'ACTIVE');
+
+        // 10g. Save IDs to DB
+        await supabase
+          .from('campaigns')
+          .update({
+            fb_campaign_id: fbCampaign.id,
+            fb_adset_id: fbAdSet.id,
+            fb_ad_id: fbAd.id,
+            fb_creative_id: fbCreative.id,
+            fb_ad_status: 'active',
+          })
+          .eq('id', campaignId);
+
+        fbAdId = fbAd.id;
+        adStatus = 'active';
+        console.log(`[CampaignService] Paid ad created for ${campaignId} → FB ad ${fbAd.id}`);
+      } catch (adErr) {
+        console.error(`[CampaignService] Paid ad creation failed for ${campaignId}:`, safeErrorMsg(adErr));
+        adStatus = 'error';
+        await supabase
+          .from('campaigns')
+          .update({ fb_ad_status: 'error' })
+          .eq('id', campaignId);
+        // Organic post still exists — no exception thrown
+      }
+    } else {
+      if (!hasAdAccount) console.log(`[CampaignService] No ad_account_id — organic only for ${campaignId}`);
+      else if (!hasBudget) console.log(`[CampaignService] No budget — organic only for ${campaignId}`);
+      else if (!sellerPhone) console.log(`[CampaignService] No WhatsApp/phone — organic only for ${campaignId}`);
+    }
+
+    return { fbPostId, permalink, fbAdId, adStatus };
   } catch (err) {
     // Rollback status on failure
     await supabase
@@ -600,6 +773,111 @@ export async function publishToFacebook(
     console.error(`[CampaignService] Publish failed for ${campaignId}:`, safeErrorMsg(err));
     throw err;
   }
+}
+
+// ─────────────────────────────────────────────
+// Ad Management (Pause / Resume / Delete)
+// ─────────────────────────────────────────────
+
+export async function pauseFBAd(
+  campaignId: string,
+  walletAddress: string
+): Promise<void> {
+  const supabase = getTypedClient();
+  const campaign = await getCampaignById(campaignId, walletAddress);
+  if (!campaign) throw new Error('Campaign not found');
+  if (!campaign.fb_campaign_id || !campaign.fb_adset_id || !campaign.fb_ad_id) {
+    throw new Error('No paid ad to pause');
+  }
+
+  const { data: connection } = await supabase
+    .from('seller_meta_connections')
+    .select('*')
+    .eq('wallet_address', walletAddress.toLowerCase())
+    .eq('is_active', true)
+    .single();
+
+  if (!connection) throw new Error('Facebook not connected');
+  const conn = connection as unknown as MetaConnection;
+
+  await updateFBObjectStatus(campaign.fb_ad_id, conn.fb_page_access_token, 'PAUSED');
+  await updateFBObjectStatus(campaign.fb_adset_id, conn.fb_page_access_token, 'PAUSED');
+  await updateFBObjectStatus(campaign.fb_campaign_id, conn.fb_page_access_token, 'PAUSED');
+
+  await supabase
+    .from('campaigns')
+    .update({ fb_ad_status: 'paused' })
+    .eq('id', campaignId);
+
+  console.log(`[CampaignService] Paused FB ad for campaign ${campaignId}`);
+}
+
+export async function resumeFBAd(
+  campaignId: string,
+  walletAddress: string
+): Promise<void> {
+  const supabase = getTypedClient();
+  const campaign = await getCampaignById(campaignId, walletAddress);
+  if (!campaign) throw new Error('Campaign not found');
+  if (!campaign.fb_campaign_id || !campaign.fb_adset_id || !campaign.fb_ad_id) {
+    throw new Error('No paid ad to resume');
+  }
+
+  const { data: connection } = await supabase
+    .from('seller_meta_connections')
+    .select('*')
+    .eq('wallet_address', walletAddress.toLowerCase())
+    .eq('is_active', true)
+    .single();
+
+  if (!connection) throw new Error('Facebook not connected');
+  const conn = connection as unknown as MetaConnection;
+
+  await updateFBObjectStatus(campaign.fb_campaign_id, conn.fb_page_access_token, 'ACTIVE');
+  await updateFBObjectStatus(campaign.fb_adset_id, conn.fb_page_access_token, 'ACTIVE');
+  await updateFBObjectStatus(campaign.fb_ad_id, conn.fb_page_access_token, 'ACTIVE');
+
+  await supabase
+    .from('campaigns')
+    .update({ fb_ad_status: 'active' })
+    .eq('id', campaignId);
+
+  console.log(`[CampaignService] Resumed FB ad for campaign ${campaignId}`);
+}
+
+export async function deleteFBAd(
+  campaignId: string,
+  walletAddress: string
+): Promise<void> {
+  const supabase = getTypedClient();
+  const campaign = await getCampaignById(campaignId, walletAddress);
+  if (!campaign) throw new Error('Campaign not found');
+  if (!campaign.fb_campaign_id) return; // nothing to delete
+
+  const { data: connection } = await supabase
+    .from('seller_meta_connections')
+    .select('*')
+    .eq('wallet_address', walletAddress.toLowerCase())
+    .eq('is_active', true)
+    .single();
+
+  if (!connection) throw new Error('Facebook not connected');
+  const conn = connection as unknown as MetaConnection;
+
+  await deleteFBCampaignObject(campaign.fb_campaign_id, conn.fb_page_access_token);
+
+  await supabase
+    .from('campaigns')
+    .update({
+      fb_campaign_id: null,
+      fb_adset_id: null,
+      fb_ad_id: null,
+      fb_creative_id: null,
+      fb_ad_status: 'none',
+    })
+    .eq('id', campaignId);
+
+  console.log(`[CampaignService] Deleted FB ad for campaign ${campaignId}`);
 }
 
 // ─────────────────────────────────────────────

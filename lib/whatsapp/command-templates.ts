@@ -584,6 +584,7 @@ interface CampaignDetailData {
   daily_budget: number | null;
   fb_publish_status: string;
   fb_permalink_url: string | null;
+  fb_ad_status?: string;
   landing_slug: string | null;
   metrics: { page_views: number; whatsapp_clicks: number; total_leads: number };
 }
@@ -602,9 +603,28 @@ export function campaignDetail(lang: Lang, c: CampaignDetailData): { text: strin
   const budget = c.daily_budget ? `$${c.daily_budget}/dia` : '—';
   const landingUrl = c.landing_slug ? `autosmall.org/w/${c.landing_slug}` : '—';
 
+  // Ad status indicator
+  const adIndicators: Record<string, string> = {
+    active: '💰 Ad activo',
+    paused: '⏸ Ad pausado',
+    creating: '⏳ Ad creando',
+    error: '⚠️ Ad error',
+    completed: '🏁 Ad completado',
+  };
+  const adIndicatorsEN: Record<string, string> = {
+    active: '💰 Ad active',
+    paused: '⏸ Ad paused',
+    creating: '⏳ Ad creating',
+    error: '⚠️ Ad error',
+    completed: '🏁 Ad completed',
+  };
+  const adLine = c.fb_ad_status && c.fb_ad_status !== 'none'
+    ? '\n' + (lang === 'es' ? (adIndicators[c.fb_ad_status] || '') : (adIndicatorsEN[c.fb_ad_status] || ''))
+    : '';
+
   const text = lang === 'es'
-    ? `📢 *${c.name}*\n${statusText} | ${c.vehicle_count} vehiculos | ${budget}\n\n📊 Vistas: ${c.metrics.page_views} | WA clicks: ${c.metrics.whatsapp_clicks} | Leads: ${c.metrics.total_leads}\n🔗 ${landingUrl}${c.fb_permalink_url ? '\n📱 ' + c.fb_permalink_url : ''}`
-    : `📢 *${c.name}*\n${statusText} | ${c.vehicle_count} vehicles | ${budget}\n\n📊 Views: ${c.metrics.page_views} | WA clicks: ${c.metrics.whatsapp_clicks} | Leads: ${c.metrics.total_leads}\n🔗 ${landingUrl}${c.fb_permalink_url ? '\n📱 ' + c.fb_permalink_url : ''}`;
+    ? `📢 *${c.name}*\n${statusText} | ${c.vehicle_count} vehiculos | ${budget}${adLine}\n\n📊 Vistas: ${c.metrics.page_views} | WA clicks: ${c.metrics.whatsapp_clicks} | Leads: ${c.metrics.total_leads}\n🔗 ${landingUrl}${c.fb_permalink_url ? '\n📱 ' + c.fb_permalink_url : ''}`
+    : `📢 *${c.name}*\n${statusText} | ${c.vehicle_count} vehicles | ${budget}${adLine}\n\n📊 Views: ${c.metrics.page_views} | WA clicks: ${c.metrics.whatsapp_clicks} | Leads: ${c.metrics.total_leads}\n🔗 ${landingUrl}${c.fb_permalink_url ? '\n📱 ' + c.fb_permalink_url : ''}`;
 
   // Strategy: 3 buttons max
   // Button 1: Primary action (Publish FB / Pause / Resume) based on state
@@ -720,7 +740,7 @@ export function campaignCreateConfirmStep(lang: Lang, preview: CampaignPreview):
 
   const buttons: WAButton[] = [
     { type: 'reply', reply: { id: 'cmd_camp_create', title: lang === 'es' ? 'Crear' : 'Create' } },
-    { type: 'reply', reply: { id: 'cmd_camp_create_pub', title: lang === 'es' ? 'Crear + FB' : 'Create + FB' } },
+    { type: 'reply', reply: { id: 'cmd_camp_create_pub', title: lang === 'es' ? 'Crear + Ad FB' : 'Create + FB Ad' } },
     { type: 'reply', reply: { id: 'cmd_menu', title: lang === 'es' ? 'Cancelar' : 'Cancel' } },
   ];
 
@@ -734,12 +754,36 @@ export function campaignCreated(lang: Lang, name: string, landingSlug: string): 
     : `✅ Campaign created: *${name}*\n🔗 ${landingUrl}\n\nUse /campaigns to publish to Facebook.`;
 }
 
-export function campaignPublished(lang: Lang, name: string, permalink: string | null, landingSlug: string): string {
+export function campaignPublished(
+  lang: Lang,
+  name: string,
+  permalink: string | null,
+  landingSlug: string,
+  adStatus?: 'active' | 'organic_only' | 'error',
+  dailyBudget?: number | null
+): string {
   const landingUrl = `autosmall.org/w/${landingSlug}`;
   const fbLink = permalink || 'Facebook';
+
+  let adNote = '';
+  if (adStatus === 'active') {
+    const budgetStr = dailyBudget ? `$${dailyBudget}` : '$?';
+    adNote = lang === 'es'
+      ? `\n💰 Ad pagado ACTIVO — ${budgetStr}/dia en Houston area`
+      : `\n💰 Paid ad ACTIVE — ${budgetStr}/day in Houston area`;
+  } else if (adStatus === 'organic_only') {
+    adNote = lang === 'es'
+      ? '\n📋 Post organico (sin presupuesto para ad)'
+      : '\n📋 Organic post (no budget for ad)';
+  } else if (adStatus === 'error') {
+    adNote = lang === 'es'
+      ? '\n⚠️ Post organico OK, anuncio pagado fallo'
+      : '\n⚠️ Organic post OK, paid ad failed';
+  }
+
   return lang === 'es'
-    ? `✅ Campana publicada!\n📢 *${name}*\n📱 FB: ${fbLink}\n🔗 Landing: ${landingUrl}`
-    : `✅ Campaign published!\n📢 *${name}*\n📱 FB: ${fbLink}\n🔗 Landing: ${landingUrl}`;
+    ? `✅ Campana publicada!\n📢 *${name}*\n📱 FB: ${fbLink}\n🔗 Landing: ${landingUrl}${adNote}`
+    : `✅ Campaign published!\n📢 *${name}*\n📱 FB: ${fbLink}\n🔗 Landing: ${landingUrl}${adNote}`;
 }
 
 export function campaignStatusChanged(lang: Lang, name: string, newStatus: string): string {
@@ -813,6 +857,15 @@ interface CampaignFullStatsData {
     shares: number;
     clicks: number;
   };
+  ad?: {
+    status: string;
+    spend: number;
+    impressions: number;
+    reach: number;
+    clicks: number;
+    conversations: number;
+    costPerConversation: number;
+  } | null;
   publishedAt: string | null;
 }
 
@@ -839,6 +892,22 @@ export function campaignFullStats(lang: Lang, data: CampaignFullStatsData): { te
     text += lang === 'es'
       ? `📱 *Facebook:* No publicada`
       : `📱 *Facebook:* Not published`;
+  }
+
+  // Paid ad stats
+  if (data.ad && data.ad.status !== 'none') {
+    const statusLabels: Record<string, { es: string; en: string }> = {
+      active: { es: '💰 ACTIVO', en: '💰 ACTIVE' },
+      paused: { es: '⏸ PAUSADO', en: '⏸ PAUSED' },
+      error: { es: '⚠️ ERROR', en: '⚠️ ERROR' },
+      completed: { es: '🏁 COMPLETADO', en: '🏁 COMPLETED' },
+      creating: { es: '⏳ CREANDO', en: '⏳ CREATING' },
+    };
+    const sl = statusLabels[data.ad.status] || { es: data.ad.status, en: data.ad.status };
+
+    text += lang === 'es'
+      ? `\n\n💰 *Anuncio Pagado* (${sl.es}):\n💵 Gasto: $${data.ad.spend.toFixed(2)}\n👁️ Impresiones: ${data.ad.impressions.toLocaleString()}\n👥 Alcance: ${data.ad.reach.toLocaleString()}\n🔗 Clicks: ${data.ad.clicks}\n💬 Conversaciones WA: ${data.ad.conversations}${data.ad.costPerConversation > 0 ? `\n💲 Costo/conv: $${data.ad.costPerConversation.toFixed(2)}` : ''}`
+      : `\n\n💰 *Paid Ad* (${sl.en}):\n💵 Spend: $${data.ad.spend.toFixed(2)}\n👁️ Impressions: ${data.ad.impressions.toLocaleString()}\n👥 Reach: ${data.ad.reach.toLocaleString()}\n🔗 Clicks: ${data.ad.clicks}\n💬 WA Conversations: ${data.ad.conversations}${data.ad.costPerConversation > 0 ? `\n💲 Cost/conv: $${data.ad.costPerConversation.toFixed(2)}` : ''}`;
   }
 
   const buttons: WAButton[] = [
