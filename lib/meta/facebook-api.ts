@@ -632,7 +632,9 @@ export async function verifyTokenPermissions(
   return { granted, declined, tokenValid: true };
 }
 
-/** Create a Facebook campaign with OUTCOME_ENGAGEMENT objective */
+/** Create a Facebook campaign with OUTCOME_AWARENESS objective.
+ *  Optimizes for maximum REACH — ideal for promoting vehicle inventory
+ *  to local buyers. Works universally (no beta restrictions). */
 export async function createFBCampaign(
   adAccountId: string,
   accessToken: string,
@@ -643,7 +645,7 @@ export async function createFBCampaign(
 
   const body = new URLSearchParams();
   body.set('name', opts.name);
-  body.set('objective', 'OUTCOME_ENGAGEMENT');
+  body.set('objective', 'OUTCOME_AWARENESS');
   body.set('status', 'PAUSED');
   body.set('special_ad_categories', '[]');
   body.set('access_token', accessToken);
@@ -666,12 +668,12 @@ export async function createFBCampaign(
 /**
  * Create a Facebook AdSet.
  *
- * Modes:
- * - **Boost Post** (default): optimization_goal='POST_ENGAGEMENT', no destination_type.
- *   Promotes an existing organic post. No WABA required.
- * - **CTWA**: optimization_goal='CONVERSATIONS', destination_type='WHATSAPP'.
- *   Requires a WhatsApp Business Account (WABA) linked to Meta Business Manager.
- *   Pass whatsappNumber + set optimizationGoal/destinationType explicitly.
+ * Default mode: REACH optimization — maximizes unique viewers.
+ * Works with OUTCOME_AWARENESS campaign objective (universally supported).
+ * promoted_object = { page_id } — simple, no WABA required.
+ *
+ * Optional CTWA mode: optimization_goal='CONVERSATIONS', destination_type='WHATSAPP'.
+ * Requires a WhatsApp Business Account (WABA) linked to Meta Business Manager.
  */
 export async function createFBAdSet(
   adAccountId: string,
@@ -691,7 +693,7 @@ export async function createFBAdSet(
   const accountId = adAccountId.replace(/^act_/, '');
   const url = new URL(`${GRAPH_API}/act_${accountId}/adsets`);
 
-  const optimizationGoal = opts.optimizationGoal || 'POST_ENGAGEMENT';
+  const optimizationGoal = opts.optimizationGoal || 'REACH';
 
   // Build promoted_object based on destination type
   const promotedObject: Record<string, string> = { page_id: opts.pageId };

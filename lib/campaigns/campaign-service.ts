@@ -767,10 +767,9 @@ export async function publishToFacebook(
           name: `AutoMALL — ${campaign.name}`,
         });
 
-        // 10c. Create adset — Boost Post mode (promotes organic post)
-        // NOTE: CTWA (destination_type='WHATSAPP') requires a WhatsApp Business Account (WABA)
-        // linked to Meta Business Manager. Until WABA is set up, we use POST_ENGAGEMENT
-        // which boosts the organic post (already has WhatsApp contact in caption).
+        // 10c. Create adset — REACH mode (maximizes viewers of the organic post)
+        // Uses OUTCOME_AWARENESS + REACH — universally supported, no beta restrictions.
+        // The organic post caption already has WhatsApp contact info for leads.
         const dailyBudgetCents = Math.round(campaign.daily_budget_usd! * 100);
         const fbAdSet = await createFBAdSet(adAccountId, userToken, {
           name: `${campaign.name} — Houston Area`,
