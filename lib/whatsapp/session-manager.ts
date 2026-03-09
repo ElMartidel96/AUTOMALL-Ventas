@@ -492,7 +492,40 @@ async function handleConfirmingState(
     }
 
     case 'field_correction': {
-      // Re-extract with updated text — gather all texts including this new one
+      // Try simple inline parse first — avoids re-downloading images + re-running GPT-4o
+      const correctionText = message.text?.body?.trim() || '';
+      const existingData = session.extracted_vehicle as unknown as Record<string, unknown>;
+      const currentMissing = session.missing_fields || [];
+
+      if (existingData && currentMissing.length > 0 && correctionText) {
+        const { _staged_images: sImgs, _auto_filled: aFill, ...exFields } = existingData;
+        const parsed = parseFieldCorrection(correctionText, currentMissing, exFields as unknown as ExtractedVehicle);
+
+        if (Object.keys(parsed).length > 0) {
+          // Merge correction into existing data
+          const merged = { ...exFields, ...parsed } as unknown as ExtractedVehicle;
+          const stillMissing = findMissingFields(merged);
+          console.log(`[WA] Field correction: parsed ${Object.keys(parsed).join(',')} from "${correctionText}" — still missing: ${stillMissing.join(',') || 'none'}`);
+
+          await updateSession(session.id, {
+            extracted_vehicle: { ...merged, _staged_images: sImgs, _auto_filled: aFill },
+            missing_fields: stillMissing,
+          });
+
+          if (stillMissing.length > 0) {
+            const { text: missTxt, buttons: missBtns } = templates.missingRequiredMessage(lang, merged, stillMissing);
+            await safeSendInteractive(waPhoneNumberId, session.phone_number, missTxt, missBtns, accessToken);
+          } else {
+            const sellerHandle = await getSellerHandle(link.wallet_address);
+            const hasLoc = await checkSellerLocation(link.wallet_address);
+            const { text: confTxt, buttons: confBtns } = templates.smartConfirmation(lang, merged, (aFill as string[]) || [], sellerHandle, !hasLoc);
+            await safeSendInteractive(waPhoneNumberId, session.phone_number, confTxt, confBtns, accessToken);
+          }
+          break;
+        }
+      }
+
+      // Fallback: full re-extraction (if simple parse couldn't resolve)
       const mediaIds = await getSessionMediaIds(session.id);
       if (mediaIds.length > 0) {
         await triggerExtraction(session, mediaIds, message, waPhoneNumberId, accessToken, link);
@@ -1306,4 +1339,82 @@ async function saveSellerAddress(
 
   console.log(`[WA] Saved seller address: "${address}" (geocoded: ${geocoded})`);
   return { geocoded };
+}
+
+// ─────────────────────────────────────────────
+// Field Correction Parser (avoids full re-extraction)
+// ─────────────────────────────────────────────
+
+/**
+ * Parse a correction text for missing vehicle fields.
+ * Handles common formats: "$3200", "85000", "2015", "Toyota", "red", etc.
+ * Returns partial vehicle data with only the parsed fields.
+ */
+function parseFieldCorrection(
+  text: string,
+  missingFields: string[],
+  existing: ExtractedVehicle
+): Partial<ExtractedVehicle> {
+  const updates: Partial<ExtractedVehicle> = {};
+  const t = text.trim();
+  const tLower = t.toLowerCase();
+
+  // Price: "$3,200", "$3200", "3200", "15000", "P. INICIAL: $1300"
+  if (missingFields.includes('price')) {
+    const priceMatch = t.match(/\$?\s*([\d,]+(?:\.\d{1,2})?)/);
+    if (priceMatch) {
+      const price = parseFloat(priceMatch[1].replace(/,/g, ''));
+      if (price > 0 && price <= 500000) {
+        updates.price = price;
+      }
+    }
+  }
+
+  // Mileage: "85000", "85,000", "85k", "115000mi", "MILLAJE: 40,546"
+  if (missingFields.includes('mileage') && !('price' in updates)) {
+    const mileMatch = t.match(/([\d,]+)\s*(?:k|mi|miles|millas)?/i);
+    if (mileMatch) {
+      let mileage = parseInt(mileMatch[1].replace(/,/g, ''), 10);
+      if (tLower.includes('k') && mileage < 1000) mileage *= 1000;
+      if (mileage > 0 && mileage <= 999999) {
+        updates.mileage = mileage;
+      }
+    }
+  }
+
+  // Year: "2015", "2023"
+  if (missingFields.includes('year') && Object.keys(updates).length === 0) {
+    const yearMatch = t.match(/\b(19[89]\d|20[0-2]\d)\b/);
+    if (yearMatch) {
+      const year = parseInt(yearMatch[1], 10);
+      const maxYear = new Date().getFullYear() + 2;
+      if (year >= 1980 && year <= maxYear) {
+        updates.year = year;
+      }
+    }
+  }
+
+  // Brand: simple text match (only if single missing field is brand)
+  if (missingFields.includes('brand') && Object.keys(updates).length === 0) {
+    const brands = ['toyota', 'ford', 'chevrolet', 'chevy', 'nissan', 'honda', 'hyundai',
+      'kia', 'gmc', 'dodge', 'jeep', 'ram', 'bmw', 'mercedes', 'mazda', 'subaru',
+      'volkswagen', 'vw', 'lexus', 'acura', 'infiniti', 'buick', 'cadillac', 'chrysler',
+      'lincoln', 'mitsubishi', 'volvo', 'audi', 'tesla', 'genesis'];
+    const match = brands.find(b => tLower.includes(b));
+    if (match) {
+      const brandMap: Record<string, string> = {
+        'chevy': 'Chevrolet', 'bmw': 'BMW', 'gmc': 'GMC', 'ram': 'RAM', 'vw': 'Volkswagen',
+      };
+      updates.brand = brandMap[match] || match.charAt(0).toUpperCase() + match.slice(1);
+    }
+  }
+
+  // Model: if brand exists but model is missing, the text might be the model name
+  if (missingFields.includes('model') && !missingFields.includes('brand') && existing.brand && Object.keys(updates).length === 0) {
+    if (t.length > 1 && t.length < 30 && !/^\d+$/.test(t) && !t.startsWith('$')) {
+      updates.model = t;
+    }
+  }
+
+  return updates;
 }

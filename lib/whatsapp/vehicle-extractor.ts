@@ -38,9 +38,9 @@ export const VehicleExtractionSchema = z.object({
   trim: z.string().nullable().describe('Trim level from text or badge (e.g. LXS, LE, XLE, Limited, Lariat, SR5)'),
   doors: z.number().int().nullable().describe('Number of doors'),
   vin: z.string().nullable().describe('VIN if visible in any photo or mentioned in text (17 characters)'),
-  features: z.array(z.string()).describe('Notable features visible in photos or mentioned'),
+  features: z.array(z.string()).default([]).describe('Notable features visible in photos or mentioned'),
   description: z.string().nullable().describe('Generated bilingual description (English + Spanish), 2-3 sentences each'),
-  confidence: z.record(z.string(), z.number()).describe('Confidence score 0-1 for each extracted field'),
+  confidence: z.record(z.string(), z.number()).default({}).describe('Confidence score 0-1 for each extracted field'),
   image_order: z.array(z.object({
     index: z.number().int().describe('0-based index of this image in the array sent'),
     category: z.enum([
@@ -49,7 +49,7 @@ export const VehicleExtractionSchema = z.object({
       'interior_detail', 'engine', 'wheels_tires', 'trunk',
       'document', 'damage', 'other',
     ]).describe('What this image primarily shows'),
-  })).describe('Classification of each image for optimal catalog display order'),
+  })).optional().default([]).describe('Classification of each image for optimal catalog display order'),
 });
 
 const SYSTEM_PROMPT = `You are an expert vehicle identification specialist for Autos MALL, a car dealership platform in Houston, Texas.
