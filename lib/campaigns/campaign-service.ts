@@ -16,6 +16,7 @@ import {
   createFBCampaign,
   createFBAdSet,
   createFBAdCreative,
+  createFBLinkAdCreative,
   createFBAd,
   updateFBObjectStatus,
   deleteFBCampaignObject,
@@ -24,7 +25,7 @@ import {
   verifyTokenPermissions,
 } from '@/lib/meta/facebook-api';
 import { buildTargeting } from '@/lib/meta/targeting-helper';
-import { buildFBCaption, generateAdCopy, buildLandingURL } from './ad-copy-generator';
+import { buildFBCaption, generateAdCopy, generatePaidAdCopy, buildLandingURL } from './ad-copy-generator';
 import { getTemplate } from './campaign-templates';
 import type {
   Campaign,
@@ -35,6 +36,7 @@ import type {
   PublicVehicle,
   PublicSeller,
   CampaignEventInsert,
+  FBAdObjective,
 } from './types';
 import type { VehicleForCopy } from './ad-copy-generator';
 import type { MetaConnection, SellerForFeed } from '@/lib/meta/types';
@@ -747,107 +749,155 @@ export async function publishToFacebook(
 
     console.log(`[CampaignService] Published campaign ${campaignId} → FB post ${fbPostId}`);
 
-    // ── 10. Paid ad creation (pre-flight already passed above) ──
+    // ── 10. Paid ad creation — branching by fb_ad_objective ──
+    //   awareness:       OUTCOME_AWARENESS + REACH + boost organic post
+    //   whatsapp_clicks: OUTCOME_TRAFFIC + LINK_CLICKS + link ad with wa.me CTA
     let fbAdId: string | null = null;
     let adStatus: 'active' | 'organic_only' | 'error' | 'missing_requirements' = 'organic_only';
     let adMessage: string | null = null;
 
     if (hasBudget && adAccountId && userToken && fbPostId) {
+      const adObjective: FBAdObjective = campaign.fb_ad_objective || 'whatsapp_clicks';
+
+      // 10.0 Pre-check: whatsapp_clicks requires phone/whatsapp
+      if (adObjective === 'whatsapp_clicks') {
+        const whatsappPhone = seller.whatsapp || seller.phone;
+        if (!whatsappPhone) {
+          // ALL-OR-NOTHING: rollback organic post
+          try { await deletePost(fbPostId, conn.fb_page_access_token); } catch { /* best effort */ }
+          await supabase.from('campaigns').update({
+            fb_publish_status: 'failed', fb_post_ids: [], fb_published_at: null,
+            fb_permalink_url: null, fb_ad_status: 'error',
+            status: campaign.status === 'active' ? 'draft' : campaign.status,
+          }).eq('id', campaignId);
+          try { await supabase.from('meta_publication_log').update({ status: 'deleted' }).eq('campaign_id', campaignId).eq('fb_post_id', fbPostId); } catch { /* best effort */ }
+          throw new Error('Add your WhatsApp number in your profile to run ads / Agrega tu numero de WhatsApp en tu perfil para crear anuncios');
+        }
+      }
+
       try {
-        await supabase
-          .from('campaigns')
-          .update({ fb_ad_status: 'creating' })
-          .eq('id', campaignId);
+        await supabase.from('campaigns').update({ fb_ad_status: 'creating' }).eq('id', campaignId);
 
-        // 10a. Build targeting
         const targeting = buildTargeting(seller.city, seller.state, 50);
-
-        // 10b. Create campaign (USER token for Marketing API)
-        const fbCampaign = await createFBCampaign(adAccountId, userToken, {
-          name: `AutoMALL — ${campaign.name}`,
-        });
-
-        // 10c. Create adset — REACH mode (maximizes viewers of the organic post)
-        // Uses OUTCOME_AWARENESS + REACH — universally supported, no beta restrictions.
-        // The organic post caption already has WhatsApp contact info for leads.
         const dailyBudgetCents = Math.round(campaign.daily_budget_usd! * 100);
-        const fbAdSet = await createFBAdSet(adAccountId, userToken, {
-          name: `${campaign.name} — Houston Area`,
-          campaignId: fbCampaign.id,
-          dailyBudgetCents,
-          pageId: conn.fb_page_id,
-          targeting,
-        });
 
-        // 10d. Create ad creative using the organic post
-        const objectStoryId = `${conn.fb_page_id}_${fbPostId.split('_').pop()}`;
-        const fbCreative = await createFBAdCreative(adAccountId, userToken, {
-          name: `Creative — ${campaign.name}`,
-          objectStoryId,
-        });
+        let fbCampaignId: string;
+        let fbAdSetId: string;
+        let fbCreativeId: string;
+        let fbAdIdResult: string;
 
-        // 10e. Create ad
-        const fbAd = await createFBAd(adAccountId, userToken, {
-          name: `Ad — ${campaign.name}`,
-          adsetId: fbAdSet.id,
-          creativeId: fbCreative.id,
-        });
+        if (adObjective === 'whatsapp_clicks') {
+          // ── WHATSAPP CLICKS: OUTCOME_TRAFFIC + LINK_CLICKS + wa.me link ad ──
+          const fbCampaign = await createFBCampaign(adAccountId, userToken, {
+            name: `AutoMALL — ${campaign.name}`,
+            objective: 'OUTCOME_TRAFFIC',
+          });
+          fbCampaignId = fbCampaign.id;
 
-        // 10f. Activate all objects (campaign → adset → ad)
-        await updateFBObjectStatus(fbCampaign.id, userToken, 'ACTIVE');
-        await updateFBObjectStatus(fbAdSet.id, userToken, 'ACTIVE');
-        await updateFBObjectStatus(fbAd.id, userToken, 'ACTIVE');
+          const fbAdSet = await createFBAdSet(adAccountId, userToken, {
+            name: `${campaign.name} — Houston Area`,
+            campaignId: fbCampaignId,
+            dailyBudgetCents,
+            pageId: conn.fb_page_id,
+            targeting,
+            optimizationGoal: 'LINK_CLICKS',
+            destinationType: 'WEBSITE',
+          });
+          fbAdSetId = fbAdSet.id;
 
-        // 10g. Save IDs to DB
-        await supabase
-          .from('campaigns')
-          .update({
-            fb_campaign_id: fbCampaign.id,
-            fb_adset_id: fbAdSet.id,
-            fb_ad_id: fbAd.id,
-            fb_creative_id: fbCreative.id,
-            fb_ad_status: 'active',
-          })
-          .eq('id', campaignId);
+          const paidCopy = generatePaidAdCopy({
+            campaignType: campaign.type,
+            vehicles,
+            seller,
+            lang: campaign.caption_language,
+            discountAmount: 1500,
+          });
 
-        fbAdId = fbAd.id;
+          const fbCreative = await createFBLinkAdCreative(adAccountId, userToken, {
+            name: `Creative — ${campaign.name}`,
+            pageId: conn.fb_page_id,
+            link: paidCopy.whatsappUrl,
+            imageUrl: imageUrls[0],
+            message: paidCopy.message,
+            headline: paidCopy.headline,
+            description: paidCopy.description,
+          });
+          fbCreativeId = fbCreative.id;
+
+          const fbAd = await createFBAd(adAccountId, userToken, {
+            name: `Ad — ${campaign.name}`,
+            adsetId: fbAdSetId,
+            creativeId: fbCreativeId,
+          });
+          fbAdIdResult = fbAd.id;
+
+        } else {
+          // ── AWARENESS: OUTCOME_AWARENESS + REACH + boost organic post ──
+          const fbCampaign = await createFBCampaign(adAccountId, userToken, {
+            name: `AutoMALL — ${campaign.name}`,
+            objective: 'OUTCOME_AWARENESS',
+          });
+          fbCampaignId = fbCampaign.id;
+
+          const fbAdSet = await createFBAdSet(adAccountId, userToken, {
+            name: `${campaign.name} — Houston Area`,
+            campaignId: fbCampaignId,
+            dailyBudgetCents,
+            pageId: conn.fb_page_id,
+            targeting,
+            // REACH mode: no optimizationGoal override (defaults to REACH), no destinationType
+          });
+          fbAdSetId = fbAdSet.id;
+
+          // Boost the organic post via object_story_id
+          const objectStoryId = `${conn.fb_page_id}_${fbPostId.split('_').pop()}`;
+          const fbCreative = await createFBAdCreative(adAccountId, userToken, {
+            name: `Creative — ${campaign.name}`,
+            objectStoryId,
+          });
+          fbCreativeId = fbCreative.id;
+
+          const fbAd = await createFBAd(adAccountId, userToken, {
+            name: `Ad — ${campaign.name}`,
+            adsetId: fbAdSetId,
+            creativeId: fbCreativeId,
+          });
+          fbAdIdResult = fbAd.id;
+        }
+
+        // Activate all objects (campaign → adset → ad)
+        await updateFBObjectStatus(fbCampaignId, userToken, 'ACTIVE');
+        await updateFBObjectStatus(fbAdSetId, userToken, 'ACTIVE');
+        await updateFBObjectStatus(fbAdIdResult, userToken, 'ACTIVE');
+
+        // Save IDs to DB
+        await supabase.from('campaigns').update({
+          fb_campaign_id: fbCampaignId,
+          fb_adset_id: fbAdSetId,
+          fb_ad_id: fbAdIdResult,
+          fb_creative_id: fbCreativeId,
+          fb_ad_status: 'active',
+          fb_ad_objective: adObjective,
+        }).eq('id', campaignId);
+
+        fbAdId = fbAdIdResult;
         adStatus = 'active';
         adMessage = null;
-        console.log(`[CampaignService] Paid ad ACTIVE for ${campaignId} → FB ad ${fbAd.id}`);
+        console.log(`[CampaignService] Paid ad ACTIVE for ${campaignId} → FB ad ${fbAdIdResult} (objective=${adObjective})`);
       } catch (adErr) {
         // ALL-OR-NOTHING: Ad creation failed AFTER organic post → ROLLBACK organic post
         const errorDetail = safeErrorMsg(adErr);
         console.error(`[CampaignService] Paid ad FAILED for ${campaignId}: ${errorDetail} — ROLLING BACK organic post`);
 
-        // Delete the organic post from Facebook
-        try {
-          await deletePost(fbPostId, conn.fb_page_access_token);
-          console.log(`[CampaignService] Rollback: deleted organic post ${fbPostId} from FB`);
-        } catch (delErr) {
-          console.error(`[CampaignService] Rollback: failed to delete organic post ${fbPostId}:`, safeErrorMsg(delErr));
-        }
+        try { await deletePost(fbPostId, conn.fb_page_access_token); console.log(`[CampaignService] Rollback: deleted organic post ${fbPostId}`); } catch (delErr) { console.error(`[CampaignService] Rollback: failed to delete ${fbPostId}:`, safeErrorMsg(delErr)); }
 
-        // Reset campaign to unpublished state
-        await supabase
-          .from('campaigns')
-          .update({
-            fb_publish_status: 'failed',
-            fb_post_ids: [],
-            fb_published_at: null,
-            fb_permalink_url: null,
-            fb_ad_status: 'error',
-            status: campaign.status === 'active' ? 'draft' : campaign.status,
-          })
-          .eq('id', campaignId);
+        await supabase.from('campaigns').update({
+          fb_publish_status: 'failed', fb_post_ids: [], fb_published_at: null,
+          fb_permalink_url: null, fb_ad_status: 'error',
+          status: campaign.status === 'active' ? 'draft' : campaign.status,
+        }).eq('id', campaignId);
 
-        // Update publication log
-        try {
-          await supabase
-            .from('meta_publication_log')
-            .update({ status: 'deleted' })
-            .eq('campaign_id', campaignId)
-            .eq('fb_post_id', fbPostId);
-        } catch { /* best effort */ }
+        try { await supabase.from('meta_publication_log').update({ status: 'deleted' }).eq('campaign_id', campaignId).eq('fb_post_id', fbPostId); } catch { /* best effort */ }
 
         throw new Error(`Paid ad creation failed — campaign rolled back. Error: ${errorDetail}`);
       }
@@ -973,6 +1023,219 @@ export async function deleteFBAd(
     .eq('id', campaignId);
 
   console.log(`[CampaignService] Deleted FB ad for campaign ${campaignId}`);
+}
+
+// ─────────────────────────────────────────────
+// Switch Ad Objective (awareness ↔ whatsapp_clicks)
+// ─────────────────────────────────────────────
+
+/**
+ * Switch the ad objective for a published campaign.
+ * Deletes the entire FB ad structure (campaign+adset+ad+creative) and recreates
+ * with the new objective. The organic post is NOT touched.
+ * Preserves pause/active state across the switch.
+ */
+export async function switchAdObjective(
+  campaignId: string,
+  walletAddress: string,
+  newObjective: FBAdObjective
+): Promise<{
+  fbAdId: string;
+  adStatus: 'active' | 'paused' | 'error';
+  adMessage: string | null;
+}> {
+  const supabase = getTypedClient();
+  const wallet = walletAddress.toLowerCase();
+
+  // 1. Get campaign
+  const campaign = await getCampaignById(campaignId, walletAddress);
+  if (!campaign) throw new Error('Campaign not found');
+  if (!campaign.fb_campaign_id) throw new Error('No paid ad to switch — publish the campaign first');
+  if (campaign.fb_post_ids.length === 0) throw new Error('No organic post — publish the campaign first');
+
+  // 2. No-op if same objective
+  if (campaign.fb_ad_objective === newObjective) {
+    return {
+      fbAdId: campaign.fb_ad_id || '',
+      adStatus: campaign.fb_ad_status === 'active' ? 'active' : 'paused',
+      adMessage: `Objective is already ${newObjective}`,
+    };
+  }
+
+  // 3. Get Meta connection
+  const { data: connection } = await supabase
+    .from('seller_meta_connections')
+    .select('*')
+    .eq('wallet_address', wallet)
+    .eq('is_active', true)
+    .single();
+
+  if (!connection) throw new Error('Facebook not connected');
+  const conn = connection as unknown as MetaConnection;
+  const userToken = conn.fb_user_access_token;
+  if (!userToken) throw new Error('User token missing — reconnect Facebook');
+  const adAccountId = conn.ad_account_id;
+  if (!adAccountId) throw new Error('No ad account — reconnect Facebook');
+
+  // 4. Pre-check: whatsapp_clicks requires phone
+  if (newObjective === 'whatsapp_clicks') {
+    const seller = await getSellerByWallet(walletAddress);
+    if (!seller || (!seller.whatsapp && !seller.phone)) {
+      throw new Error('Add your WhatsApp number in your profile to use WhatsApp Clicks objective / Agrega tu numero de WhatsApp para usar el objetivo de WhatsApp Clicks');
+    }
+  }
+
+  // 5. Remember current state to preserve after switch
+  const wasActive = campaign.fb_ad_status === 'active';
+
+  console.log(`[CampaignService] Switching objective for ${campaignId}: ${campaign.fb_ad_objective} → ${newObjective} (was ${wasActive ? 'active' : 'paused'})`);
+
+  // 6. Delete existing FB campaign (cascades to adset/ad/creative)
+  try {
+    await deleteFBCampaignObject(campaign.fb_campaign_id, userToken);
+  } catch (delErr) {
+    console.error(`[CampaignService] Failed to delete old campaign:`, safeErrorMsg(delErr));
+    // Continue anyway — the old campaign might already be deleted
+  }
+
+  // 7. Clear old FB ad fields
+  await supabase.from('campaigns').update({
+    fb_campaign_id: null,
+    fb_adset_id: null,
+    fb_ad_id: null,
+    fb_creative_id: null,
+    fb_ad_status: 'creating',
+  }).eq('id', campaignId);
+
+  // 8. Recreate with new objective
+  try {
+    const seller = await getSellerByWallet(walletAddress);
+    if (!seller) throw new Error('Seller not found');
+
+    const vehicles = await getVehiclesForCopy(campaign.vehicle_ids);
+    const targeting = buildTargeting(seller.city, seller.state, 50);
+    const dailyBudgetCents = Math.round((campaign.daily_budget_usd || 5) * 100);
+    const fbPostId = campaign.fb_post_ids[0];
+
+    let fbCampaignId: string;
+    let fbAdSetId: string;
+    let fbCreativeId: string;
+    let fbAdIdResult: string;
+
+    if (newObjective === 'whatsapp_clicks') {
+      // ── WHATSAPP CLICKS: OUTCOME_TRAFFIC + LINK_CLICKS + wa.me link ad ──
+      const fbCampaign = await createFBCampaign(adAccountId, userToken, {
+        name: `AutoMALL — ${campaign.name}`,
+        objective: 'OUTCOME_TRAFFIC',
+      });
+      fbCampaignId = fbCampaign.id;
+
+      const fbAdSet = await createFBAdSet(adAccountId, userToken, {
+        name: `${campaign.name} — Houston Area`,
+        campaignId: fbCampaignId,
+        dailyBudgetCents,
+        pageId: conn.fb_page_id,
+        targeting,
+        optimizationGoal: 'LINK_CLICKS',
+        destinationType: 'WEBSITE',
+      });
+      fbAdSetId = fbAdSet.id;
+
+      const imageUrls = await getVehicleImageUrls(campaign.vehicle_ids);
+      const paidCopy = generatePaidAdCopy({
+        campaignType: campaign.type,
+        vehicles,
+        seller,
+        lang: campaign.caption_language,
+        discountAmount: 1500,
+      });
+
+      const fbCreative = await createFBLinkAdCreative(adAccountId, userToken, {
+        name: `Creative — ${campaign.name}`,
+        pageId: conn.fb_page_id,
+        link: paidCopy.whatsappUrl,
+        imageUrl: imageUrls[0] || '',
+        message: paidCopy.message,
+        headline: paidCopy.headline,
+        description: paidCopy.description,
+      });
+      fbCreativeId = fbCreative.id;
+
+      const fbAd = await createFBAd(adAccountId, userToken, {
+        name: `Ad — ${campaign.name}`,
+        adsetId: fbAdSetId,
+        creativeId: fbCreativeId,
+      });
+      fbAdIdResult = fbAd.id;
+
+    } else {
+      // ── AWARENESS: OUTCOME_AWARENESS + REACH + boost organic post ──
+      const fbCampaign = await createFBCampaign(adAccountId, userToken, {
+        name: `AutoMALL — ${campaign.name}`,
+        objective: 'OUTCOME_AWARENESS',
+      });
+      fbCampaignId = fbCampaign.id;
+
+      const fbAdSet = await createFBAdSet(adAccountId, userToken, {
+        name: `${campaign.name} — Houston Area`,
+        campaignId: fbCampaignId,
+        dailyBudgetCents,
+        pageId: conn.fb_page_id,
+        targeting,
+      });
+      fbAdSetId = fbAdSet.id;
+
+      const objectStoryId = `${conn.fb_page_id}_${fbPostId.split('_').pop()}`;
+      const fbCreative = await createFBAdCreative(adAccountId, userToken, {
+        name: `Creative — ${campaign.name}`,
+        objectStoryId,
+      });
+      fbCreativeId = fbCreative.id;
+
+      const fbAd = await createFBAd(adAccountId, userToken, {
+        name: `Ad — ${campaign.name}`,
+        adsetId: fbAdSetId,
+        creativeId: fbCreativeId,
+      });
+      fbAdIdResult = fbAd.id;
+    }
+
+    // 9. Activate or leave paused (preserve previous state)
+    const targetStatus: 'ACTIVE' | 'PAUSED' = wasActive ? 'ACTIVE' : 'PAUSED';
+    await updateFBObjectStatus(fbCampaignId, userToken, targetStatus);
+    await updateFBObjectStatus(fbAdSetId, userToken, targetStatus);
+    await updateFBObjectStatus(fbAdIdResult, userToken, targetStatus);
+
+    // 10. Save new IDs + objective
+    const finalAdStatus = wasActive ? 'active' : 'paused';
+    await supabase.from('campaigns').update({
+      fb_campaign_id: fbCampaignId,
+      fb_adset_id: fbAdSetId,
+      fb_ad_id: fbAdIdResult,
+      fb_creative_id: fbCreativeId,
+      fb_ad_status: finalAdStatus,
+      fb_ad_objective: newObjective,
+    }).eq('id', campaignId);
+
+    console.log(`[CampaignService] Objective switched to ${newObjective} for ${campaignId} → FB ad ${fbAdIdResult} (${finalAdStatus})`);
+
+    return {
+      fbAdId: fbAdIdResult,
+      adStatus: finalAdStatus as 'active' | 'paused',
+      adMessage: null,
+    };
+  } catch (err) {
+    const errorDetail = safeErrorMsg(err);
+    console.error(`[CampaignService] Switch objective FAILED for ${campaignId}: ${errorDetail}`);
+
+    // Mark as error — organic post is still live
+    await supabase.from('campaigns').update({
+      fb_ad_status: 'error',
+      fb_ad_objective: newObjective,
+    }).eq('id', campaignId);
+
+    throw new Error(`Failed to switch ad objective: ${errorDetail}`);
+  }
 }
 
 // ─────────────────────────────────────────────

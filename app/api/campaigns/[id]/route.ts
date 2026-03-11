@@ -13,11 +13,12 @@ import {
   deleteCampaign,
   getCampaignFullStats,
 } from '@/lib/campaigns/campaign-service';
-import type { CampaignType, CampaignStatus, CaptionLanguage } from '@/lib/campaigns/types';
+import type { CampaignType, CampaignStatus, CaptionLanguage, FBAdObjective } from '@/lib/campaigns/types';
 
 const VALID_STATUSES: CampaignStatus[] = ['draft', 'active', 'paused', 'completed', 'archived'];
 const VALID_TYPES: CampaignType[] = ['inventory_showcase', 'seasonal_promo', 'clearance', 'financing', 'trade_in', 'custom'];
 const VALID_LANGS: CaptionLanguage[] = ['en', 'es', 'both'];
+const VALID_AD_OBJECTIVES: FBAdObjective[] = ['awareness', 'whatsapp_clicks'];
 
 async function getSellerId(wallet: string) {
   const supabase = getTypedClient();
@@ -109,6 +110,7 @@ export async function PATCH(
   if (body.start_date !== undefined) updates.start_date = body.start_date || null;
   if (body.end_date !== undefined) updates.end_date = body.end_date || null;
   if (body.caption_language && VALID_LANGS.includes(body.caption_language as CaptionLanguage)) updates.caption_language = body.caption_language;
+  if (body.fb_ad_objective && VALID_AD_OBJECTIVES.includes(body.fb_ad_objective as FBAdObjective)) updates.fb_ad_objective = body.fb_ad_objective;
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });

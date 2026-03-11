@@ -15,7 +15,6 @@ export interface FBTargeting {
   };
   age_min: number;
   age_max: number;
-  locales: number[];
 }
 
 // Facebook city keys for major TX cities
@@ -60,9 +59,6 @@ const MAX_RADIUS_MILES = 80;
 const DEFAULT_RADIUS_MILES = 50;
 const MIN_AGE = 21;
 const MAX_AGE = 65;
-// Facebook locale IDs: 6 = English (US), 24 = Spanish
-const TARGET_LOCALES = [6, 24];
-
 export function buildTargeting(
   city: string | null,
   state: string | null,
@@ -92,6 +88,5 @@ export function buildTargeting(
     },
     age_min: MIN_AGE,
     age_max: MAX_AGE,
-    locales: TARGET_LOCALES,
   };
 }

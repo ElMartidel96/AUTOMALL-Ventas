@@ -691,6 +691,7 @@ interface CampaignDetailData {
   fb_publish_status: string;
   fb_permalink_url: string | null;
   fb_ad_status?: string;
+  fb_ad_objective?: string;
   landing_slug: string | null;
   metrics: { page_views: number; whatsapp_clicks: number; total_leads: number };
 }
@@ -728,32 +729,42 @@ export function campaignDetail(lang: Lang, c: CampaignDetailData): { text: strin
     ? '\n' + (lang === 'es' ? (adIndicators[c.fb_ad_status] || '') : (adIndicatorsEN[c.fb_ad_status] || ''))
     : '';
 
+  // Objective indicator (only when paid ad exists)
+  const hasPaidAd = c.fb_ad_status && c.fb_ad_status !== 'none' && c.fb_ad_status !== 'error';
+  const objLabels: Record<string, string> = { awareness: '📡 Alcance', whatsapp_clicks: '💬 WhatsApp Clicks' };
+  const objLabelsEN: Record<string, string> = { awareness: '📡 Reach', whatsapp_clicks: '💬 WhatsApp Clicks' };
+  const objLine = hasPaidAd && c.fb_ad_objective
+    ? '\n🎯 ' + (lang === 'es' ? (objLabels[c.fb_ad_objective] || c.fb_ad_objective) : (objLabelsEN[c.fb_ad_objective] || c.fb_ad_objective))
+    : '';
+
   const text = lang === 'es'
-    ? `📢 *${c.name}*\n${statusText} | ${c.vehicle_count} vehiculos | ${budget}${adLine}\n\n📊 Vistas: ${c.metrics.page_views} | WA clicks: ${c.metrics.whatsapp_clicks} | Leads: ${c.metrics.total_leads}\n🔗 ${landingUrl}${c.fb_permalink_url ? '\n📱 ' + c.fb_permalink_url : ''}`
-    : `📢 *${c.name}*\n${statusText} | ${c.vehicle_count} vehicles | ${budget}${adLine}\n\n📊 Views: ${c.metrics.page_views} | WA clicks: ${c.metrics.whatsapp_clicks} | Leads: ${c.metrics.total_leads}\n🔗 ${landingUrl}${c.fb_permalink_url ? '\n📱 ' + c.fb_permalink_url : ''}`;
+    ? `📢 *${c.name}*\n${statusText} | ${c.vehicle_count} vehiculos | ${budget}${adLine}${objLine}\n\n📊 Vistas: ${c.metrics.page_views} | WA clicks: ${c.metrics.whatsapp_clicks} | Leads: ${c.metrics.total_leads}\n🔗 ${landingUrl}${c.fb_permalink_url ? '\n📱 ' + c.fb_permalink_url : ''}`
+    : `📢 *${c.name}*\n${statusText} | ${c.vehicle_count} vehicles | ${budget}${adLine}${objLine}\n\n📊 Views: ${c.metrics.page_views} | WA clicks: ${c.metrics.whatsapp_clicks} | Leads: ${c.metrics.total_leads}\n🔗 ${landingUrl}${c.fb_permalink_url ? '\n📱 ' + c.fb_permalink_url : ''}`;
 
   // Strategy: 3 buttons max
-  // Button 1: Primary action (Publish FB / Pause / Resume) based on state
-  // Button 2: Stats (always, except archived)
-  // Button 3: Eliminar (if not archived) or Campanas (if archived)
+  // When paid ad exists: [Pause/Resume] [Switch Obj] [Stats]
+  // When no paid ad:     [Publish FB]   [Stats]      [Delete]
   const buttons: WAButton[] = [];
 
   if (c.status === 'archived') {
     buttons.push({ type: 'reply', reply: { id: 'cmd_campaigns', title: lang === 'es' ? 'Campanas' : 'Campaigns' } });
-  } else {
-    // Button 1: Primary action
-    if (c.fb_publish_status !== 'published') {
-      buttons.push({ type: 'reply', reply: { id: `cmd_camp_pub_${c.id}`, title: lang === 'es' ? 'Publicar FB' : 'Publish FB' } });
-    } else if (c.status === 'active') {
+  } else if (hasPaidAd) {
+    // Button 1: Pause/Resume
+    if (c.status === 'active') {
       buttons.push({ type: 'reply', reply: { id: `cmd_camp_pause_${c.id}`, title: lang === 'es' ? 'Pausar' : 'Pause' } });
     } else if (c.status === 'paused') {
       buttons.push({ type: 'reply', reply: { id: `cmd_camp_resume_${c.id}`, title: lang === 'es' ? 'Reactivar' : 'Resume' } });
     }
-
-    // Button 2: Stats
+    // Button 2: Switch objective
+    buttons.push({ type: 'reply', reply: { id: `cmd_camp_switch_${c.id}`, title: lang === 'es' ? 'Cambiar Obj.' : 'Switch Obj.' } });
+    // Button 3: Stats
     buttons.push({ type: 'reply', reply: { id: `cmd_camp_stats_${c.id}`, title: 'Stats' } });
-
-    // Button 3: Eliminar
+  } else {
+    // No paid ad — standard layout
+    if (c.fb_publish_status !== 'published') {
+      buttons.push({ type: 'reply', reply: { id: `cmd_camp_pub_${c.id}`, title: lang === 'es' ? 'Publicar FB' : 'Publish FB' } });
+    }
+    buttons.push({ type: 'reply', reply: { id: `cmd_camp_stats_${c.id}`, title: 'Stats' } });
     buttons.push({ type: 'reply', reply: { id: `cmd_camp_del_${c.id}`, title: lang === 'es' ? 'Eliminar' : 'Delete' } });
   }
 
@@ -999,6 +1010,7 @@ export function campaignDeleted(lang: Lang, name: string, fbCount: number): stri
 // ─────────────────────────────────────────────
 
 interface CampaignFullStatsData {
+  id: string;
   name: string;
   landing: { page_views: number; whatsapp_clicks: number; total_leads: number };
   fb: {
@@ -1065,7 +1077,36 @@ export function campaignFullStats(lang: Lang, data: CampaignFullStatsData): { te
 
   const buttons: WAButton[] = [
     { type: 'reply', reply: { id: 'cmd_campaigns_list', title: lang === 'es' ? 'Mis campanas' : 'My campaigns' } },
+    { type: 'reply', reply: { id: `cmd_camp_del_${data.id}`, title: lang === 'es' ? 'Eliminar' : 'Delete' } },
     { type: 'reply', reply: { id: 'cmd_menu', title: 'Menu' } },
+  ];
+
+  return { text, buttons };
+}
+
+export function campaignSwitchConfirm(
+  lang: Lang,
+  data: { id: string; name: string; currentObjective: string; newObjective: string }
+): { text: string; buttons: WAButton[] } {
+  const objLabels: Record<string, { es: string; en: string }> = {
+    awareness: { es: '📡 Alcance (Awareness)', en: '📡 Reach (Awareness)' },
+    whatsapp_clicks: { es: '💬 WhatsApp Clicks', en: '💬 WhatsApp Clicks' },
+  };
+
+  const currentLabel = lang === 'es'
+    ? (objLabels[data.currentObjective]?.es || data.currentObjective)
+    : (objLabels[data.currentObjective]?.en || data.currentObjective);
+  const newLabel = lang === 'es'
+    ? (objLabels[data.newObjective]?.es || data.newObjective)
+    : (objLabels[data.newObjective]?.en || data.newObjective);
+
+  const text = lang === 'es'
+    ? `🎯 *Cambiar objetivo — ${data.name}*\n\nActual: ${currentLabel}\nCambiar a: ${newLabel}\n\n⚠️ Esto eliminara el anuncio actual y creara uno nuevo con el objetivo ${newLabel}.\nEl post organico NO se afecta. El presupuesto se mantiene.\n\nContinuar?`
+    : `🎯 *Switch objective — ${data.name}*\n\nCurrent: ${currentLabel}\nSwitch to: ${newLabel}\n\n⚠️ This will delete the current ad and create a new one with ${newLabel} objective.\nThe organic post is NOT affected. Budget remains the same.\n\nContinue?`;
+
+  const buttons: WAButton[] = [
+    { type: 'reply', reply: { id: `cmd_camp_sw_yes_${data.id}`, title: lang === 'es' ? 'Si, cambiar' : 'Yes, switch' } },
+    { type: 'reply', reply: { id: `cmd_camp_stats_${data.id}`, title: lang === 'es' ? 'Cancelar' : 'Cancel' } },
   ];
 
   return { text, buttons };

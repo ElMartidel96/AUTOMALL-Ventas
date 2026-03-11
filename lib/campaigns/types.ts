@@ -34,6 +34,8 @@ export type CaptionLanguage = 'en' | 'es' | 'both';
 
 export type FBAdStatus = 'none' | 'creating' | 'paused' | 'active' | 'completed' | 'error';
 
+export type FBAdObjective = 'awareness' | 'whatsapp_clicks';
+
 export type CampaignEventType =
   | 'page_view'
   | 'vehicle_view'
@@ -84,6 +86,7 @@ export interface Campaign {
   fb_ad_id: string | null;
   fb_creative_id: string | null;
   fb_ad_status: FBAdStatus;
+  fb_ad_objective: FBAdObjective;
   created_at: string;
   updated_at: string;
 }
@@ -107,6 +110,7 @@ export interface CampaignInsert {
   end_date?: string | null;
   caption_language?: CaptionLanguage;
   target_audience_notes?: string | null;
+  fb_ad_objective?: FBAdObjective;
 }
 
 export interface CampaignUpdate {
@@ -131,6 +135,7 @@ export interface CampaignUpdate {
   fb_ad_id?: string | null;
   fb_creative_id?: string | null;
   fb_ad_status?: FBAdStatus;
+  fb_ad_objective?: FBAdObjective;
 }
 
 // ─────────────────────────────────────────────

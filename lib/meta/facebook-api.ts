@@ -632,20 +632,20 @@ export async function verifyTokenPermissions(
   return { granted, declined, tokenValid: true };
 }
 
-/** Create a Facebook campaign with OUTCOME_AWARENESS objective.
- *  Optimizes for maximum REACH — ideal for promoting vehicle inventory
- *  to local buyers. Works universally (no beta restrictions). */
+/** Create a Facebook campaign with configurable ODAX objective.
+ *  Supports: OUTCOME_TRAFFIC (link clicks → wa.me), OUTCOME_AWARENESS (reach/boost).
+ *  Default: OUTCOME_TRAFFIC. */
 export async function createFBCampaign(
   adAccountId: string,
   accessToken: string,
-  opts: { name: string }
+  opts: { name: string; objective?: string }
 ): Promise<FBCampaignResponse> {
   const accountId = adAccountId.replace(/^act_/, '');
   const url = new URL(`${GRAPH_API}/act_${accountId}/campaigns`);
 
   const body = new URLSearchParams();
   body.set('name', opts.name);
-  body.set('objective', 'OUTCOME_AWARENESS');
+  body.set('objective', opts.objective || 'OUTCOME_TRAFFIC');
   body.set('status', 'PAUSED');
   body.set('special_ad_categories', '[]');
   body.set('access_token', accessToken);
@@ -736,6 +736,61 @@ export async function createFBAdSet(
       console.error(`[FB-API] createFBAdSet error_data:`, JSON.stringify(fbErr.error_data));
     }
     throw new Error(_formatFBError('Create adset failed:', fbErr));
+  }
+  return res.json();
+}
+
+/** Create a link ad creative with CTA button (e.g. wa.me link).
+ *  Uses object_story_spec + link_data instead of object_story_id.
+ *  The ad appears as a standalone link ad with image, headline, description, and CTA. */
+export async function createFBLinkAdCreative(
+  adAccountId: string,
+  accessToken: string,
+  opts: {
+    name: string;
+    pageId: string;
+    link: string;
+    imageUrl: string;
+    message: string;
+    headline: string;
+    description: string;
+    ctaType?: string;
+  }
+): Promise<FBAdCreativeResponse> {
+  const accountId = adAccountId.replace(/^act_/, '');
+  const url = new URL(`${GRAPH_API}/act_${accountId}/adcreatives`);
+
+  const objectStorySpec = {
+    page_id: opts.pageId,
+    link_data: {
+      message: opts.message,
+      link: opts.link,
+      picture: opts.imageUrl,
+      name: opts.headline,
+      description: opts.description,
+      call_to_action: {
+        type: opts.ctaType || 'LEARN_MORE',
+        value: { link: opts.link },
+      },
+    },
+  };
+
+  const body = new URLSearchParams();
+  body.set('name', opts.name);
+  body.set('object_story_spec', JSON.stringify(objectStorySpec));
+  body.set('access_token', accessToken);
+
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    const fbErr = _extractFBError(err);
+    _logFBError(`createFBLinkAdCreative(act_${accountId})`, fbErr);
+    throw new Error(_formatFBError('Create link ad creative failed:', fbErr));
   }
   return res.json();
 }

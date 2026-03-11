@@ -369,6 +369,18 @@ async function handleButtonAction(
     return handlers.handleCampaignDelete(lang, link, campaignId);
   }
 
+  // Campaign switch objective
+  if (actionId.startsWith('cmd_camp_sw_yes_')) {
+    const newObjective = (context?.data?.newObjective as string) || 'whatsapp_clicks';
+    const campaignId = (context?.data?.campaignId as string) || '';
+    if (!campaignId) return null;
+    return handlers.handleCampaignSwitchConfirm(lang, link, campaignId, newObjective);
+  }
+  if (actionId.startsWith('cmd_camp_switch_')) {
+    const campaignId = actionId.replace('cmd_camp_switch_', '');
+    return handlers.handleCampaignSwitchObjective(lang, link, campaignId);
+  }
+
   // Campaign stats
   if (actionId.startsWith('cmd_camp_stats_')) {
     const campaignId = actionId.replace('cmd_camp_stats_', '');

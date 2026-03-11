@@ -314,6 +314,107 @@ export function generateAdCopy(opts: AdCopyOptions): GeneratedCopy {
   return { headline_en, headline_es, body_en, body_es };
 }
 
+// ─────────────────────────────────────────────
+// Paid Link Ad Copy — optimized for CTA clicks
+//
+// Different from organic: shorter, more urgent,
+// includes wa.me link + CTA button.
+// ─────────────────────────────────────────────
+
+export interface PaidAdCopy {
+  message: string;
+  headline: string;
+  description: string;
+  whatsappUrl: string;
+}
+
+interface PaidAdCopyOptions {
+  campaignType: CampaignType;
+  vehicles: VehicleForCopy[];
+  seller: SellerForFeed;
+  lang: CaptionLanguage;
+  discountAmount?: number;
+}
+
+export function generatePaidAdCopy(opts: PaidAdCopyOptions): PaidAdCopy {
+  const { vehicles, seller, lang, discountAmount } = opts;
+  const discount = discountAmount || 1500;
+  const discountStr = formatPrice(discount);
+  const phone = seller.whatsapp || seller.phone || '';
+  const businessName = seller.business_name || 'Autos MALL LLC';
+  const city = seller.city || 'Houston';
+  const state = seller.state || 'TX';
+
+  // Build WhatsApp prefill message (Spanish default for Houston market)
+  let prefillMsg: string;
+  if (vehicles.length > 0) {
+    const v = vehicles[0];
+    if (lang === 'en') {
+      prefillMsg = `Hi! I saw your ad on Facebook. I'm interested in the ${v.year} ${v.brand} ${v.model}. Is the ${discountStr} discount still available?`;
+    } else {
+      prefillMsg = `Hola! Vi su anuncio en Facebook. Me interesa el ${v.year} ${v.brand} ${v.model}. Aun esta disponible el descuento de ${discountStr}?`;
+    }
+  } else {
+    if (lang === 'en') {
+      prefillMsg = `Hi! I saw your ad on Facebook. Is the ${discountStr} discount still available?`;
+    } else {
+      prefillMsg = `Hola! Vi su anuncio en Facebook. Aun esta disponible el descuento de ${discountStr}?`;
+    }
+  }
+
+  const whatsappUrl = buildWhatsAppURL(phone, prefillMsg);
+
+  // Truncate prefill if URL is too long (wa.me limit ~1500 chars)
+  const finalUrl = whatsappUrl.length > 1500
+    ? buildWhatsAppURL(phone, lang === 'en'
+      ? `Hi! I saw your ad on Facebook. Is the ${discountStr} discount available?`
+      : `Hola! Vi su anuncio en Facebook. Tiene el descuento de ${discountStr}?`)
+    : whatsappUrl;
+
+  // Build message (text above the image)
+  const lines: string[] = [];
+
+  if (lang === 'both') {
+    lines.push(`🔥 Limited time only! Message us NOW on WhatsApp`);
+    lines.push(`🔥 Oferta por tiempo limitado! Escribenos AHORA por WhatsApp`);
+  } else if (lang === 'en') {
+    lines.push(`🔥 Limited time only! Message us NOW on WhatsApp`);
+  } else {
+    lines.push(`🔥 Oferta por tiempo limitado! Escribenos AHORA por WhatsApp`);
+  }
+
+  lines.push(`${businessName} — ${city}, ${state}`);
+  lines.push('');
+
+  // Vehicle list
+  for (const v of vehicles) {
+    lines.push(`${v.year} ${v.brand} ${v.model} — ${formatPrice(v.price)}`);
+  }
+
+  lines.push('');
+
+  if (lang === 'both') {
+    lines.push(`${discountStr} OFF all vehicles! Limited spots / Cupos limitados`);
+    lines.push(`👇 Tap below to message us / Toca abajo para escribirnos`);
+  } else if (lang === 'en') {
+    lines.push(`${discountStr} OFF all vehicles! Limited spots available`);
+    lines.push(`👇 Tap below to message us on WhatsApp`);
+  } else {
+    lines.push(`${discountStr} de descuento! Cupos limitados`);
+    lines.push(`👇 Toca abajo para escribirnos por WhatsApp`);
+  }
+
+  const message = truncate(lines.join('\n'), FB_BODY_MAX);
+
+  // Headline (bold below image — max ~40 chars)
+  const headline = truncate(`${discountStr} OFF — Message Us!`, 40);
+
+  // Description (below headline)
+  const description = truncate(`${businessName} — ${city}, ${state}`, 30);
+
+  return { message, headline, description, whatsappUrl: finalUrl };
+}
+
 /**
  * Build the Facebook caption for a campaign publish.
  * Respects lang preference: 'en' | 'es' | 'both'.

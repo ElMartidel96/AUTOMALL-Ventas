@@ -789,6 +789,7 @@ export async function handleCampaignDetail(
       fb_publish_status: campaign.fb_publish_status,
       fb_permalink_url: campaign.fb_permalink_url,
       fb_ad_status: campaign.fb_ad_status,
+      fb_ad_objective: campaign.fb_ad_objective,
       landing_slug: campaign.landing_slug,
       metrics: {
         page_views: metrics.page_views,
@@ -1237,6 +1238,7 @@ export async function handleCampaignStats(
     const stats = await getCampaignFullStats(campaignId, link.wallet_address);
 
     const { text, buttons } = ct.campaignFullStats(lang, {
+      id: campaignId,
       name: campaign.name,
       landing: stats.landing,
       fb: stats.fb,
@@ -1248,6 +1250,96 @@ export async function handleCampaignStats(
   } catch (err) {
     console.error('[WA-CMD] Campaign stats error:', err);
     return { text: ct.commandError(lang, 'campaigns'), newContext: null };
+  }
+}
+
+// ─────────────────────────────────────────────
+// CAMPAIGN — Switch Ad Objective
+// ─────────────────────────────────────────────
+
+export async function handleCampaignSwitchObjective(
+  lang: Lang,
+  link: WAPhoneLink,
+  campaignId: string
+): Promise<CommandResult> {
+  try {
+    const { getCampaignById } = await import('@/lib/campaigns/campaign-service');
+    const campaign = await getCampaignById(campaignId, link.wallet_address);
+    if (!campaign) {
+      return { text: lang === 'es' ? 'Campana no encontrada.' : 'Campaign not found.', newContext: null };
+    }
+
+    if (!campaign.fb_campaign_id) {
+      return {
+        text: lang === 'es'
+          ? '⚠️ No hay anuncio pagado activo. Publica la campana primero.'
+          : '⚠️ No active paid ad. Publish the campaign first.',
+        newContext: null,
+      };
+    }
+
+    const currentObjective = campaign.fb_ad_objective || 'whatsapp_clicks';
+    const newObjective = currentObjective === 'awareness' ? 'whatsapp_clicks' : 'awareness';
+
+    const { text, buttons } = ct.campaignSwitchConfirm(lang, {
+      id: campaign.id,
+      name: campaign.name,
+      currentObjective,
+      newObjective,
+    });
+
+    return {
+      text,
+      buttons,
+      newContext: {
+        flow: 'campaign_switch',
+        step: 0,
+        data: { campaignId: campaign.id, newObjective },
+      },
+    };
+  } catch (err) {
+    console.error('[WA-CMD] Campaign switch objective error:', err);
+    return { text: ct.commandError(lang, 'campaigns'), newContext: null };
+  }
+}
+
+export async function handleCampaignSwitchConfirm(
+  lang: Lang,
+  link: WAPhoneLink,
+  campaignId: string,
+  newObjective: string
+): Promise<CommandResult> {
+  try {
+    const { switchAdObjective } = await import('@/lib/campaigns/campaign-service');
+    const result = await switchAdObjective(
+      campaignId,
+      link.wallet_address,
+      newObjective as 'awareness' | 'whatsapp_clicks'
+    );
+
+    const objLabels: Record<string, { es: string; en: string }> = {
+      awareness: { es: '📡 Alcance (Awareness)', en: '📡 Reach (Awareness)' },
+      whatsapp_clicks: { es: '💬 WhatsApp Clicks', en: '💬 WhatsApp Clicks' },
+    };
+    const label = lang === 'es'
+      ? (objLabels[newObjective]?.es || newObjective)
+      : (objLabels[newObjective]?.en || newObjective);
+    const statusLabel = result.adStatus === 'active'
+      ? (lang === 'es' ? 'activo' : 'active')
+      : (lang === 'es' ? 'pausado' : 'paused');
+
+    const text = lang === 'es'
+      ? `✅ Objetivo cambiado a ${label}.\nEl anuncio esta ${statusLabel}.`
+      : `✅ Objective switched to ${label}.\nThe ad is ${statusLabel}.`;
+
+    return { text, newContext: null };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[WA-CMD] Campaign switch confirm error:', msg);
+    const text = lang === 'es'
+      ? `⚠️ Error al cambiar objetivo: ${msg}`
+      : `⚠️ Failed to switch objective: ${msg}`;
+    return { text, newContext: null };
   }
 }
 
