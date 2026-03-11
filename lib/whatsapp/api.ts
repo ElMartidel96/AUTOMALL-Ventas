@@ -53,9 +53,12 @@ export async function sendTextMessage(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(`WA send text failed: ${formatApiError(err, res.statusText)}`);
+    throw new Error(`WA send text failed (${res.status}): ${formatApiError(err, res.statusText)}`);
   }
-  return res.json();
+  const data: WAMessageResponse = await res.json();
+  const msgId = data?.messages?.[0]?.id || 'NO_ID';
+  console.log(`[WA-API] text sent OK → msgId=${msgId}, to=${to.slice(-4)}, chars=${text.length}`);
+  return data;
 }
 
 export async function sendInteractiveMessage(
@@ -66,6 +69,7 @@ export async function sendInteractiveMessage(
   token: string
 ): Promise<WAMessageResponse> {
   const url = `${GRAPH_API}/${phoneNumberId}/messages`;
+  const btnCount = buttons.length;
 
   const res = await fetch(url, {
     method: 'POST',
@@ -87,9 +91,12 @@ export async function sendInteractiveMessage(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(`WA send interactive failed: ${formatApiError(err, res.statusText)}`);
+    throw new Error(`WA send interactive failed (${res.status}): ${formatApiError(err, res.statusText)}`);
   }
-  return res.json();
+  const data: WAMessageResponse = await res.json();
+  const msgId = data?.messages?.[0]?.id || 'NO_ID';
+  console.log(`[WA-API] interactive sent OK → msgId=${msgId}, to=${to.slice(-4)}, btns=${btnCount}, chars=${bodyText.length}`);
+  return data;
 }
 
 export async function sendImageMessage(

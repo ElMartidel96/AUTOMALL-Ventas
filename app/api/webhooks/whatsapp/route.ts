@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     // 2. Parse payload
     const payload: WAWebhookPayload = JSON.parse(rawBody);
 
-    // 3. Collect messages to process (ignore status updates, read receipts, etc.)
+    // 3. Collect messages to process + log status updates (delivery failures)
     const messagesToProcess: Array<{
       phoneNumber: string;
       waPhoneNumberId: string;
@@ -78,6 +78,19 @@ export async function POST(request: NextRequest) {
     for (const entry of payload.entry || []) {
       for (const change of entry.changes || []) {
         const value = change.value;
+
+        // Log delivery status updates — critical for diagnosing silent delivery failures
+        if (value?.statuses) {
+          for (const s of value.statuses as Array<{ id?: string; status?: string; recipient_id?: string; errors?: Array<{ code?: number; title?: string }> }>) {
+            if (s.status === 'failed' || s.errors?.length) {
+              const errCodes = s.errors?.map(e => `${e.code}:${e.title}`).join(', ') || 'unknown';
+              console.error(`[WA-STATUS] DELIVERY FAILED → msgId=${s.id?.slice(-8) || '?'}, to=${s.recipient_id?.slice(-4) || '?'}, errors=[${errCodes}]`);
+            } else if (s.status === 'sent' || s.status === 'delivered' || s.status === 'read') {
+              console.log(`[WA-STATUS] ${s.status} → msgId=${s.id?.slice(-8) || '?'}, to=${s.recipient_id?.slice(-4) || '?'}`);
+            }
+          }
+        }
+
         if (!value?.messages) continue;
 
         const waPhoneNumberId = value.metadata.phone_number_id;
