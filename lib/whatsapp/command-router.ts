@@ -87,12 +87,12 @@ const COMMANDS: CommandDef[] = [
     slash: ['/stats', '/resumen', '/summary', '/estadisticas'],
     keywords_es: [
       'estadisticas', 'resumen', 'numeros', 'stats',
-      'como voy', 'ventas', 'reporte', 'como va', 'mi negocio',
+      'como voy', 'reporte', 'como va', 'mi negocio',
       'como estoy', 'resultados',
     ],
     keywords_en: [
       'stats', 'summary', 'numbers', 'statistics',
-      'how am i doing', 'sales', 'report', 'my business', 'results',
+      'how am i doing', 'report', 'my business', 'results',
     ],
   },
   {
@@ -130,6 +130,30 @@ const COMMANDS: CommandDef[] = [
       'campaigns', 'campaign', 'my campaigns', 'new campaign',
       'advertising', 'ads', 'promote', 'facebook ads', 'create campaign',
     ],
+  },
+  {
+    id: 'deals',
+    slash: ['/ventas', '/deals', '/mis_ventas', '/sales'],
+    keywords_es: [
+      'mis ventas', 'ventas registradas', 'control de ventas',
+      'deals', 'mis deals', 'ver ventas',
+    ],
+    keywords_en: [
+      'my deals', 'my sales', 'sales control',
+      'deals', 'view deals', 'view sales',
+    ],
+  },
+  {
+    id: 'new_deal',
+    slash: ['/nueva_venta', '/new_deal', '/vender'],
+    keywords_es: ['nueva venta', 'registrar venta', 'vendi', 'vendi un carro', 'agregar venta'],
+    keywords_en: ['new deal', 'new sale', 'sold a car', 'register sale', 'add deal'],
+  },
+  {
+    id: 'record_payment',
+    slash: ['/pago', '/payment', '/cobrar'],
+    keywords_es: ['registrar pago', 'cobrar', 'pago', 'cobro'],
+    keywords_en: ['record payment', 'collect payment', 'payment'],
   },
 ];
 
@@ -266,6 +290,15 @@ async function executeCommand(commandId: string, lang: Lang, link: WAPhoneLink):
     case 'campaigns':
       return handlers.handleCampaigns(lang, link);
 
+    case 'deals':
+      return handlers.handleListDeals(lang, link);
+
+    case 'new_deal':
+      return handlers.handleCreateDealStep(lang, link, 0, {}, '');
+
+    case 'record_payment':
+      return handlers.handleRecordPaymentStep(lang, link, 0, {}, '');
+
     default:
       return handlers.handleMenu(lang);
   }
@@ -289,6 +322,9 @@ async function handleButtonAction(
   if (actionId === 'cmd_leads') return handlers.handleListLeads(lang, link);
   if (actionId === 'cmd_stats') return handlers.handleStats(lang, link);
   if (actionId === 'cmd_new_lead') return handlers.handleCreateLeadStep(lang, link, 0, {}, '');
+  if (actionId === 'cmd_deals') return handlers.handleListDeals(lang, link);
+  if (actionId === 'cmd_new_deal') return handlers.handleCreateDealStep(lang, link, 0, {}, '');
+  if (actionId === 'cmd_deal_pay') return handlers.handleRecordPaymentStep(lang, link, 0, {}, '');
 
   // Pagination
   if (actionId === 'cmd_inventory_next' && context?.flow === 'list_vehicles') {
@@ -299,6 +335,13 @@ async function handleButtonAction(
   if (actionId === 'cmd_leads_next' && context?.flow === 'list_leads') {
     const nextPage = ((context.data.page as number) || 1) + 1;
     return handlers.handleListLeads(lang, link, nextPage);
+  }
+  if (actionId === 'cmd_deals_next' && context?.flow === 'list_deals') {
+    const nextPage = ((context.data.page as number) || 1) + 1;
+    return handlers.handleListDeals(lang, link, nextPage);
+  }
+  if (actionId === 'cmd_deal_pay_confirm' && context?.flow === 'record_payment') {
+    return handlers.handleRecordPaymentConfirm(lang, link, context.data);
   }
 
   // Vehicle actions (cmd_price_UUID, cmd_sell_UUID, etc.)
@@ -462,10 +505,19 @@ async function handleSubFlow(
       return handlers.handleCampaignCreateStep(lang, link, step, data, text);
     }
 
-    // list_vehicles / list_leads / list_campaigns — number selection handled separately
+    case 'create_deal_deal': {
+      return handlers.handleCreateDealStep(lang, link, step, data, text);
+    }
+
+    case 'record_payment': {
+      return handlers.handleRecordPaymentStep(lang, link, step, data, text);
+    }
+
+    // list_vehicles / list_leads / list_campaigns / list_deals — number selection handled separately
     case 'list_vehicles':
     case 'list_leads':
     case 'list_campaigns':
+    case 'list_deals':
       // Only handle if input is a number
       if (/^\d+$/.test(text.trim())) {
         return handleNumberSelection(parseInt(text.trim()), context, lang, link);
@@ -502,6 +554,10 @@ async function handleNumberSelection(
 
   if (context.flow === 'list_campaigns') {
     return handlers.handleCampaignDetail(lang, link, selectedId);
+  }
+
+  if (context.flow === 'list_deals') {
+    return handlers.handleDealDetail(lang, link, selectedId);
   }
 
   if (context.flow === 'list_leads') {

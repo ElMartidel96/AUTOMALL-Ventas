@@ -1435,6 +1435,285 @@ export async function handleDeleteVehicleFBPostConfirm(
 }
 
 // ─────────────────────────────────────────────
+// DEALS / VENTAS
+// ─────────────────────────────────────────────
+
+const DEALS_PER_PAGE = 5;
+
+export async function handleListDeals(lang: Lang, link: WAPhoneLink, page = 1): Promise<CommandResult> {
+  const sellerId = await getSellerId(link.wallet_address);
+  if (!sellerId) return { text: ct.noSellerFound(lang), newContext: null };
+
+  const { listDeals } = await import('@/lib/crm/deal-service');
+  const result = await listDeals(sellerId, { page, limit: DEALS_PER_PAGE });
+  const hasMore = page < result.totalPages;
+
+  const { text, buttons } = ct.dealList(lang, result.deals, result.total, page, hasMore);
+  return {
+    text,
+    buttons,
+    newContext: {
+      flow: 'list_deals',
+      step: 0,
+      data: {
+        page,
+        items: result.deals.map((d: { id: string }) => d.id),
+      },
+    },
+  };
+}
+
+export async function handleCreateDealStep(
+  lang: Lang,
+  link: WAPhoneLink,
+  step: number,
+  data: Record<string, unknown>,
+  userInput: string
+): Promise<CommandResult> {
+  const sellerId = await getSellerId(link.wallet_address);
+  if (!sellerId) return { text: ct.noSellerFound(lang), newContext: null };
+
+  // Merge any new input with existing data
+  const merged = { ...data };
+
+  if (step === 0 && userInput) {
+    // First input — try to parse everything from it
+    const { parseDealFromText, getMissingDealFields } = await import('@/lib/crm/deal-parser');
+    const parsed = parseDealFromText(userInput);
+    Object.assign(merged, parsed);
+
+    const missing = getMissingDealFields(parsed);
+    if (missing.length === 0) {
+      // All required fields present — create deal immediately!
+      return createDealFromData(lang, sellerId, merged);
+    }
+
+    // Ask for the first missing field
+    const nextStep = getStepForMissingField(missing[0]);
+    const { text, buttons } = ct.createDealStep(lang, nextStep, merged, missing);
+    return { text, buttons, newContext: { flow: 'create_deal_deal', step: nextStep, data: merged } };
+  }
+
+  // Subsequent steps
+  switch (step) {
+    case 1: // client_name
+      merged.client_name = userInput.trim();
+      break;
+    case 2: { // vehicle info (year brand model)
+      const { parseDealFromText } = await import('@/lib/crm/deal-parser');
+      const vParsed = parseDealFromText(userInput);
+      if (vParsed.vehicle_brand) merged.vehicle_brand = vParsed.vehicle_brand;
+      if (vParsed.vehicle_model) merged.vehicle_model = vParsed.vehicle_model;
+      if (vParsed.vehicle_year) merged.vehicle_year = vParsed.vehicle_year;
+      if (vParsed.vehicle_color) merged.vehicle_color = vParsed.vehicle_color;
+      break;
+    }
+    case 3: { // sale price
+      const { parseDealFromText } = await import('@/lib/crm/deal-parser');
+      const pParsed = parseDealFromText(userInput);
+      if (pParsed.sale_price) merged.sale_price = pParsed.sale_price;
+      else {
+        const num = parseFloat(userInput.replace(/[$,]/g, ''));
+        if (num > 0) merged.sale_price = num;
+      }
+      break;
+    }
+    case 4: { // down payment / financing
+      const lower = userInput.toLowerCase().trim();
+      if (lower === 'cash' || lower === 'efectivo' || lower === 'contado') {
+        merged.financing_type = 'cash';
+        merged.down_payment = merged.sale_price;
+      } else {
+        const { parseDealFromText } = await import('@/lib/crm/deal-parser');
+        const fParsed = parseDealFromText(userInput);
+        if (fParsed.down_payment) merged.down_payment = fParsed.down_payment;
+        else {
+          const num = parseFloat(userInput.replace(/[$,]/g, ''));
+          if (num > 0) merged.down_payment = num;
+        }
+        if (!merged.financing_type) merged.financing_type = 'in_house';
+      }
+      break;
+    }
+  }
+
+  // Check if we now have everything
+  const { getMissingDealFields } = await import('@/lib/crm/deal-parser');
+  const asParsed = {
+    client_name: merged.client_name as string | undefined,
+    vehicle_brand: merged.vehicle_brand as string | undefined,
+    vehicle_model: merged.vehicle_model as string | undefined,
+    vehicle_year: merged.vehicle_year as number | undefined,
+    sale_price: merged.sale_price as number | undefined,
+  };
+  const missing = getMissingDealFields(asParsed);
+
+  if (missing.length === 0) {
+    return createDealFromData(lang, sellerId, merged);
+  }
+
+  const nextStep = getStepForMissingField(missing[0]);
+  const { text, buttons } = ct.createDealStep(lang, nextStep, merged, missing);
+  return { text, buttons, newContext: { flow: 'create_deal_deal', step: nextStep, data: merged } };
+}
+
+async function createDealFromData(lang: Lang, sellerId: string, data: Record<string, unknown>): Promise<CommandResult> {
+  try {
+    const { createDeal } = await import('@/lib/crm/deal-service');
+    const deal = await createDeal(sellerId, {
+      client_name: data.client_name as string,
+      vehicle_brand: data.vehicle_brand as string,
+      vehicle_model: data.vehicle_model as string,
+      vehicle_year: data.vehicle_year as number,
+      sale_price: data.sale_price as number,
+      client_phone: data.client_phone as string | undefined,
+      down_payment: (data.down_payment as number) || 0,
+      financing_type: (data.financing_type as 'cash' | 'in_house' | 'external') || 'cash',
+      num_installments: (data.num_installments as number) || 0,
+      payment_frequency: (data.payment_frequency as 'weekly' | 'biweekly' | 'monthly') || 'weekly',
+      first_payment_date: data.first_payment_date as string | undefined,
+      installment_amount: data.installment_amount as number | undefined,
+      vehicle_color: data.vehicle_color as string | undefined,
+      vehicle_vin: data.vehicle_vin as string | undefined,
+      vehicle_mileage: data.vehicle_mileage as number | undefined,
+      referred_by: data.referred_by as string | undefined,
+      notes: data.notes as string | undefined,
+    });
+
+    const { text, buttons } = ct.dealCreated(lang, deal);
+    return { text, buttons, newContext: null };
+  } catch (err) {
+    console.error('[WA-CMD] Create deal error:', err);
+    const errMsg = err instanceof Error ? err.message : 'Unknown error';
+    return {
+      text: lang === 'es' ? `Error creando venta: ${errMsg}` : `Error creating deal: ${errMsg}`,
+      newContext: null,
+    };
+  }
+}
+
+function getStepForMissingField(field: string): number {
+  switch (field) {
+    case 'client_name': return 1;
+    case 'vehicle_brand':
+    case 'vehicle_model':
+    case 'vehicle_year': return 2;
+    case 'sale_price': return 3;
+    default: return 1;
+  }
+}
+
+export async function handleDealDetail(lang: Lang, link: WAPhoneLink, dealId: string): Promise<CommandResult> {
+  const sellerId = await getSellerId(link.wallet_address);
+  if (!sellerId) return { text: ct.noSellerFound(lang), newContext: null };
+
+  const { getDealById } = await import('@/lib/crm/deal-service');
+  const result = await getDealById(dealId, sellerId);
+  if (!result) {
+    return { text: lang === 'es' ? 'Venta no encontrada.' : 'Deal not found.', newContext: null };
+  }
+
+  const { text, buttons } = ct.dealDetail(lang, result.deal, result.payments);
+  return { text, buttons, newContext: null };
+}
+
+export async function handleRecordPaymentStep(
+  lang: Lang,
+  link: WAPhoneLink,
+  step: number,
+  data: Record<string, unknown>,
+  userInput: string
+): Promise<CommandResult> {
+  const sellerId = await getSellerId(link.wallet_address);
+  if (!sellerId) return { text: ct.noSellerFound(lang), newContext: null };
+
+  if (step === 0) {
+    // Show deals with outstanding balance
+    const { listDeals } = await import('@/lib/crm/deal-service');
+    const result = await listDeals(sellerId, { deal_status: 'active', limit: 10 });
+    const dealsWithBalance = result.deals.filter((d: { outstanding_balance: number }) => Number(d.outstanding_balance) > 0);
+
+    if (dealsWithBalance.length === 0) {
+      return {
+        text: lang === 'es' ? 'No tienes ventas con saldo pendiente.' : 'No deals with outstanding balance.',
+        newContext: null,
+      };
+    }
+
+    const { text, buttons } = ct.paymentSelectDeal(lang, dealsWithBalance);
+    return {
+      text,
+      buttons,
+      newContext: {
+        flow: 'record_payment',
+        step: 1,
+        data: { items: dealsWithBalance.map((d: { id: string }) => d.id) },
+      },
+    };
+  }
+
+  if (step === 1) {
+    // User selected deal number
+    const items = (data.items as string[]) || [];
+    const idx = parseInt(userInput) - 1;
+    if (idx < 0 || idx >= items.length) {
+      return { text: ct.invalidNumber(lang), newContext: { flow: 'record_payment', step: 1, data } };
+    }
+
+    const dealId = items[idx];
+    const { getDealById } = await import('@/lib/crm/deal-service');
+    const result = await getDealById(dealId, sellerId);
+    if (!result) return { text: lang === 'es' ? 'Venta no encontrada.' : 'Deal not found.', newContext: null };
+
+    // Find next pending payment
+    const nextPayment = result.payments.find((p: { status: string }) => p.status === 'pending' || p.status === 'overdue');
+    if (!nextPayment) {
+      return { text: lang === 'es' ? 'No hay pagos pendientes para esta venta.' : 'No pending payments for this deal.', newContext: null };
+    }
+
+    const { text, buttons } = ct.paymentConfirm(lang, result.deal, nextPayment);
+    return {
+      text,
+      buttons,
+      newContext: {
+        flow: 'record_payment',
+        step: 2,
+        data: { dealId, paymentId: nextPayment.id, amount: nextPayment.amount },
+      },
+    };
+  }
+
+  return { text: lang === 'es' ? 'Flujo inesperado.' : 'Unexpected flow.', newContext: null };
+}
+
+export async function handleRecordPaymentConfirm(
+  lang: Lang,
+  link: WAPhoneLink,
+  data: Record<string, unknown>
+): Promise<CommandResult> {
+  const sellerId = await getSellerId(link.wallet_address);
+  if (!sellerId) return { text: ct.noSellerFound(lang), newContext: null };
+
+  try {
+    const { recordPayment, getDealById } = await import('@/lib/crm/deal-service');
+    const paymentId = data.paymentId as string;
+    const dealId = data.dealId as string;
+
+    const payment = await recordPayment(paymentId, sellerId, { status: 'paid' });
+    const result = await getDealById(dealId, sellerId);
+
+    const { text, buttons } = ct.paymentRecorded(lang, result?.deal ?? null, payment);
+    return { text, buttons, newContext: null };
+  } catch (err) {
+    console.error('[WA-CMD] Record payment error:', err);
+    return {
+      text: lang === 'es' ? 'Error registrando pago.' : 'Error recording payment.',
+      newContext: null,
+    };
+  }
+}
+
+// ─────────────────────────────────────────────
 // SUPPORT
 // ─────────────────────────────────────────────
 

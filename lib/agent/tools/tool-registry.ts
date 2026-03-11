@@ -12,6 +12,7 @@ import { inventoryTools } from './inventory-tools'
 import { profileTools } from './profile-tools'
 import { referralTools } from './referral-tools'
 import { geoTools } from './geo-tools'
+import { crmTools } from './crm-tools'
 
 // ===================================================
 // UTILITY TOOLS (inline — no DB needed)
@@ -114,6 +115,7 @@ class ToolRegistry {
       ...profileTools,
       ...referralTools,
       ...geoTools,
+      ...crmTools,
       ...utilityTools,
     ]
 

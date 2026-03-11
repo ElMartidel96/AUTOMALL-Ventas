@@ -1145,3 +1145,205 @@ export function vehicleFBDeleteError(lang: Lang, title: string, reason: string):
     ? `❌ No se pudieron eliminar los posts de *${title}*: ${reason}\nSoporte: ${SUPPORT_WA} (${SUPPORT_NAME})`
     : `❌ Couldn't delete posts for *${title}*: ${reason}\nSupport: ${SUPPORT_WA} (${SUPPORT_NAME})`;
 }
+
+// ─────────────────────────────────────────────
+// DEALS / VENTAS
+// ─────────────────────────────────────────────
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
+}
+
+const dealStatusEmoji: Record<string, string> = {
+  active: '✅', completed: '🏁', default: '🔴', cancelled: '⚫',
+};
+
+export function dealList(
+  lang: Lang,
+  deals: Array<{ id: string; client_name: string; vehicle_year: number; vehicle_brand: string; vehicle_model: string; sale_price: number; deal_status: string }>,
+  total: number,
+  page: number,
+  hasMore: boolean
+): { text: string; buttons: WAButton[] } {
+  if (deals.length === 0) {
+    const text = lang === 'es'
+      ? '📋 No tienes ventas registradas.\n\nEscribe /nueva_venta para registrar una.'
+      : '📋 No deals registered yet.\n\nType /new_deal to create one.';
+    const buttons: WAButton[] = [
+      { type: 'reply', reply: { id: 'cmd_new_deal', title: lang === 'es' ? 'Nueva Venta' : 'New Deal' } },
+      { type: 'reply', reply: { id: 'cmd_menu', title: 'Menu' } },
+    ];
+    return { text, buttons };
+  }
+
+  const header = lang === 'es'
+    ? `📋 *Mis Ventas* (${total} total)\n`
+    : `📋 *My Deals* (${total} total)\n`;
+
+  const offset = (page - 1) * 5;
+  const lines = deals.map((d, i) => {
+    const emoji = dealStatusEmoji[d.deal_status] || '❓';
+    return `${offset + i + 1}. ${emoji} *${d.client_name}* — ${d.vehicle_year} ${d.vehicle_brand} ${d.vehicle_model} | ${formatCurrency(Number(d.sale_price))}`;
+  });
+
+  const footer = lang === 'es'
+    ? '\n📌 Envía el número para ver detalle'
+    : '\n📌 Send the number to see details';
+
+  const text = header + lines.join('\n') + footer;
+  const buttons: WAButton[] = [];
+  if (hasMore) buttons.push({ type: 'reply', reply: { id: 'cmd_deals_next', title: lang === 'es' ? 'Más ▶' : 'More ▶' } });
+  buttons.push({ type: 'reply', reply: { id: 'cmd_new_deal', title: lang === 'es' ? 'Nueva Venta' : 'New Deal' } });
+  buttons.push({ type: 'reply', reply: { id: 'cmd_menu', title: 'Menu' } });
+
+  return { text, buttons };
+}
+
+export function dealDetail(
+  lang: Lang,
+  deal: { client_name: string; client_phone: string | null; vehicle_year: number; vehicle_brand: string; vehicle_model: string; vehicle_color: string | null; sale_price: number; down_payment: number; financed_amount: number; financing_type: string; num_installments: number; total_collected: number; outstanding_balance: number; deal_status: string; sale_date: string },
+  payments: Array<{ payment_number: number; due_date: string; amount: number; status: string; paid_date: string | null }>
+): { text: string; buttons: WAButton[] } {
+  const emoji = dealStatusEmoji[deal.deal_status] || '❓';
+  const finLabels: Record<string, string> = { cash: lang === 'es' ? 'Efectivo' : 'Cash', in_house: 'In-House', external: lang === 'es' ? 'Externo' : 'External' };
+
+  let text = lang === 'es'
+    ? `${emoji} *${deal.client_name}*\n🚗 ${deal.vehicle_year} ${deal.vehicle_brand} ${deal.vehicle_model}${deal.vehicle_color ? ' ' + deal.vehicle_color : ''}\n📅 ${deal.sale_date}\n\n💰 *Precio:* ${formatCurrency(Number(deal.sale_price))}\n💵 *Enganche:* ${formatCurrency(Number(deal.down_payment))}\n🏦 *Financiamiento:* ${finLabels[deal.financing_type] || deal.financing_type}`
+    : `${emoji} *${deal.client_name}*\n🚗 ${deal.vehicle_year} ${deal.vehicle_brand} ${deal.vehicle_model}${deal.vehicle_color ? ' ' + deal.vehicle_color : ''}\n📅 ${deal.sale_date}\n\n💰 *Price:* ${formatCurrency(Number(deal.sale_price))}\n💵 *Down Payment:* ${formatCurrency(Number(deal.down_payment))}\n🏦 *Financing:* ${finLabels[deal.financing_type] || deal.financing_type}`;
+
+  if (deal.financing_type !== 'cash' && deal.num_installments > 0) {
+    const paidCount = payments.filter(p => p.status === 'paid').length;
+    const overdueCount = payments.filter(p => p.status === 'overdue' || (p.status === 'pending' && p.due_date < new Date().toISOString().split('T')[0])).length;
+
+    text += lang === 'es'
+      ? `\n📊 *Pagos:* ${paidCount}/${deal.num_installments} | *Cobrado:* ${formatCurrency(Number(deal.total_collected))} | *Saldo:* ${formatCurrency(Number(deal.outstanding_balance))}${overdueCount > 0 ? `\n⚠️ ${overdueCount} pago(s) atrasado(s)` : ''}`
+      : `\n📊 *Payments:* ${paidCount}/${deal.num_installments} | *Collected:* ${formatCurrency(Number(deal.total_collected))} | *Balance:* ${formatCurrency(Number(deal.outstanding_balance))}${overdueCount > 0 ? `\n⚠️ ${overdueCount} overdue payment(s)` : ''}`;
+  }
+
+  if (deal.client_phone) text += `\n📞 ${deal.client_phone}`;
+
+  const buttons: WAButton[] = [
+    { type: 'reply', reply: { id: 'cmd_deals', title: lang === 'es' ? 'Mis Ventas' : 'My Deals' } },
+    { type: 'reply', reply: { id: 'cmd_menu', title: 'Menu' } },
+  ];
+
+  return { text, buttons };
+}
+
+export function dealCreated(
+  lang: Lang,
+  deal: { client_name: string; vehicle_year: number; vehicle_brand: string; vehicle_model: string; sale_price: number; financing_type: string }
+): { text: string; buttons: WAButton[] } {
+  const finLabels: Record<string, string> = { cash: lang === 'es' ? 'Efectivo' : 'Cash', in_house: 'In-House', external: lang === 'es' ? 'Externo' : 'External' };
+
+  const text = lang === 'es'
+    ? `✅ *Venta registrada!*\n\n👤 ${deal.client_name}\n🚗 ${deal.vehicle_year} ${deal.vehicle_brand} ${deal.vehicle_model}\n💰 ${formatCurrency(Number(deal.sale_price))}\n🏦 ${finLabels[deal.financing_type] || deal.financing_type}`
+    : `✅ *Deal created!*\n\n👤 ${deal.client_name}\n🚗 ${deal.vehicle_year} ${deal.vehicle_brand} ${deal.vehicle_model}\n💰 ${formatCurrency(Number(deal.sale_price))}\n🏦 ${finLabels[deal.financing_type] || deal.financing_type}`;
+
+  const buttons: WAButton[] = [
+    { type: 'reply', reply: { id: 'cmd_deals', title: lang === 'es' ? 'Ver Ventas' : 'View Deals' } },
+    { type: 'reply', reply: { id: 'cmd_new_deal', title: lang === 'es' ? 'Otra Venta' : 'Another Deal' } },
+    { type: 'reply', reply: { id: 'cmd_menu', title: 'Menu' } },
+  ];
+
+  return { text, buttons };
+}
+
+export function createDealStep(
+  lang: Lang,
+  step: number,
+  _data: Record<string, unknown>,
+  missing: string[]
+): { text: string; buttons: WAButton[] } {
+  let text = '';
+  const buttons: WAButton[] = [
+    { type: 'reply', reply: { id: 'cmd_menu', title: lang === 'es' ? 'Cancelar' : 'Cancel' } },
+  ];
+
+  switch (step) {
+    case 1:
+      text = lang === 'es'
+        ? '👤 *Nombre del cliente?*\n\nEjemplo: María García'
+        : '👤 *Client name?*\n\nExample: Maria Garcia';
+      break;
+    case 2:
+      text = lang === 'es'
+        ? '🚗 *Vehículo?* (Año Marca Modelo)\n\nEjemplo: 2022 Toyota Camry'
+        : '🚗 *Vehicle?* (Year Brand Model)\n\nExample: 2022 Toyota Camry';
+      break;
+    case 3:
+      text = lang === 'es'
+        ? '💰 *Precio de venta?*\n\nEjemplo: $18,500'
+        : '💰 *Sale price?*\n\nExample: $18,500';
+      break;
+    case 4:
+      text = lang === 'es'
+        ? '💵 *Enganche?*\n\nEscribe el monto (ej: $3,000) o "efectivo" para venta cash'
+        : '💵 *Down payment?*\n\nEnter amount (e.g. $3,000) or "cash" for cash sale';
+      break;
+    default:
+      text = lang === 'es'
+        ? `Faltan campos: ${missing.join(', ')}`
+        : `Missing fields: ${missing.join(', ')}`;
+  }
+
+  return { text, buttons };
+}
+
+export function paymentSelectDeal(
+  lang: Lang,
+  deals: Array<{ id: string; client_name: string; vehicle_year: number; vehicle_brand: string; vehicle_model: string; outstanding_balance: number }>
+): { text: string; buttons: WAButton[] } {
+  const header = lang === 'es'
+    ? '💳 *Registrar Pago*\n\nSelecciona la venta:\n'
+    : '💳 *Record Payment*\n\nSelect the deal:\n';
+
+  const lines = deals.map((d, i) =>
+    `${i + 1}. ${d.client_name} — ${d.vehicle_year} ${d.vehicle_brand} ${d.vehicle_model} (${formatCurrency(Number(d.outstanding_balance))})`
+  );
+
+  return {
+    text: header + lines.join('\n'),
+    buttons: [{ type: 'reply', reply: { id: 'cmd_menu', title: lang === 'es' ? 'Cancelar' : 'Cancel' } }],
+  };
+}
+
+export function paymentConfirm(
+  lang: Lang,
+  deal: { client_name: string; vehicle_year: number; vehicle_brand: string; vehicle_model: string },
+  payment: { payment_number: number; due_date: string; amount: number }
+): { text: string; buttons: WAButton[] } {
+  const text = lang === 'es'
+    ? `💳 *Confirmar pago:*\n\n👤 ${deal.client_name}\n🚗 ${deal.vehicle_year} ${deal.vehicle_brand} ${deal.vehicle_model}\n\n📌 Pago #${payment.payment_number}\n📅 Fecha: ${payment.due_date}\n💰 Monto: ${formatCurrency(Number(payment.amount))}\n\n¿Registrar como pagado?`
+    : `💳 *Confirm payment:*\n\n👤 ${deal.client_name}\n🚗 ${deal.vehicle_year} ${deal.vehicle_brand} ${deal.vehicle_model}\n\n📌 Payment #${payment.payment_number}\n📅 Due: ${payment.due_date}\n💰 Amount: ${formatCurrency(Number(payment.amount))}\n\nRecord as paid?`;
+
+  const buttons: WAButton[] = [
+    { type: 'reply', reply: { id: 'cmd_deal_pay_confirm', title: lang === 'es' ? 'Sí, pagado' : 'Yes, paid' } },
+    { type: 'reply', reply: { id: 'cmd_menu', title: lang === 'es' ? 'Cancelar' : 'Cancel' } },
+  ];
+
+  return { text, buttons };
+}
+
+export function paymentRecorded(
+  lang: Lang,
+  deal: { client_name: string; total_collected: number; outstanding_balance: number } | null,
+  payment: { payment_number: number; amount: number }
+): { text: string; buttons: WAButton[] } {
+  const text = lang === 'es'
+    ? `✅ *Pago #${payment.payment_number} registrado!*\n💰 ${formatCurrency(Number(payment.amount))}${deal ? `\n\n📊 Cobrado: ${formatCurrency(Number(deal.total_collected))} | Saldo: ${formatCurrency(Number(deal.outstanding_balance))}` : ''}`
+    : `✅ *Payment #${payment.payment_number} recorded!*\n💰 ${formatCurrency(Number(payment.amount))}${deal ? `\n\n📊 Collected: ${formatCurrency(Number(deal.total_collected))} | Balance: ${formatCurrency(Number(deal.outstanding_balance))}` : ''}`;
+
+  const buttons: WAButton[] = [
+    { type: 'reply', reply: { id: 'cmd_deals', title: lang === 'es' ? 'Mis Ventas' : 'My Deals' } },
+    { type: 'reply', reply: { id: 'cmd_menu', title: 'Menu' } },
+  ];
+
+  return { text, buttons };
+}
+
+export function noSellerFound(lang: Lang): string {
+  return lang === 'es'
+    ? '❌ No se encontró tu cuenta de vendedor. Contacta soporte.'
+    : '❌ Seller account not found. Contact support.';
+}
