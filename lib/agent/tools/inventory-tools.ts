@@ -14,6 +14,10 @@
 import { z } from 'zod'
 import type { AgentTool, ToolContext } from '../types/connector-types'
 import { supabaseAdmin } from '@/lib/supabase/client'
+import { extractVehicleData, smartAutoFill, findMissingFields } from '@/lib/whatsapp/vehicle-extractor'
+import { createVehicleFromExtraction } from '@/lib/whatsapp/vehicle-creator'
+import type { StagedImage } from '@/lib/whatsapp/image-pipeline'
+import type { ExtractedVehicle } from '@/lib/whatsapp/types'
 
 // ===================================================
 // SCHEMAS
@@ -332,6 +336,129 @@ async function decodeVin(input: z.infer<typeof DecodeVinInput>) {
 }
 
 // ===================================================
+// IMAGE-BASED VEHICLE TOOLS (same pipeline as WhatsApp)
+// ===================================================
+
+const ExtractVehicleFromImagesInput = z.object({
+  image_urls: z.array(z.string()).min(1).max(10).describe('Public URLs of staged vehicle images'),
+  text_description: z.string().optional().describe('Optional seller text describing the vehicle (brand, model, year, price, etc.)'),
+})
+
+const CreateVehicleFromImagesInput = z.object({
+  brand: z.string().min(1).describe('Vehicle brand'),
+  model: z.string().min(1).describe('Vehicle model'),
+  year: z.number().int().describe('Model year'),
+  price: z.number().describe('Price in USD'),
+  mileage: z.number().int().describe('Mileage in miles'),
+  condition: z.enum(['new', 'like_new', 'excellent', 'good', 'fair']).optional(),
+  exterior_color: z.string().optional(),
+  interior_color: z.string().optional(),
+  body_type: z.string().optional(),
+  transmission: z.enum(['automatic', 'manual', 'cvt']).optional(),
+  fuel_type: z.enum(['gasoline', 'diesel', 'electric', 'hybrid', 'plugin_hybrid']).optional(),
+  drivetrain: z.enum(['fwd', 'rwd', 'awd', '4wd']).optional(),
+  engine: z.string().optional(),
+  trim: z.string().optional(),
+  doors: z.number().int().optional(),
+  vin: z.string().optional(),
+  features: z.array(z.string()).optional(),
+  description: z.string().optional(),
+  image_urls: z.array(z.string()).min(1).describe('Staged image URLs to attach to the vehicle'),
+})
+
+/**
+ * Derive storage_path from a Supabase Storage public URL.
+ * URL format: https://{project}.supabase.co/storage/v1/object/public/vehicle-images/{path}
+ */
+function storagePathFromUrl(url: string): string {
+  const marker = '/vehicle-images/'
+  const idx = url.indexOf(marker)
+  if (idx === -1) return url
+  return url.substring(idx + marker.length)
+}
+
+async function extractVehicleFromImages(
+  input: z.infer<typeof ExtractVehicleFromImagesInput>,
+  ctx: ToolContext,
+) {
+  const { image_urls, text_description } = input
+  const textMessages = text_description ? [text_description] : []
+
+  // Use the EXACT same extractor as WhatsApp (GPT-4o Vision)
+  const raw = await extractVehicleData(image_urls, textMessages)
+
+  // Smart auto-fill (same as WhatsApp)
+  const { filled, autoFilledFields } = smartAutoFill(raw)
+
+  // Find missing required fields (same as WhatsApp)
+  const missingFields = findMissingFields(filled)
+
+  return {
+    extracted: filled,
+    auto_filled: autoFilledFields,
+    missing_required: missingFields,
+    image_count: image_urls.length,
+    image_urls,
+    message: missingFields.length > 0
+      ? `Extracted vehicle data. Missing required fields: ${missingFields.join(', ')}. Please provide them to complete the listing.`
+      : 'All required fields extracted. Ready to create the listing — please confirm the details.',
+  }
+}
+
+async function createVehicleFromImagesHandler(
+  input: z.infer<typeof CreateVehicleFromImagesInput>,
+  ctx: ToolContext,
+) {
+  const { image_urls, ...vehicleFields } = input
+
+  // Build ExtractedVehicle from input
+  const extracted: ExtractedVehicle = {
+    brand: vehicleFields.brand,
+    model: vehicleFields.model,
+    year: vehicleFields.year,
+    price: vehicleFields.price,
+    mileage: vehicleFields.mileage,
+    condition: vehicleFields.condition || 'good',
+    exterior_color: vehicleFields.exterior_color || null,
+    interior_color: vehicleFields.interior_color || null,
+    body_type: vehicleFields.body_type || null,
+    transmission: vehicleFields.transmission || 'automatic',
+    fuel_type: vehicleFields.fuel_type || 'gasoline',
+    drivetrain: vehicleFields.drivetrain || null,
+    engine: vehicleFields.engine || null,
+    trim: vehicleFields.trim || null,
+    doors: vehicleFields.doors || null,
+    vin: vehicleFields.vin || null,
+    features: vehicleFields.features || [],
+    description: vehicleFields.description || null,
+    confidence: {},
+  }
+
+  // Build StagedImage array from URLs (same structure as WhatsApp pipeline)
+  const stagedImages: StagedImage[] = image_urls.map((url) => {
+    const storagePath = storagePathFromUrl(url)
+    const ext = storagePath.split('.').pop() || 'jpg'
+    const mimeMap: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }
+    return {
+      public_url: url,
+      storage_path: storagePath,
+      file_size: 0, // Will be filled by DB record
+      mime_type: mimeMap[ext] || 'image/jpeg',
+    }
+  })
+
+  // Use the EXACT same creator as WhatsApp
+  const result = await createVehicleFromExtraction(extracted, ctx.walletAddress, stagedImages)
+
+  return {
+    vehicle_id: result.vehicleId,
+    catalog_url: result.catalogUrl,
+    image_count: image_urls.length,
+    message: `Vehicle created: ${extracted.year} ${extracted.brand} ${extracted.model}. Published and visible in the catalog.`,
+  }
+}
+
+// ===================================================
 // TOOL DEFINITIONS
 // ===================================================
 
@@ -398,5 +525,23 @@ export const inventoryTools: AgentTool[] = [
     permission: 'read',
     roles: ['seller', 'admin'],
     handler: decodeVin,
+  },
+  {
+    name: 'extract_vehicle_from_images',
+    description: 'Analyze vehicle photos with AI Vision to extract brand, model, year, price, mileage, condition, colors, and all specs. Uses GPT-4o to identify the vehicle from images. Call this when the user uploads vehicle images or sends image URLs. Returns extracted data + missing required fields.',
+    category: 'Inventory',
+    inputSchema: ExtractVehicleFromImagesInput,
+    permission: 'write',
+    roles: ['seller', 'admin'],
+    handler: extractVehicleFromImages,
+  },
+  {
+    name: 'create_vehicle_from_images',
+    description: 'Create a new vehicle listing from AI-extracted data with attached images. Call this AFTER extract_vehicle_from_images, once the user confirms the extracted details. Moves staged images to the vehicle folder and publishes the listing.',
+    category: 'Inventory',
+    inputSchema: CreateVehicleFromImagesInput,
+    permission: 'write',
+    roles: ['seller', 'admin'],
+    handler: createVehicleFromImagesHandler,
   },
 ]

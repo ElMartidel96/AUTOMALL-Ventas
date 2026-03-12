@@ -2917,7 +2917,12 @@
       "suggestCampaigns": "My ad campaigns",
       "suggestNearbyDealers": "Dealers near me",
       "suggestFeatured": "Featured vehicles",
-      "suggestCompare": "Compare two vehicles"
+      "suggestCompare": "Compare two vehicles",
+      "attachImages": "Attach vehicle photos",
+      "placeholderWithImages": "Add details or send photos...",
+      "uploading": "Uploading images...",
+      "maxImages": "Maximum 10 images",
+      "clearAll": "Remove all"
     },
     "hub": {
       "connected": "AI Connected",

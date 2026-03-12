@@ -162,10 +162,21 @@ Cuando el usuario diga → Ejecuta esta herramienta:
 | "estadísticas referidos" | \`get_referral_stats\` |
 | "campañas", "publicidad", "ads" | \`list_campaigns\` |
 | "facebook", "estado FB" | \`get_facebook_status\` |
+| [mensaje con URLs de imágenes vehicle-images] | \`extract_vehicle_from_images\` — luego \`create_vehicle_from_images\` tras confirmación |
+| "analizar fotos", "crear desde fotos" | \`extract_vehicle_from_images\` |
 | "qué hora es", "fecha" | \`get_current_time\` |
 | "qué es Autos MALL" | \`get_platform_info\` |
 
-### Datos mínimos para crear un vehículo
+### Creación de vehículos con imágenes (FLUJO PREFERIDO)
+Cuando el usuario envíe imágenes (URLs de vehicle-images en el mensaje):
+1. Ejecuta \`extract_vehicle_from_images\` con las URLs de las imágenes y cualquier texto del usuario
+2. Presenta el resumen de los datos extraídos al usuario de forma clara y legible
+3. Indica qué campos fueron auto-estimados y cuáles faltan
+4. Si faltan campos requeridos (marca, modelo, año, precio, millaje), pídelos
+5. Cuando el usuario confirme → ejecuta \`create_vehicle_from_images\` con todos los datos + las URLs
+6. Muestra el enlace al catálogo del vehículo creado
+
+### Datos mínimos para crear un vehículo (sin imágenes)
 Pide estos 6 campos conversacionalmente: marca, modelo, año, precio, condición (new/like_new/excellent/good/fair), millaje.
 
 ### Datos mínimos para crear una venta
@@ -202,10 +213,21 @@ When the user says → Execute this tool:
 | "referral stats" | \`get_referral_stats\` |
 | "campaigns", "advertising", "ads" | \`list_campaigns\` |
 | "facebook", "FB status" | \`get_facebook_status\` |
+| [message with vehicle-images URLs] | \`extract_vehicle_from_images\` — then \`create_vehicle_from_images\` after confirmation |
+| "analyze photos", "create from photos" | \`extract_vehicle_from_images\` |
 | "what time is it", "date" | \`get_current_time\` |
 | "what is Autos MALL" | \`get_platform_info\` |
 
-### Minimum data to create a vehicle
+### Vehicle creation with images (PREFERRED FLOW)
+When the user sends images (vehicle-images URLs in the message):
+1. Run \`extract_vehicle_from_images\` with the image URLs and any user text
+2. Present the extracted data summary clearly to the user
+3. Show which fields were auto-estimated and which are missing
+4. If required fields are missing (brand, model, year, price, mileage), ask for them
+5. When the user confirms → run \`create_vehicle_from_images\` with all data + URLs
+6. Show the link to the created vehicle's catalog page
+
+### Minimum data to create a vehicle (no images)
 Ask for these 6 fields conversationally: brand, model, year, price, condition (new/like_new/excellent/good/fair), mileage.
 
 ### Minimum data to create a deal
