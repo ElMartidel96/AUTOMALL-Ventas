@@ -150,11 +150,11 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    log.info(`wallet=${walletAddress} msgs=${messages.length}`)
-
     // Resolve role
     const role = await resolveUserRole(walletAddress)
     const scopes = ['read', 'write'] // Platform chat gets full access
+
+    log.info(`wallet=${walletAddress} role=${role} msgs=${messages.length}`)
 
     // Resolve display name
     let displayName: string | undefined
@@ -163,7 +163,7 @@ export async function POST(req: NextRequest) {
         const { data } = await supabaseAdmin
           .from('sellers')
           .select('display_name, business_name')
-          .eq('wallet_address', walletAddress)
+          .eq('wallet_address', walletAddress.toLowerCase())
           .single()
         displayName = data?.display_name || data?.business_name || undefined
       } catch {

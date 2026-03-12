@@ -149,19 +149,49 @@ export async function validateApiKey(keyHash: string): Promise<ValidatedApiKey |
 
 /**
  * Resolve a user's role from the database.
- * Defaults to 'buyer' if not found.
+ *
+ * Resolution order:
+ *   1. Check `users` table for explicit role
+ *   2. Check `sellers` table — if wallet exists as active seller → 'seller'
+ *   3. Default to 'buyer'
  */
 export async function resolveUserRole(walletAddress: string): Promise<UserRole> {
   if (!supabaseAdmin) return 'buyer'
 
-  const { data } = await supabaseAdmin
-    .from('users')
-    .select('role')
-    .eq('wallet_address', walletAddress)
-    .single()
-
-  if (!data?.role) return 'buyer'
-
   const validRoles: UserRole[] = ['buyer', 'seller', 'birddog', 'admin']
-  return validRoles.includes(data.role as UserRole) ? (data.role as UserRole) : 'buyer'
+  const wallet = walletAddress.toLowerCase()
+
+  // 1. Check users table for explicit role
+  try {
+    const { data } = await supabaseAdmin
+      .from('users')
+      .select('role')
+      .eq('wallet_address', walletAddress)
+      .single()
+
+    if (data?.role && validRoles.includes(data.role as UserRole)) {
+      return data.role as UserRole
+    }
+  } catch {
+    // Table may not exist or user not found — continue
+  }
+
+  // 2. Check sellers table — active seller record means seller role
+  try {
+    const { data: seller } = await supabaseAdmin
+      .from('sellers')
+      .select('id')
+      .eq('wallet_address', wallet)
+      .eq('is_active', true)
+      .single()
+
+    if (seller?.id) {
+      return 'seller'
+    }
+  } catch {
+    // Table may not exist or seller not found — continue
+  }
+
+  // 3. Default
+  return 'buyer'
 }
