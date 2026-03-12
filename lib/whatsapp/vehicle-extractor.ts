@@ -119,8 +119,11 @@ Classify each image by what it primarily shows. This determines the display orde
 - damage: Visible damage, scratches, dents
 - other: Anything that doesn't fit above`;
 
-// Max images to send to GPT-4o (10 is plenty for vehicle identification, keeps request size sane)
-export const MAX_EXTRACTION_IMAGES = 10;
+// Max images to send to GPT-4o Vision for extraction.
+// 5 images is optimal: front, rear, interior, dashboard + one more — enough to identify any vehicle.
+// More images → longer processing (each adds ~8-12s) and risks Vercel timeout (120s).
+// ALL images are preserved for the listing; only extraction is limited.
+export const MAX_EXTRACTION_IMAGES = 5;
 
 export async function extractVehicleData(
   imageUrls: string[],
@@ -163,9 +166,33 @@ export async function extractVehicleData(
         },
       ],
       abortSignal: controller.signal,
+      // CRITICAL: Disable OpenAI strict structured outputs.
+      // Strict mode rejects flexible Zod patterns (z.record, nullable enums, .default).
+      // Without this, GPT-4o returns valid JSON but schema validation fails with
+      // "No object generated: response did not match schema."
+      providerOptions: {
+        openai: { structuredOutputs: false },
+      },
     });
 
     return validateExtraction(object as ExtractedVehicle);
+  } catch (extractionError) {
+    // If schema validation fails, try without image_order and confidence (the complex fields)
+    const errMsg = extractionError instanceof Error ? extractionError.message : String(extractionError);
+    if (errMsg.includes('did not match schema') || errMsg.includes('No object generated')) {
+      console.warn(`[Vehicle Extractor] Schema mismatch, retrying with simplified schema: ${errMsg}`);
+      const SimplifiedSchema = VehicleExtractionSchema.omit({ image_order: true, confidence: true });
+      const { object } = await generateObject({
+        model: openai('gpt-4o'),
+        schema: SimplifiedSchema,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content }],
+        abortSignal: controller.signal,
+        providerOptions: { openai: { structuredOutputs: false } },
+      });
+      return validateExtraction({ ...object, image_order: [], confidence: {} } as ExtractedVehicle);
+    }
+    throw extractionError;
   } finally {
     clearTimeout(timeout);
   }

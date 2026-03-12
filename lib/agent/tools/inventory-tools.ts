@@ -14,7 +14,7 @@
 import { z } from 'zod'
 import type { AgentTool, ToolContext } from '../types/connector-types'
 import { supabaseAdmin } from '@/lib/supabase/client'
-import { extractVehicleData, smartAutoFill, findMissingFields } from '@/lib/whatsapp/vehicle-extractor'
+import { extractVehicleData, smartAutoFill, findMissingFields, MAX_EXTRACTION_IMAGES } from '@/lib/whatsapp/vehicle-extractor'
 import { createVehicleFromExtraction } from '@/lib/whatsapp/vehicle-creator'
 import type { StagedImage } from '@/lib/whatsapp/image-pipeline'
 import type { ExtractedVehicle } from '@/lib/whatsapp/types'
@@ -384,11 +384,12 @@ async function extractVehicleFromImages(
   const { image_urls, text_description } = input
   const textMessages = text_description ? [text_description] : []
 
-  // Download images to buffers BEFORE sending to GPT-4o Vision.
-  // This avoids the known issue of GPT-4o timing out when downloading from Supabase CDN.
-  // Same approach as WhatsApp pipeline: inline buffers for reliability.
+  // Only download the first MAX_EXTRACTION_IMAGES (5) as buffers for GPT-4o Vision.
+  // This keeps total processing under Vercel's 120s timeout.
+  // ALL image URLs are preserved for the listing; extraction only needs a subset.
+  const extractionUrls = image_urls.slice(0, MAX_EXTRACTION_IMAGES)
   const buffers: (Buffer | undefined)[] = await Promise.all(
-    image_urls.map(async (url) => {
+    extractionUrls.map(async (url) => {
       try {
         const res = await fetch(url)
         if (!res.ok) return undefined
@@ -400,7 +401,7 @@ async function extractVehicleFromImages(
   )
 
   // Use the EXACT same extractor as WhatsApp (GPT-4o Vision)
-  const raw = await extractVehicleData(image_urls, textMessages, buffers)
+  const raw = await extractVehicleData(extractionUrls, textMessages, buffers)
 
   // Smart auto-fill (same as WhatsApp)
   const { filled, autoFilledFields } = smartAutoFill(raw)
