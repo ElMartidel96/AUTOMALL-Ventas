@@ -12,7 +12,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { streamText, stepCountIs } from 'ai'
+import { streamText, stepCountIs, convertToModelMessages } from 'ai'
 import { openai } from '@ai-sdk/openai'
 import { z } from 'zod'
 import { Ratelimit } from '@upstash/ratelimit'
@@ -60,43 +60,33 @@ const rateLimiter = createRateLimiter()
 // ===================================================
 
 /**
- * Convert UIMessages (AI SDK v5 format with `parts`) to CoreMessages
- * (with `content` string) that streamText() expects.
- *
- * TextStreamChatTransport sends: { parts: [{ type: 'text', text: '...' }] }
- * streamText expects:            { content: '...' }
- */
-type ChatRole = 'user' | 'assistant' | 'system'
-const VALID_ROLES: ChatRole[] = ['user', 'assistant', 'system']
-
-function convertMessages(rawMessages: any[]): { role: ChatRole; content: string }[] {
-  return rawMessages
-    .map((msg: any) => {
-      const role = msg.role as string
-      // Accept both formats: UIMessage (parts) and CoreMessage (content)
-      let content: string = typeof msg.content === 'string' ? msg.content : ''
-      if (!content && Array.isArray(msg.parts)) {
-        content = msg.parts
-          .filter((p: any) => p.type === 'text')
-          .map((p: any) => p.text || '')
-          .join('')
-      }
-      return { role: role as ChatRole, content }
-    })
-    .filter((msg) => msg.content && VALID_ROLES.includes(msg.role))
-}
-
-/**
- * Detect staging image URLs in a message.
+ * Detect staging image URLs in a raw UIMessage.
  * Pattern: https://{host}/vehicle-images/{seller}/staging/{filename}
  */
 const STAGING_URL_REGEX = /https:\/\/[^\s]+\/vehicle-images\/[^\s]+\/staging\/[^\s]+\.\w+/g
 
-function detectStagingImages(messages: { role: ChatRole; content: string }[]): string[] {
-  // Only check the last user message for new uploads
-  const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')
+/**
+ * Extract text content from a raw UIMessage (handles both parts and content formats).
+ */
+function extractTextFromRawMessage(msg: any): string {
+  if (typeof msg.content === 'string') return msg.content
+  if (Array.isArray(msg.parts)) {
+    return msg.parts
+      .filter((p: any) => p.type === 'text')
+      .map((p: any) => p.text || '')
+      .join('')
+  }
+  return ''
+}
+
+/**
+ * Detect staging image URLs from the last user message in raw messages.
+ */
+function detectStagingImagesFromRaw(rawMessages: any[]): string[] {
+  const lastUserMsg = [...rawMessages].reverse().find((m: any) => m.role === 'user')
   if (!lastUserMsg) return []
-  return lastUserMsg.content.match(STAGING_URL_REGEX) || []
+  const text = extractTextFromRawMessage(lastUserMsg)
+  return text.match(STAGING_URL_REGEX) || []
 }
 
 // ===================================================
@@ -157,9 +147,20 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Convert UIMessages → CoreMessages
-    const messages = convertMessages(body.messages)
-    if (messages.length === 0) {
+    // Convert UIMessages → ModelMessages (preserves tool calls + results across turns).
+    // CRITICAL: The old convertMessages() only extracted text parts, DISCARDING all tool
+    // call/result data. This meant the model lost all context between turns — it couldn't
+    // reference campaign IDs, deal details, or any data from previous tool calls.
+    // convertToModelMessages() preserves the full conversation including tool interactions.
+    let messages: any[]
+    try {
+      messages = convertToModelMessages(body.messages, { ignoreIncompleteToolCalls: true })
+    } catch (convErr) {
+      log.warn(`convertToModelMessages failed: ${convErr instanceof Error ? convErr.message : 'unknown'}, falling back to raw`)
+      // Fallback: pass raw messages (streamText can often handle UIMessages directly)
+      messages = body.messages
+    }
+    if (!messages || messages.length === 0) {
       return new Response(JSON.stringify({ error: 'No valid messages found' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
@@ -243,15 +244,16 @@ export async function POST(req: NextRequest) {
     log.info(`tools=${registryTools.length} role=${role}`)
 
     // ─── IMAGE DETECTION — Inject extraction instruction ───
-    const detectedImageUrls = detectStagingImages(messages)
+    // Use raw messages for URL detection (before SDK conversion strips formatting)
+    const detectedImageUrls = detectStagingImagesFromRaw(body.messages)
     const hasNewImages = detectedImageUrls.length > 0
 
     if (hasNewImages) {
       log.info(`IMAGES DETECTED: ${detectedImageUrls.length} staging URLs`)
 
       // Extract user's text description (everything NOT a URL)
-      const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')
-      const userText = lastUserMsg?.content
+      const lastUserRaw = [...body.messages].reverse().find((m: any) => m.role === 'user')
+      const userText = extractTextFromRawMessage(lastUserRaw || {})
         .replace(STAGING_URL_REGEX, '')
         .replace(/\[?\d+ im[aá]gen(es)?\]?/gi, '')
         .replace(/Analizar estas \d+ im[aá]gen(es)? de veh[ií]culo para crear un listado:/gi, '')

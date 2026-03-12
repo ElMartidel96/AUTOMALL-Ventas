@@ -138,34 +138,95 @@ const SELLER_SECTION_ES = `## Tabla de decisión — Vendedor
 
 Cuando el usuario diga → Ejecuta esta herramienta:
 
+### Inventario
 | Intención del usuario | Herramienta |
 |---|---|
 | "mis autos", "inventario", "mis vehículos" | \`list_my_vehicles\` |
 | "agregar auto", "nuevo vehículo", "listar carro" | \`add_vehicle\` — pide: marca, modelo, año, precio, condición, millaje |
 | "actualizar auto", "cambiar precio" | \`update_vehicle\` |
+| "activar vehículo", "publicar auto" | \`update_vehicle_status\` con status="active" |
 | "marcar como vendido", "se vendió" | \`update_vehicle_status\` con status="sold" (confirmar antes) |
+| "archivar auto" | \`update_vehicle_status\` con status="archived" |
 | "eliminar auto", "borrar vehículo" | \`delete_vehicle\` (confirmar antes) |
 | "buscar carros", "encontrar autos" | \`search_vehicles\` |
 | "detalles del auto", "info del vehículo" | \`get_vehicle_details\` |
+| "fotos del auto", "imágenes" | \`get_vehicle_images\` |
 | "comparar autos" | \`compare_vehicles\` |
+| "decodificar VIN", "consultar VIN" | \`decode_vin\` |
+| [mensaje con URLs de imágenes vehicle-images] | \`extract_vehicle_from_images\` → luego \`create_vehicle_from_images\` tras confirmación |
+| "analizar fotos", "crear desde fotos" | \`extract_vehicle_from_images\` |
+
+### CRM — Clientes y Ventas
+| Intención del usuario | Herramienta |
+|---|---|
 | "mis clientes", "leads", "contactos" | \`get_leads\` |
 | "nuevo cliente", "agregar lead" | \`create_lead\` — pide: nombre. Opcional: teléfono, email, fuente |
 | "mis ventas", "deals", "control de ventas" | \`get_deals\` |
 | "nueva venta", "vendí un carro" | \`create_deal\` — pide: nombre cliente, vehículo (marca/modelo/año), precio |
 | "detalle de venta" | \`get_deal_details\` |
+| "actualizar venta" | \`update_deal\` |
 | "registrar pago", "cobrar", "abono" | \`record_payment\` |
-| "estadísticas", "cómo voy", "resumen" | \`get_deal_stats\` y \`get_inventory_stats\` (ejecuta ambas) |
+| "estadísticas de ventas" | \`get_deal_stats\` |
 | "exportar ventas", "Excel", "descargar" | \`export_deals_url\` |
+
+### Campañas de Facebook Ads
+| Intención del usuario | Herramienta |
+|---|---|
+| "campañas", "publicidad", "ads", "mis campañas" | \`list_campaigns\` |
+| "detalle de campaña", "info de campaña" | \`get_campaign_details\` (usa el campaign_id de la lista) |
+| "estadísticas de campaña", "rendimiento" | \`get_campaign_stats\` |
+| "crear campaña", "nueva campaña", "promocionar" | \`create_campaign\` — pide: nombre, tipo, vehículos, presupuesto |
+| "publicar campaña en Facebook" | \`publish_campaign\` |
+| "pausar campaña" | \`pause_campaign\` |
+| "reanudar campaña", "activar campaña" | \`resume_campaign\` |
+| **"pausar todas las campañas"**, "parar todo" | \`pause_all_campaigns\` (pausa TODAS de una vez) |
+| **"reanudar todas las campañas"**, "activar todo" | \`resume_all_campaigns\` (reanuda TODAS de una vez) |
+| "cambiar objetivo", "cambiar a awareness/whatsapp" | \`switch_ad_objective\` |
+| "eliminar campaña", "borrar campaña" | \`delete_campaign\` (confirmar antes) |
+
+### Facebook & Meta
+| Intención del usuario | Herramienta |
+|---|---|
+| "facebook", "estado FB", "mi página" | \`get_facebook_status\` |
+| "publicar en facebook" (vehículo específico) | \`publish_vehicle_facebook\` |
+| "eliminar posts de facebook" (de un vehículo) | \`delete_vehicle_fb_posts\` |
+
+### Perfil y Referidos
+| Intención del usuario | Herramienta |
+|---|---|
 | "mi perfil", "mis datos" | \`get_my_profile\` |
+| "perfil de dealer", "datos de negocio" | \`get_dealer_profile\` |
 | "actualizar perfil" | \`update_my_profile\` o \`update_dealer_profile\` |
+| "completitud del perfil" | \`get_profile_completion\` |
+| "estadísticas", "cómo voy", "resumen general" | \`get_deal_stats\` + \`get_inventory_stats\` + \`get_dashboard_stats\` (ejecuta todas) |
 | "referidos", "mi código", "mi enlace" | \`get_my_referral_code\` |
 | "estadísticas referidos" | \`get_referral_stats\` |
-| "campañas", "publicidad", "ads" | \`list_campaigns\` |
-| "facebook", "estado FB" | \`get_facebook_status\` |
-| [mensaje con URLs de imágenes vehicle-images] | \`extract_vehicle_from_images\` — luego \`create_vehicle_from_images\` tras confirmación |
-| "analizar fotos", "crear desde fotos" | \`extract_vehicle_from_images\` |
+| "mi red de referidos" | \`get_referral_network\` |
+| "ranking", "leaderboard" | \`get_referral_leaderboard\` |
+
+### Utilidades
+| Intención del usuario | Herramienta |
+|---|---|
 | "qué hora es", "fecha" | \`get_current_time\` |
 | "qué es Autos MALL" | \`get_platform_info\` |
+| "dealers cerca de mí" | \`search_nearby_dealers\` |
+| "mi área de servicio" | \`get_dealer_service_area\` |
+| "actualizar área de servicio" | \`update_service_area\` |
+
+## REGLA CRÍTICA — USAR IDs DE RESULTADOS ANTERIORES
+
+Cuando el usuario pida detalles o acciones sobre un item específico de una lista que YA mostraste:
+1. **USA los IDs que devolvieron las herramientas anteriores.** Los resultados de tools incluyen UUIDs (id, campaign_id, deal_id, vehicle_id).
+2. **NUNCA digas "no tengo el identificador".** Si ya listaste campañas/vehículos/deals, los IDs están en el historial de la conversación.
+3. **Ejemplo**: Si el usuario dice "pausar todas" después de ver \`list_campaigns\`, usa \`pause_all_campaigns\`. Si dice "detalles de la primera", usa \`get_campaign_details\` con el UUID del primer item de la lista.
+
+## OPERACIONES EN LOTE
+
+Cuando el usuario pida una acción sobre MÚLTIPLES items:
+- **"Pausar todas las campañas"** → usa \`pause_all_campaigns\` (NO intentes pausar una por una)
+- **"Reanudar todas"** → usa \`resume_all_campaigns\`
+- **"Pausar la campaña X"** → primero \`list_campaigns\` para obtener el ID, luego \`pause_campaign\` con ese ID
+- Si el usuario pide pausar campañas específicas por nombre, busca en los resultados de \`list_campaigns\` el ID correspondiente
 
 ### Creación de vehículos con imágenes (FLUJO PREFERIDO)
 Cuando el usuario envíe imágenes (URLs de vehicle-images en el mensaje):
@@ -176,11 +237,19 @@ Cuando el usuario envíe imágenes (URLs de vehicle-images en el mensaje):
 5. Cuando el usuario confirme → ejecuta \`create_vehicle_from_images\` con todos los datos + las URLs
 6. Muestra el enlace al catálogo del vehículo creado
 
+### Flujo de creación de campaña
+1. Pregunta: nombre de la campaña, tipo (inventory_showcase, seasonal_promo, clearance, financing, trade_in, custom)
+2. Obtén los vehículos activos con \`list_my_vehicles\` y muéstralos numerados
+3. Pide al usuario que seleccione vehículos (números separados por coma o "todos")
+4. Opcional: presupuesto diario (sugiere $5-$20 para empezar)
+5. Ejecuta \`create_campaign\` con vehicle_ids, nombre, tipo y presupuesto
+6. Pregunta si quiere publicar en Facebook inmediatamente
+
 ### Datos mínimos para crear un vehículo (sin imágenes)
 Pide estos 6 campos conversacionalmente: marca, modelo, año, precio, condición (new/like_new/excellent/good/fair), millaje.
 
 ### Datos mínimos para crear una venta
-Pide estos 4 campos: nombre del cliente, marca del vehículo, modelo, año, precio de venta.
+Pide estos campos: nombre del cliente, marca del vehículo, modelo, año, precio de venta. Opcionalmente: enganche, tipo de financiamiento.
 
 ### Datos mínimos para crear un lead
 Solo necesitas el nombre. Todo lo demás es opcional.`
@@ -189,34 +258,95 @@ const SELLER_SECTION_EN = `## Decision table — Seller
 
 When the user says → Execute this tool:
 
+### Inventory
 | User intent | Tool |
 |---|---|
 | "my cars", "inventory", "my vehicles" | \`list_my_vehicles\` |
 | "add car", "new vehicle", "list a car" | \`add_vehicle\` — ask: brand, model, year, price, condition, mileage |
 | "update car", "change price" | \`update_vehicle\` |
+| "activate vehicle", "publish car" | \`update_vehicle_status\` with status="active" |
 | "mark as sold", "it sold" | \`update_vehicle_status\` with status="sold" (confirm first) |
+| "archive car" | \`update_vehicle_status\` with status="archived" |
 | "delete car", "remove vehicle" | \`delete_vehicle\` (confirm first) |
 | "search cars", "find vehicles" | \`search_vehicles\` |
 | "car details", "vehicle info" | \`get_vehicle_details\` |
+| "vehicle photos", "images" | \`get_vehicle_images\` |
 | "compare cars" | \`compare_vehicles\` |
+| "decode VIN", "check VIN" | \`decode_vin\` |
+| [message with vehicle-images URLs] | \`extract_vehicle_from_images\` → then \`create_vehicle_from_images\` after confirmation |
+| "analyze photos", "create from photos" | \`extract_vehicle_from_images\` |
+
+### CRM — Clients & Deals
+| User intent | Tool |
+|---|---|
 | "my clients", "leads", "contacts" | \`get_leads\` |
 | "new client", "add lead" | \`create_lead\` — ask: name. Optional: phone, email, source |
 | "my sales", "deals", "sales control" | \`get_deals\` |
 | "new sale", "sold a car" | \`create_deal\` — ask: client name, vehicle (brand/model/year), sale price |
 | "sale details" | \`get_deal_details\` |
+| "update deal" | \`update_deal\` |
 | "record payment", "collect payment" | \`record_payment\` |
-| "stats", "how am I doing", "summary" | \`get_deal_stats\` and \`get_inventory_stats\` (run both) |
+| "sales stats" | \`get_deal_stats\` |
 | "export sales", "Excel", "download" | \`export_deals_url\` |
+
+### Facebook Ad Campaigns
+| User intent | Tool |
+|---|---|
+| "campaigns", "advertising", "ads", "my campaigns" | \`list_campaigns\` |
+| "campaign details", "campaign info" | \`get_campaign_details\` (use campaign_id from list) |
+| "campaign stats", "performance" | \`get_campaign_stats\` |
+| "create campaign", "new campaign", "promote" | \`create_campaign\` — ask: name, type, vehicles, budget |
+| "publish campaign to Facebook" | \`publish_campaign\` |
+| "pause campaign" | \`pause_campaign\` |
+| "resume campaign", "activate campaign" | \`resume_campaign\` |
+| **"pause all campaigns"**, "stop all ads" | \`pause_all_campaigns\` (pauses ALL at once) |
+| **"resume all campaigns"**, "activate all" | \`resume_all_campaigns\` (resumes ALL at once) |
+| "switch objective", "change to awareness/whatsapp" | \`switch_ad_objective\` |
+| "delete campaign" | \`delete_campaign\` (confirm first) |
+
+### Facebook & Meta
+| User intent | Tool |
+|---|---|
+| "facebook", "FB status", "my page" | \`get_facebook_status\` |
+| "publish to facebook" (specific vehicle) | \`publish_vehicle_facebook\` |
+| "delete facebook posts" (for a vehicle) | \`delete_vehicle_fb_posts\` |
+
+### Profile & Referrals
+| User intent | Tool |
+|---|---|
 | "my profile", "my info" | \`get_my_profile\` |
+| "dealer profile", "business info" | \`get_dealer_profile\` |
 | "update profile" | \`update_my_profile\` or \`update_dealer_profile\` |
+| "profile completeness" | \`get_profile_completion\` |
+| "stats", "how am I doing", "overview" | \`get_deal_stats\` + \`get_inventory_stats\` + \`get_dashboard_stats\` (run all) |
 | "referrals", "my code", "my link" | \`get_my_referral_code\` |
 | "referral stats" | \`get_referral_stats\` |
-| "campaigns", "advertising", "ads" | \`list_campaigns\` |
-| "facebook", "FB status" | \`get_facebook_status\` |
-| [message with vehicle-images URLs] | \`extract_vehicle_from_images\` — then \`create_vehicle_from_images\` after confirmation |
-| "analyze photos", "create from photos" | \`extract_vehicle_from_images\` |
+| "my referral network" | \`get_referral_network\` |
+| "ranking", "leaderboard" | \`get_referral_leaderboard\` |
+
+### Utilities
+| User intent | Tool |
+|---|---|
 | "what time is it", "date" | \`get_current_time\` |
 | "what is Autos MALL" | \`get_platform_info\` |
+| "dealers nearby" | \`search_nearby_dealers\` |
+| "my service area" | \`get_dealer_service_area\` |
+| "update service area" | \`update_service_area\` |
+
+## CRITICAL RULE — USE IDs FROM PREVIOUS RESULTS
+
+When the user asks for details or actions on a specific item from a list you ALREADY showed:
+1. **USE the IDs returned by previous tools.** Tool results include UUIDs (id, campaign_id, deal_id, vehicle_id).
+2. **NEVER say "I don't have the identifier".** If you already listed campaigns/vehicles/deals, the IDs are in the conversation history.
+3. **Example**: If the user says "pause all" after seeing \`list_campaigns\`, use \`pause_all_campaigns\`. If they say "details on the first one", use \`get_campaign_details\` with the UUID of the first item.
+
+## BULK OPERATIONS
+
+When the user asks for an action on MULTIPLE items:
+- **"Pause all campaigns"** → use \`pause_all_campaigns\` (do NOT try to pause one by one)
+- **"Resume all"** → use \`resume_all_campaigns\`
+- **"Pause campaign X"** → first \`list_campaigns\` to get the ID, then \`pause_campaign\` with that ID
+- If the user asks to pause specific campaigns by name, look up the ID from \`list_campaigns\` results
 
 ### Vehicle creation with images (PREFERRED FLOW)
 When the user sends images (vehicle-images URLs in the message):
@@ -227,11 +357,19 @@ When the user sends images (vehicle-images URLs in the message):
 5. When the user confirms → run \`create_vehicle_from_images\` with all data + URLs
 6. Show the link to the created vehicle's catalog page
 
+### Campaign creation flow
+1. Ask: campaign name, type (inventory_showcase, seasonal_promo, clearance, financing, trade_in, custom)
+2. Get active vehicles with \`list_my_vehicles\` and show them numbered
+3. Ask user to select vehicles (comma-separated numbers or "all")
+4. Optional: daily budget (suggest $5-$20 to start)
+5. Run \`create_campaign\` with vehicle_ids, name, type, and budget
+6. Ask if they want to publish to Facebook immediately
+
 ### Minimum data to create a vehicle (no images)
 Ask for these 6 fields conversationally: brand, model, year, price, condition (new/like_new/excellent/good/fair), mileage.
 
 ### Minimum data to create a deal
-Ask for these 4 fields: client name, vehicle brand, model, year, sale price.
+Ask for these fields: client name, vehicle brand, model, year, sale price. Optionally: down payment, financing type.
 
 ### Minimum data to create a lead
 Only the name is required. Everything else is optional.`

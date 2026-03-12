@@ -17,6 +17,10 @@ const PublishVehicleFacebookInput = z.object({
   vehicle_id: z.string().uuid().describe('Vehicle UUID to publish to Facebook page'),
 })
 
+const DeleteVehicleFBPostsInput = z.object({
+  vehicle_id: z.string().uuid().describe('Vehicle UUID whose Facebook posts should be deleted'),
+})
+
 // ===================================================
 // HANDLERS
 // ===================================================
@@ -142,6 +146,37 @@ async function handlePublishVehicleFacebook(input: z.infer<typeof PublishVehicle
   }
 }
 
+async function handleDeleteVehicleFBPosts(input: z.infer<typeof DeleteVehicleFBPostsInput>, ctx: ToolContext) {
+  const { getTypedClient } = await import('@/lib/supabase/client')
+  const supabase = getTypedClient()
+  const wallet = ctx.walletAddress.toLowerCase()
+
+  // Verify vehicle ownership
+  const { data: vehicle } = await supabase
+    .from('vehicles')
+    .select('year, brand, model')
+    .eq('id', input.vehicle_id)
+    .eq('seller_address', wallet)
+    .single()
+
+  if (!vehicle) {
+    throw new Error('Vehicle not found or does not belong to you.')
+  }
+
+  const v = vehicle as { year: number; brand: string; model: string }
+  const { deleteVehicleFBPosts } = await import('@/lib/campaigns/campaign-service')
+  const result = await deleteVehicleFBPosts(input.vehicle_id, ctx.walletAddress)
+
+  return {
+    success: true,
+    vehicle_title: `${v.year} ${v.brand} ${v.model}`,
+    deleted_posts_count: result.deletedPostsCount,
+    message: result.deletedPostsCount > 0
+      ? `Deleted ${result.deletedPostsCount} Facebook post(s) for ${v.year} ${v.brand} ${v.model}.`
+      : `No Facebook posts found for ${v.year} ${v.brand} ${v.model}.`,
+  }
+}
+
 // ===================================================
 // TOOL DEFINITIONS
 // ===================================================
@@ -164,5 +199,14 @@ export const metaTools: AgentTool[] = [
     permission: 'write' as ToolPermission,
     roles: ['seller', 'admin'] as UserRole[],
     handler: handlePublishVehicleFacebook,
+  },
+  {
+    name: 'delete_vehicle_fb_posts',
+    description: 'Delete all Facebook posts for a specific vehicle. Removes the posts from your Facebook page.',
+    category: 'Meta',
+    inputSchema: DeleteVehicleFBPostsInput,
+    permission: 'write' as ToolPermission,
+    roles: ['seller', 'admin'] as UserRole[],
+    handler: handleDeleteVehicleFBPosts,
   },
 ]
