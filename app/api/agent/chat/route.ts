@@ -9,9 +9,10 @@
  */
 
 import { NextRequest } from 'next/server'
-import { streamText } from 'ai'
+import { streamText, jsonSchema as wrapJsonSchema } from 'ai'
 import { openai } from '@ai-sdk/openai'
 import { z } from 'zod'
+import { zodToJsonSchema } from 'zod-to-json-schema'
 import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
 import { toolRegistry } from '@/lib/agent/tools/tool-registry'
@@ -65,6 +66,19 @@ const rateLimiter = createRateLimiter()
  */
 type ChatRole = 'user' | 'assistant' | 'system'
 const VALID_ROLES: ChatRole[] = ['user', 'assistant', 'system']
+
+/**
+ * Convert Zod schema to OpenAI-compatible JSON Schema.
+ * Bypasses the AI SDK's internal conversion which produces type: "None"
+ * on Vercel's runtime for schemas with all-optional or empty fields.
+ */
+function safeToolSchema(zodSchema: z.ZodType<any>) {
+  const converted = zodToJsonSchema(zodSchema, { $refStrategy: 'none' }) as Record<string, unknown>
+  delete converted.$schema
+  if (!converted.type) converted.type = 'object'
+  if (!converted.properties) converted.properties = {}
+  return wrapJsonSchema(converted)
+}
 
 function convertMessages(rawMessages: any[]): { role: ChatRole; content: string }[] {
   return rawMessages
@@ -185,7 +199,7 @@ export async function POST(req: NextRequest) {
     for (const tool of registryTools) {
       aiTools[tool.name] = {
         description: tool.description,
-        parameters: tool.inputSchema,
+        parameters: safeToolSchema(tool.inputSchema),
         execute: async (input: any) => {
           // Permission check
           const perm = canExecuteTool(role, tool.name, scopes)
