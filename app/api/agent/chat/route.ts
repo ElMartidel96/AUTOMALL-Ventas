@@ -25,6 +25,17 @@ export const runtime = 'nodejs'
 export const maxDuration = 60
 
 // ===================================================
+// SAFE LOGGER — Never pass complex objects to console
+// Vercel's Node.js inspect crashes on AI SDK error objects
+// ===================================================
+
+const log = {
+  info: (msg: string) => console.log(`[apeX Chat] ${msg}`),
+  error: (msg: string) => console.error(`[apeX Chat] ${msg}`),
+  warn: (msg: string) => console.warn(`[apeX Chat] ${msg}`),
+}
+
+// ===================================================
 // RATE LIMITING
 // ===================================================
 
@@ -42,15 +53,35 @@ const createRateLimiter = () => {
 const rateLimiter = createRateLimiter()
 
 // ===================================================
-// REQUEST VALIDATION
+// HELPERS
 // ===================================================
 
-const ChatRequestSchema = z.object({
-  messages: z.array(z.object({
-    role: z.enum(['user', 'assistant', 'system']),
-    content: z.string().min(1).max(8000),
-  })).min(1).max(50),
-})
+/**
+ * Convert UIMessages (AI SDK v5 format with `parts`) to CoreMessages
+ * (with `content` string) that streamText() expects.
+ *
+ * TextStreamChatTransport sends: { parts: [{ type: 'text', text: '...' }] }
+ * streamText expects:            { content: '...' }
+ */
+type ChatRole = 'user' | 'assistant' | 'system'
+const VALID_ROLES: ChatRole[] = ['user', 'assistant', 'system']
+
+function convertMessages(rawMessages: any[]): { role: ChatRole; content: string }[] {
+  return rawMessages
+    .map((msg: any) => {
+      const role = msg.role as string
+      // Accept both formats: UIMessage (parts) and CoreMessage (content)
+      let content: string = typeof msg.content === 'string' ? msg.content : ''
+      if (!content && Array.isArray(msg.parts)) {
+        content = msg.parts
+          .filter((p: any) => p.type === 'text')
+          .map((p: any) => p.text || '')
+          .join('')
+      }
+      return { role: role as ChatRole, content }
+    })
+    .filter((msg) => msg.content && VALID_ROLES.includes(msg.role))
+}
 
 // ===================================================
 // POST — Streaming AI Chat
@@ -58,6 +89,15 @@ const ChatRequestSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    // Check AI service availability early
+    if (!process.env.OPENAI_API_KEY) {
+      log.error('OPENAI_API_KEY not configured')
+      return new Response(JSON.stringify({ error: 'AI service not configured. Contact support.' }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
     // Auth
     const walletAddress = req.headers.get('x-wallet-address')
     if (!walletAddress) {
@@ -69,18 +109,48 @@ export async function POST(req: NextRequest) {
 
     // Rate limit
     if (rateLimiter) {
-      const { success } = await rateLimiter.limit(walletAddress)
-      if (!success) {
-        return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please wait a moment.' }), {
-          status: 429,
-          headers: { 'Content-Type': 'application/json' },
-        })
+      try {
+        const { success } = await rateLimiter.limit(walletAddress)
+        if (!success) {
+          return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please wait a moment.' }), {
+            status: 429,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        }
+      } catch (rlErr) {
+        log.warn(`Rate limit check failed: ${rlErr instanceof Error ? rlErr.message : 'unknown'}`)
+        // Fail open
       }
     }
 
     // Parse body
-    const body = await req.json()
-    const { messages } = ChatRequestSchema.parse(body)
+    let body: any
+    try {
+      body = await req.json()
+    } catch {
+      return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    if (!Array.isArray(body?.messages) || body.messages.length === 0) {
+      return new Response(JSON.stringify({ error: 'Messages array required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Convert UIMessages → CoreMessages
+    const messages = convertMessages(body.messages)
+    if (messages.length === 0) {
+      return new Response(JSON.stringify({ error: 'No valid messages found' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    log.info(`wallet=${walletAddress} msgs=${messages.length}`)
 
     // Resolve role
     const role = await resolveUserRole(walletAddress)
@@ -89,12 +159,16 @@ export async function POST(req: NextRequest) {
     // Resolve display name
     let displayName: string | undefined
     if (supabaseAdmin) {
-      const { data } = await supabaseAdmin
-        .from('sellers')
-        .select('display_name, business_name')
-        .eq('wallet_address', walletAddress)
-        .single()
-      displayName = data?.display_name || data?.business_name || undefined
+      try {
+        const { data } = await supabaseAdmin
+          .from('sellers')
+          .select('display_name, business_name')
+          .eq('wallet_address', walletAddress)
+          .single()
+        displayName = data?.display_name || data?.business_name || undefined
+      } catch {
+        // Seller not found — fine, use default
+      }
     }
 
     // Detect locale
@@ -149,23 +223,25 @@ export async function POST(req: NextRequest) {
       toolChoice: 'auto',
       maxOutputTokens: 2000,
       onFinish: ({ usage }) => {
-        console.log(`[apeX Chat] wallet=${walletAddress} tokens=${usage?.totalTokens}`)
+        log.info(`wallet=${walletAddress} tokens=${usage?.totalTokens ?? 'unknown'}`)
       },
     })
 
     return result.toTextStreamResponse()
   } catch (error) {
-    console.error('[apeX Chat] Error:', error)
+    // SAFE logging — never pass complex AI SDK objects to console
+    const errMsg = error instanceof Error ? error.message : String(error)
+    const errName = error instanceof Error ? error.constructor.name : 'Unknown'
+    log.error(`${errName}: ${errMsg}`)
 
     if (error instanceof z.ZodError) {
-      return new Response(JSON.stringify({ error: 'Invalid request', details: error.errors }), {
+      return new Response(JSON.stringify({ error: 'Invalid request format' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       })
     }
 
-    // OpenAI key not configured
-    if (error instanceof Error && error.message.includes('API key')) {
+    if (errMsg.includes('API key') || errMsg.includes('apiKey') || errMsg.includes('Incorrect API')) {
       return new Response(JSON.stringify({ error: 'AI service not configured' }), {
         status: 503,
         headers: { 'Content-Type': 'application/json' },
@@ -188,6 +264,7 @@ export async function GET() {
     service: 'apeX Chat — AutoMALL Platform AI',
     tools: toolRegistry.size,
     model: process.env.AI_MODEL || 'gpt-4o',
+    openaiConfigured: !!process.env.OPENAI_API_KEY,
     status: 'active',
   }), {
     status: 200,
