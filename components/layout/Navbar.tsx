@@ -29,7 +29,8 @@ import {
   MessageCircle,
   Megaphone,
 } from 'lucide-react';
-import { FEATURE_WEB3_VISIBLE, FEATURE_CGC_TOKEN, FEATURE_NEAR_ME, FEATURE_CAMPAIGNS } from '@/lib/config/features';
+import { FEATURE_WEB3_VISIBLE, FEATURE_CGC_TOKEN, FEATURE_NEAR_ME, FEATURE_CAMPAIGNS, FEATURE_CRM } from '@/lib/config/features';
+import { ClipboardList } from 'lucide-react';
 import { MapPin } from 'lucide-react';
 import { useTenant } from '@/lib/tenant/TenantProvider';
 import { DEFAULT_LOGO_NAV } from '@/lib/config/defaults';
@@ -413,6 +414,17 @@ function UserDropdown({ fullWidth = false }: { fullWidth?: boolean }) {
                   <User className="w-4 h-4 text-am-blue flex-shrink-0" />
                   <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">{tCommon('myProfile')}</span>
                 </Link>
+
+                {FEATURE_CRM && (
+                  <Link
+                    href="/clients"
+                    className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-am-orange/10 dark:hover:bg-am-orange/10 transition-colors text-left"
+                    onClick={() => setShowDropdown(false)}
+                  >
+                    <ClipboardList className="w-4 h-4 text-am-orange flex-shrink-0" />
+                    <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">{tCommon('myClients')}</span>
+                  </Link>
+                )}
 
                 <button
                   onClick={handleCopyReferral}

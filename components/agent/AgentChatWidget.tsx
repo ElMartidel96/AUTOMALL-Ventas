@@ -1,27 +1,38 @@
 'use client'
 
 /**
- * AgentConnectionHub — apeX Floating Connection Widget for AutoMALL
+ * AgentChatWidget — apeX AI Chat for AutoMALL
  *
- * Bottom-right FAB with apeX avatar that expands into a connection panel.
- * This is NOT a chatbot — the platform uses a "connect-your-own-AI" model.
- * Users connect their preferred AI (Claude, ChatGPT, Gemini, Cursor) via
- * OAuth 2.1 on the MCP Gateway. Zero API key management needed.
- *
- * States:
- *   1. Not connected (no active sessions) → Welcome + one-click setup CTA
- *   2. Connected (has active sessions) → Status dashboard + quick actions
- *   3. Loading → Spinner while checking status
+ * Full chat widget (bottom-right FAB) with two modes:
+ *   - chat (default): AI conversation with tool calling
+ *   - settings: MCP URLs, Cursor deep link, connection status
  */
 
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback, type KeyboardEvent } from 'react'
 import { useTranslations } from 'next-intl'
-import { ChevronDown, Settings2, Loader2, Zap, CheckCircle2, Sparkles, Copy, Check } from 'lucide-react'
+import {
+  ChevronDown,
+  Settings2,
+  Loader2,
+  Zap,
+  Copy,
+  Check,
+  Send,
+  Trash2,
+  ArrowLeft,
+  Search,
+  Car,
+  BarChart3,
+  UserCircle,
+  Sparkles,
+} from 'lucide-react'
 import { useAccount } from '@/lib/thirdweb'
+import { useApexChat } from '@/hooks/useApexChat'
 import Link from 'next/link'
+import ReactMarkdown from 'react-markdown'
 
 // ===================================================
-// WRAPPER — Guards address availability
+// WRAPPER — Guards auth
 // ===================================================
 
 export function AgentChatWidget() {
@@ -31,46 +42,52 @@ export function AgentChatWidget() {
     return null
   }
 
-  return <AgentConnectionHubInner address={address} />
+  return <ApexChatInner address={address} />
 }
 
 // ===================================================
-// INNER — Connection Hub (NOT a chat)
+// INNER — Chat + Settings
 // ===================================================
 
-function AgentConnectionHubInner({ address }: { address: string }) {
+type WidgetMode = 'chat' | 'settings'
+
+function ApexChatInner({ address }: { address: string }) {
   const t = useTranslations('agent')
   const [isOpen, setIsOpen] = useState(false)
   const [showTooltip, setShowTooltip] = useState(true)
-  // null = loading, false = no connections, true = has connections (OAuth or API keys)
-  const [aiConnected, setAiConnected] = useState<boolean | null>(null)
-  const [connectionCount, setConnectionCount] = useState(0)
+  const [mode, setMode] = useState<WidgetMode>('chat')
   const [copiedUrl, setCopiedUrl] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    isLoading,
+    error,
+    clearChat,
+    appendMessage,
+  } = useApexChat({ walletAddress: address })
 
   const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://autosmall.org'
   const mcpUrl = `${appUrl}/api/mcp/gateway`
 
-  // Check connection status (OAuth + API keys) when widget opens
+  // Auto-scroll on new messages
   useEffect(() => {
-    if (!isOpen) return
-    let cancelled = false
-    fetch('/api/agent/connections', {
-      headers: { 'x-wallet-address': address },
-    })
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (cancelled) return
-        setAiConnected(data?.connected ?? false)
-        setConnectionCount(data?.total ?? 0)
-      })
-      .catch(() => {
-        if (!cancelled) setAiConnected(false)
-      })
-    return () => { cancelled = true }
-  }, [address, isOpen])
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
-  // Auto-hide tooltip after 5 seconds
+  // Focus textarea when chat opens
+  useEffect(() => {
+    if (isOpen && mode === 'chat') {
+      setTimeout(() => textareaRef.current?.focus(), 300)
+    }
+  }, [isOpen, mode])
+
+  // Auto-hide tooltip
   useEffect(() => {
     const timer = setTimeout(() => setShowTooltip(false), 5000)
     return () => clearTimeout(timer)
@@ -96,43 +113,83 @@ function AgentConnectionHubInner({ address }: { address: string }) {
     setTimeout(() => setCopiedUrl(false), 2000)
   }
 
-  // Cursor deep link
   const cursorConfig = btoa(JSON.stringify({ url: mcpUrl }))
   const cursorDeepLink = `cursor://anysphere.cursor-deeplink/mcp/install?name=AutoMALL&config=${cursorConfig}`
+
+  // Handle Enter to send, Shift+Enter for newline
+  const handleKeyDown = useCallback((e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      if (input.trim() && !isLoading) {
+        handleSubmit(e as any)
+      }
+    }
+  }, [input, isLoading, handleSubmit])
+
+  // Quick suggestion
+  const sendSuggestion = (text: string) => {
+    appendMessage(text)
+  }
+
+  // Auto-resize textarea
+  const handleTextareaChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    handleInputChange(e)
+    const el = e.target
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px'
+  }, [handleInputChange])
 
   return (
     <div className="fixed bottom-6 right-6 z-50" style={{ zIndex: 9999 }}>
 
-      {/* Connection Panel */}
+      {/* Panel */}
       {isOpen && (
         <div
           ref={panelRef}
-          className="absolute bottom-20 right-0 w-80 sm:w-96 rounded-2xl shadow-2xl overflow-hidden border border-gray-200/50 dark:border-gray-700/50 bg-white dark:bg-gray-900 animate-in slide-in-from-bottom-4 duration-300"
+          className="absolute bottom-20 right-0 w-80 sm:w-[420px] rounded-2xl shadow-2xl overflow-hidden border border-gray-200/50 dark:border-gray-700/50 bg-white dark:bg-gray-900 animate-in slide-in-from-bottom-4 duration-300 flex flex-col"
+          style={{ maxHeight: 'min(600px, 80vh)' }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-am-blue to-am-blue-light text-white">
+          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-am-blue to-am-blue-light text-white shrink-0">
             <div className="flex items-center gap-2.5">
+              {mode === 'settings' && (
+                <button
+                  onClick={() => setMode('chat')}
+                  className="p-1 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+              )}
               <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white/30 shadow-md shrink-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/apeX11.png" alt="apeX" className="w-full h-full object-cover" />
               </div>
               <div>
                 <p className="font-bold text-sm leading-tight">apeX</p>
-                <div className="flex items-center gap-1">
-                  <div className={`w-1.5 h-1.5 rounded-full ${aiConnected ? 'bg-green-400 animate-pulse' : 'bg-yellow-400'}`} />
-                  <p className="text-[11px] text-white/70">{t('chat.subtitle')}</p>
-                </div>
+                <p className="text-[11px] text-white/70">
+                  {mode === 'settings' ? t('chat.connectAI') : t('chat.subtitle')}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <Link
-                href="/profile?tab=agent"
-                onClick={() => setIsOpen(false)}
-                className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
-                title={t('chat.connectAI')}
-              >
-                <Settings2 className="w-4 h-4" />
-              </Link>
+              {mode === 'chat' && messages.length > 0 && (
+                <button
+                  onClick={clearChat}
+                  className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+                  title={t('chat.clearChat')}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {mode === 'chat' && (
+                <button
+                  onClick={() => setMode('settings')}
+                  className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+                  title={t('chat.settings')}
+                >
+                  <Settings2 className="w-4 h-4" />
+                </button>
+              )}
               <button
                 onClick={() => setIsOpen(false)}
                 className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
@@ -142,27 +199,144 @@ function AgentConnectionHubInner({ address }: { address: string }) {
             </div>
           </div>
 
-          {/* ─── STATE: Loading ─── */}
-          {aiConnected === null && (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-6 h-6 animate-spin text-am-blue" />
-            </div>
-          )}
+          {/* ─── CHAT MODE ─── */}
+          {mode === 'chat' && (
+            <>
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[200px]">
+                {/* Welcome */}
+                {messages.length === 0 && (
+                  <div className="text-center py-6">
+                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-am-blue/20 shadow-md mx-auto mb-3">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/apeX11.png" alt="apeX" className="w-full h-full object-cover" />
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 max-w-[280px] mx-auto">
+                      {t('chat.welcomeMessage')}
+                    </p>
 
-          {/* ─── STATE: Not connected — Quick Setup ─── */}
-          {aiConnected === false && (
-            <div className="p-5 space-y-4">
-              <div className="text-center">
-                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-am-blue/20 shadow-md mx-auto mb-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/apeX11.png" alt="apeX" className="w-full h-full object-cover" />
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 max-w-[260px] mx-auto">
-                  {t('chat.welcomeSetup')}
-                </p>
+                    {/* Quick suggestions */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => sendSuggestion(t('chat.suggestSearch'))}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 hover:bg-am-blue/10 dark:hover:bg-am-blue/20 transition-colors text-left"
+                      >
+                        <Search className="w-3.5 h-3.5 text-am-blue shrink-0" />
+                        <span className="line-clamp-2">{t('chat.suggestSearch')}</span>
+                      </button>
+                      <button
+                        onClick={() => sendSuggestion(t('chat.suggestInventory'))}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 hover:bg-am-blue/10 dark:hover:bg-am-blue/20 transition-colors text-left"
+                      >
+                        <Car className="w-3.5 h-3.5 text-am-orange shrink-0" />
+                        <span className="line-clamp-2">{t('chat.suggestInventory')}</span>
+                      </button>
+                      <button
+                        onClick={() => sendSuggestion(t('chat.suggestDeals'))}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 hover:bg-am-blue/10 dark:hover:bg-am-blue/20 transition-colors text-left"
+                      >
+                        <BarChart3 className="w-3.5 h-3.5 text-am-green shrink-0" />
+                        <span className="line-clamp-2">{t('chat.suggestDeals')}</span>
+                      </button>
+                      <button
+                        onClick={() => sendSuggestion(t('chat.suggestStats'))}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 hover:bg-am-blue/10 dark:hover:bg-am-blue/20 transition-colors text-left"
+                      >
+                        <UserCircle className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+                        <span className="line-clamp-2">{t('chat.suggestStats')}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Message bubbles */}
+                {messages.map((msg) => {
+                  const text = msg.parts
+                    ?.filter((p: any) => p.type === 'text')
+                    .map((p: any) => p.text)
+                    .join('') || ''
+                  if (!text && msg.role === 'assistant') return null
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                          msg.role === 'user'
+                            ? 'bg-am-blue text-white rounded-br-md'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-md'
+                        }`}
+                      >
+                        {msg.role === 'assistant' ? (
+                          <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:m-0 [&>ul]:my-1 [&>ol]:my-1 [&>p+p]:mt-2">
+                            <ReactMarkdown>{text}</ReactMarkdown>
+                          </div>
+                        ) : (
+                          <span>{text}</span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+
+                {/* Streaming indicator */}
+                {isLoading && (
+                  <div className="flex justify-start">
+                    <div className="bg-gray-100 dark:bg-gray-800 px-3.5 py-2.5 rounded-2xl rounded-bl-md flex items-center gap-2">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-am-blue" />
+                      <span className="text-xs text-gray-500 dark:text-gray-400">{t('chat.thinking')}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Error */}
+                {error && (
+                  <div className="flex justify-center">
+                    <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-3 py-2 rounded-xl text-xs text-center">
+                      {error.message?.includes('429')
+                        ? t('chat.errorRateLimit')
+                        : t('chat.errorGeneric')}
+                    </div>
+                  </div>
+                )}
+
+                <div ref={messagesEndRef} />
               </div>
 
-              {/* Quick copy URL */}
+              {/* Input area */}
+              <div className="shrink-0 border-t border-gray-200/50 dark:border-gray-700/50 p-3">
+                <form onSubmit={handleSubmit} className="flex items-end gap-2">
+                  <textarea
+                    ref={textareaRef}
+                    value={input}
+                    onChange={handleTextareaChange}
+                    onKeyDown={handleKeyDown}
+                    placeholder={t('chat.placeholder')}
+                    rows={1}
+                    className="flex-1 resize-none bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-am-blue/30 focus:border-am-blue/50 transition-colors"
+                    style={{ maxHeight: '120px' }}
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!input.trim() || isLoading}
+                    className="shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-am-blue text-white hover:bg-am-blue-light disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </form>
+                <p className="text-[10px] text-gray-400 dark:text-gray-500 text-center mt-1.5">
+                  {t('chat.poweredBy')}
+                </p>
+              </div>
+            </>
+          )}
+
+          {/* ─── SETTINGS MODE ─── */}
+          {mode === 'settings' && (
+            <div className="p-5 space-y-4 overflow-y-auto flex-1">
+              {/* MCP URL */}
               <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3">
                 <p className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">
                   {t('widget.serverUrl')}
@@ -198,24 +372,8 @@ function AgentConnectionHubInner({ address }: { address: string }) {
                   {t('widget.allPlatforms')}
                 </Link>
               </div>
-            </div>
-          )}
 
-          {/* ─── STATE: Connected — Status Dashboard ─── */}
-          {aiConnected === true && (
-            <div className="p-5 space-y-4">
-              {/* Connection status */}
-              <div className="flex items-center gap-3 p-3 bg-am-green/10 rounded-xl border border-am-green/20">
-                <CheckCircle2 className="w-5 h-5 text-am-green shrink-0" />
-                <div>
-                  <p className="text-sm font-bold text-gray-900 dark:text-white">{t('hub.connected')}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {t('hub.keysActive', { count: connectionCount })}
-                  </p>
-                </div>
-              </div>
-
-              {/* What your AI can do */}
+              {/* What AI can do */}
               <div>
                 <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
                   {t('hub.capabilities')}
@@ -228,25 +386,6 @@ function AgentConnectionHubInner({ address }: { address: string }) {
                     </div>
                   ))}
                 </div>
-              </div>
-
-              {/* How to use */}
-              <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  {t('hub.howToUse')}
-                </p>
-              </div>
-
-              {/* Quick actions */}
-              <div className="flex gap-2">
-                <Link
-                  href="/profile?tab=agent"
-                  onClick={() => setIsOpen(false)}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <Settings2 className="w-3.5 h-3.5" />
-                  {t('hub.manageKeys')}
-                </Link>
               </div>
             </div>
           )}
@@ -291,9 +430,7 @@ function AgentConnectionHubInner({ address }: { address: string }) {
         )}
 
         {!isOpen && (
-          <div className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white dark:border-gray-900 ${
-            aiConnected ? 'bg-green-500' : 'bg-yellow-500'
-          }`} />
+          <div className="absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white dark:border-gray-900 bg-green-500" />
         )}
       </button>
     </div>
