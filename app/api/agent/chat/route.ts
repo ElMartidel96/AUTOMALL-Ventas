@@ -6,10 +6,13 @@
  * as the MCP Gateway — same capabilities, different interface.
  *
  * Auth: x-wallet-address header (platform chat, same-origin).
+ *
+ * CRITICAL: stopWhen must be > stepCountIs(1) to allow the model to process tool results.
+ * With stepCountIs(1) (default), tool results never reach the model → model avoids tools.
  */
 
 import { NextRequest } from 'next/server'
-import { streamText } from 'ai'
+import { streamText, stepCountIs } from 'ai'
 import { openai } from '@ai-sdk/openai'
 import { z } from 'zod'
 import { Ratelimit } from '@upstash/ratelimit'
@@ -22,7 +25,7 @@ import { supabaseAdmin } from '@/lib/supabase/client'
 import type { ToolContext } from '@/lib/agent/types/connector-types'
 
 export const runtime = 'nodejs'
-export const maxDuration = 60
+export const maxDuration = 120
 
 // ===================================================
 // SAFE LOGGER — Never pass complex objects to console
@@ -81,6 +84,19 @@ function convertMessages(rawMessages: any[]): { role: ChatRole; content: string 
       return { role: role as ChatRole, content }
     })
     .filter((msg) => msg.content && VALID_ROLES.includes(msg.role))
+}
+
+/**
+ * Detect staging image URLs in a message.
+ * Pattern: https://{host}/vehicle-images/{seller}/staging/{filename}
+ */
+const STAGING_URL_REGEX = /https:\/\/[^\s]+\/vehicle-images\/[^\s]+\/staging\/[^\s]+\.\w+/g
+
+function detectStagingImages(messages: { role: ChatRole; content: string }[]): string[] {
+  // Only check the last user message for new uploads
+  const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')
+  if (!lastUserMsg) return []
+  return lastUserMsg.content.match(STAGING_URL_REGEX) || []
 }
 
 // ===================================================
@@ -176,7 +192,7 @@ export async function POST(req: NextRequest) {
     const locale: 'en' | 'es' = acceptLang.startsWith('es') ? 'es' : 'en'
 
     // System prompt
-    const system = generateSystemPrompt({ role, displayName, walletAddress, locale })
+    let system = generateSystemPrompt({ role, displayName, walletAddress, locale })
 
     // Build Vercel AI SDK v5 tools from registry
     // CRITICAL: AI SDK v5 uses `inputSchema` (NOT `parameters`) as the property name.
@@ -189,9 +205,12 @@ export async function POST(req: NextRequest) {
         description: regTool.description,
         inputSchema: regTool.inputSchema,
         execute: async (input: any) => {
+          log.info(`TOOL CALL: ${regTool.name}`)
+
           // Permission check
           const perm = canExecuteTool(role, regTool.name, scopes)
           if (!perm.allowed) {
+            log.warn(`TOOL DENIED: ${regTool.name} — ${perm.reason}`)
             return { error: perm.reason }
           }
 
@@ -210,12 +229,55 @@ export async function POST(req: NextRequest) {
             ctx,
           )
 
+          if (result.success) {
+            log.info(`TOOL OK: ${regTool.name} (${result.duration_ms}ms)`)
+          } else {
+            log.error(`TOOL FAIL: ${regTool.name} — ${result.error}`)
+          }
+
           return result.success ? result.data : { error: result.error }
         },
       }
     }
 
     log.info(`tools=${registryTools.length} role=${role}`)
+
+    // ─── IMAGE DETECTION — Inject extraction instruction ───
+    const detectedImageUrls = detectStagingImages(messages)
+    const hasNewImages = detectedImageUrls.length > 0
+
+    if (hasNewImages) {
+      log.info(`IMAGES DETECTED: ${detectedImageUrls.length} staging URLs`)
+
+      // Extract user's text description (everything NOT a URL)
+      const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')
+      const userText = lastUserMsg?.content
+        .replace(STAGING_URL_REGEX, '')
+        .replace(/\[?\d+ im[aá]gen(es)?\]?/gi, '')
+        .replace(/Analizar estas \d+ im[aá]gen(es)? de veh[ií]culo para crear un listado:/gi, '')
+        .trim() || ''
+
+      // Inject EXPLICIT system instruction — model MUST call the extraction tool
+      system += `\n\n## ACCIÓN INMEDIATA REQUERIDA — IMÁGENES DE VEHÍCULO DETECTADAS
+
+El usuario ha subido ${detectedImageUrls.length} foto(s) de un vehículo. DEBES analizar estas imágenes AHORA.
+
+Llama a \`extract_vehicle_from_images\` con estos parámetros:
+- image_urls: ${JSON.stringify(detectedImageUrls)}${userText ? `\n- text_description: "${userText}"` : ''}
+
+Después de recibir el resultado, presenta un resumen claro y legible de los datos extraídos. Indica qué campos faltan. Pregunta al usuario si quiere crear el listado.`
+    }
+
+    // ─── Determine toolChoice ───
+    // Force extraction tool when images detected (if available for this role)
+    const extractToolAvailable = !!aiTools['extract_vehicle_from_images']
+    const toolChoiceValue = hasNewImages && extractToolAvailable
+      ? { type: 'tool' as const, toolName: 'extract_vehicle_from_images' }
+      : 'auto' as const
+
+    if (hasNewImages && extractToolAvailable) {
+      log.info('toolChoice FORCED: extract_vehicle_from_images')
+    }
 
     // Stream — use .chat() to force Chat Completions API (Responses API rejects flexible Zod schemas)
     const modelId = process.env.AI_MODEL || 'gpt-4o'
@@ -224,13 +286,24 @@ export async function POST(req: NextRequest) {
       system,
       messages,
       tools: aiTools,
-      toolChoice: 'auto',
+      toolChoice: toolChoiceValue,
+      // CRITICAL: stopWhen controls how many steps the model can take.
+      // Default is stepCountIs(1) — model makes ONE call, never processes tool results.
+      // With stepCountIs(5), the model can call tools and then process their output.
+      // This was THE root cause of tools not working.
+      stopWhen: stepCountIs(5),
       maxOutputTokens: 2000,
       providerOptions: {
         openai: { structuredOutputs: false },
       },
-      onFinish: ({ usage }) => {
-        log.info(`wallet=${walletAddress} tokens=${usage?.totalTokens ?? 'unknown'}`)
+      onStepFinish: ({ toolCalls, finishReason }) => {
+        if (toolCalls && toolCalls.length > 0) {
+          const names = toolCalls.map((tc: any) => tc.toolName || tc.name || 'unknown').join(', ')
+          log.info(`STEP (${finishReason}): tools=[${names}]`)
+        }
+      },
+      onFinish: ({ usage, steps }) => {
+        log.info(`wallet=${walletAddress} tokens=${usage?.totalTokens ?? '?'} steps=${steps?.length ?? '?'}`)
       },
     })
 

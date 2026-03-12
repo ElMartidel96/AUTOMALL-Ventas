@@ -384,8 +384,23 @@ async function extractVehicleFromImages(
   const { image_urls, text_description } = input
   const textMessages = text_description ? [text_description] : []
 
+  // Download images to buffers BEFORE sending to GPT-4o Vision.
+  // This avoids the known issue of GPT-4o timing out when downloading from Supabase CDN.
+  // Same approach as WhatsApp pipeline: inline buffers for reliability.
+  const buffers: (Buffer | undefined)[] = await Promise.all(
+    image_urls.map(async (url) => {
+      try {
+        const res = await fetch(url)
+        if (!res.ok) return undefined
+        return Buffer.from(await res.arrayBuffer())
+      } catch {
+        return undefined
+      }
+    })
+  )
+
   // Use the EXACT same extractor as WhatsApp (GPT-4o Vision)
-  const raw = await extractVehicleData(image_urls, textMessages)
+  const raw = await extractVehicleData(image_urls, textMessages, buffers)
 
   // Smart auto-fill (same as WhatsApp)
   const { filled, autoFilledFields } = smartAutoFill(raw)

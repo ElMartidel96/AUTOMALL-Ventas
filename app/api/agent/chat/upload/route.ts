@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getTypedClient } from '@/lib/supabase/client'
+import { resolveUserRole } from '@/lib/agent/security/permission-engine'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
@@ -39,6 +40,12 @@ export async function POST(req: NextRequest) {
     const walletAddress = req.headers.get('x-wallet-address')
     if (!walletAddress) {
       return NextResponse.json({ error: 'Missing x-wallet-address header' }, { status: 401 })
+    }
+
+    // Only sellers/admins can upload vehicle images
+    const role = await resolveUserRole(walletAddress)
+    if (role !== 'seller' && role !== 'admin') {
+      return NextResponse.json({ error: 'Only sellers can upload vehicle images' }, { status: 403 })
     }
 
     const formData = await req.formData()
