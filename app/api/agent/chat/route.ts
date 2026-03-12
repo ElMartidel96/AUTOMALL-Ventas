@@ -9,10 +9,9 @@
  */
 
 import { NextRequest } from 'next/server'
-import { streamText, jsonSchema as wrapJsonSchema } from 'ai'
+import { streamText } from 'ai'
 import { openai } from '@ai-sdk/openai'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
 import { toolRegistry } from '@/lib/agent/tools/tool-registry'
@@ -66,19 +65,6 @@ const rateLimiter = createRateLimiter()
  */
 type ChatRole = 'user' | 'assistant' | 'system'
 const VALID_ROLES: ChatRole[] = ['user', 'assistant', 'system']
-
-/**
- * Convert Zod schema to OpenAI-compatible JSON Schema.
- * Bypasses the AI SDK's internal conversion which produces type: "None"
- * on Vercel's runtime for schemas with all-optional or empty fields.
- */
-function safeToolSchema(zodSchema: z.ZodType<any>) {
-  const converted = zodToJsonSchema(zodSchema, { $refStrategy: 'none' }) as Record<string, unknown>
-  delete converted.$schema
-  if (!converted.type) converted.type = 'object'
-  if (!converted.properties) converted.properties = {}
-  return wrapJsonSchema(converted)
-}
 
 function convertMessages(rawMessages: any[]): { role: ChatRole; content: string }[] {
   return rawMessages
@@ -192,17 +178,19 @@ export async function POST(req: NextRequest) {
     // System prompt
     const system = generateSystemPrompt({ role, displayName, walletAddress, locale })
 
-    // Build Vercel AI SDK tools from registry
+    // Build Vercel AI SDK v5 tools from registry
+    // CRITICAL: AI SDK v5 uses `inputSchema` (NOT `parameters`) as the property name.
+    // Using the wrong name causes asSchema(undefined) → missing `type` field → OpenAI rejects.
     const registryTools = toolRegistry.getToolsForScopes(role, scopes)
     const aiTools: Record<string, any> = {}
 
-    for (const tool of registryTools) {
-      aiTools[tool.name] = {
-        description: tool.description,
-        parameters: safeToolSchema(tool.inputSchema),
+    for (const regTool of registryTools) {
+      aiTools[regTool.name] = {
+        description: regTool.description,
+        inputSchema: regTool.inputSchema,
         execute: async (input: any) => {
           // Permission check
-          const perm = canExecuteTool(role, tool.name, scopes)
+          const perm = canExecuteTool(role, regTool.name, scopes)
           if (!perm.allowed) {
             return { error: perm.reason }
           }
@@ -216,8 +204,8 @@ export async function POST(req: NextRequest) {
           }
 
           const result = await executeToolWithAudit(
-            tool.name,
-            tool.handler,
+            regTool.name,
+            regTool.handler,
             input,
             ctx,
           )
@@ -226,6 +214,8 @@ export async function POST(req: NextRequest) {
         },
       }
     }
+
+    log.info(`tools=${registryTools.length} role=${role}`)
 
     // Stream — use .chat() to force Chat Completions API (Responses API rejects flexible Zod schemas)
     const modelId = process.env.AI_MODEL || 'gpt-4o'
@@ -236,6 +226,9 @@ export async function POST(req: NextRequest) {
       tools: aiTools,
       toolChoice: 'auto',
       maxOutputTokens: 2000,
+      providerOptions: {
+        openai: { structuredOutputs: false },
+      },
       onFinish: ({ usage }) => {
         log.info(`wallet=${walletAddress} tokens=${usage?.totalTokens ?? 'unknown'}`)
       },
