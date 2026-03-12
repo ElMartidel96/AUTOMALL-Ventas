@@ -2906,8 +2906,14 @@
       "poweredBy": "Impulsado por apeX AI",
       "suggestSearch": "Buscar trucks bajo $30k",
       "suggestInventory": "Mostrar mi inventario",
-      "suggestDeals": "Mis tratos recientes",
-      "suggestStats": "Mis estadisticas de referidos"
+      "suggestPayments": "Cobros pendientes",
+      "suggestDashboard": "Mi dashboard de ventas",
+      "suggestLeads": "Mis leads nuevos",
+      "suggestAddVehicle": "Agregar un vehiculo",
+      "suggestCreateDeal": "Crear un deal nuevo",
+      "suggestReferralCode": "Mi codigo de referido",
+      "suggestCalculator": "Calcular mensualidad",
+      "suggestVIN": "Decodificar un VIN"
     },
     "hub": {
       "connected": "IA Conectada",

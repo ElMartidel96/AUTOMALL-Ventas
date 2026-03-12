@@ -2906,8 +2906,14 @@
       "poweredBy": "Powered by apeX AI",
       "suggestSearch": "Search trucks under $30k",
       "suggestInventory": "Show my inventory",
-      "suggestDeals": "My recent deals",
-      "suggestStats": "My referral stats"
+      "suggestPayments": "Pending payments",
+      "suggestDashboard": "My sales dashboard",
+      "suggestLeads": "My new leads",
+      "suggestAddVehicle": "Add a new vehicle",
+      "suggestCreateDeal": "Create a new deal",
+      "suggestReferralCode": "My referral code",
+      "suggestCalculator": "Calculate monthly payment",
+      "suggestVIN": "Decode a VIN number"
     },
     "hub": {
       "connected": "AI Connected",

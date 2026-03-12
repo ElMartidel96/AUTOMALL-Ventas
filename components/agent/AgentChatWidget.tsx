@@ -23,8 +23,13 @@ import {
   Search,
   Car,
   BarChart3,
-  UserCircle,
   Sparkles,
+  DollarSign,
+  PlusCircle,
+  Users,
+  Link2,
+  Calculator,
+  ScanLine,
 } from 'lucide-react'
 import { useAccount } from '@/lib/thirdweb'
 import { useApexChat } from '@/hooks/useApexChat'
@@ -215,36 +220,29 @@ function ApexChatInner({ address }: { address: string }) {
                       {t('chat.welcomeMessage')}
                     </p>
 
-                    {/* Quick suggestions */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() => sendSuggestion(t('chat.suggestSearch'))}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 hover:bg-am-blue/10 dark:hover:bg-am-blue/20 transition-colors text-left"
-                      >
-                        <Search className="w-3.5 h-3.5 text-am-blue shrink-0" />
-                        <span className="line-clamp-2">{t('chat.suggestSearch')}</span>
-                      </button>
-                      <button
-                        onClick={() => sendSuggestion(t('chat.suggestInventory'))}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 hover:bg-am-blue/10 dark:hover:bg-am-blue/20 transition-colors text-left"
-                      >
-                        <Car className="w-3.5 h-3.5 text-am-orange shrink-0" />
-                        <span className="line-clamp-2">{t('chat.suggestInventory')}</span>
-                      </button>
-                      <button
-                        onClick={() => sendSuggestion(t('chat.suggestDeals'))}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 hover:bg-am-blue/10 dark:hover:bg-am-blue/20 transition-colors text-left"
-                      >
-                        <BarChart3 className="w-3.5 h-3.5 text-am-green shrink-0" />
-                        <span className="line-clamp-2">{t('chat.suggestDeals')}</span>
-                      </button>
-                      <button
-                        onClick={() => sendSuggestion(t('chat.suggestStats'))}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 hover:bg-am-blue/10 dark:hover:bg-am-blue/20 transition-colors text-left"
-                      >
-                        <UserCircle className="w-3.5 h-3.5 text-purple-500 shrink-0" />
-                        <span className="line-clamp-2">{t('chat.suggestStats')}</span>
-                      </button>
+                    {/* Quick suggestions — all seller/birddog needs */}
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {([
+                        { key: 'suggestSearch', icon: Search, color: 'text-am-blue' },
+                        { key: 'suggestInventory', icon: Car, color: 'text-am-orange' },
+                        { key: 'suggestPayments', icon: DollarSign, color: 'text-am-green' },
+                        { key: 'suggestDashboard', icon: BarChart3, color: 'text-purple-500' },
+                        { key: 'suggestLeads', icon: Users, color: 'text-sky-500' },
+                        { key: 'suggestAddVehicle', icon: PlusCircle, color: 'text-am-orange' },
+                        { key: 'suggestCreateDeal', icon: DollarSign, color: 'text-emerald-500' },
+                        { key: 'suggestReferralCode', icon: Link2, color: 'text-am-blue' },
+                        { key: 'suggestCalculator', icon: Calculator, color: 'text-amber-500' },
+                        { key: 'suggestVIN', icon: ScanLine, color: 'text-gray-500' },
+                      ] as const).map(({ key, icon: Icon, color }) => (
+                        <button
+                          key={key}
+                          onClick={() => sendSuggestion(t(`chat.${key}`))}
+                          className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 hover:bg-am-blue/10 dark:hover:bg-am-blue/20 transition-colors text-left"
+                        >
+                          <Icon className={`w-3.5 h-3.5 ${color} shrink-0`} />
+                          <span className="line-clamp-2">{t(`chat.${key}`)}</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}

@@ -213,10 +213,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Stream
+    // Stream — use .chat() to force Chat Completions API (Responses API rejects flexible Zod schemas)
     const modelId = process.env.AI_MODEL || 'gpt-4o'
     const result = await streamText({
-      model: openai(modelId),
+      model: openai.chat(modelId),
       system,
       messages,
       tools: aiTools,
