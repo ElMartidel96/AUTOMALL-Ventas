@@ -266,13 +266,25 @@ export async function POST(req: NextRequest) {
 // GET — Health check
 // ===================================================
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const walletAddress = req.headers.get('x-wallet-address')
+
+  let role: string | undefined
+  if (walletAddress) {
+    try {
+      role = await resolveUserRole(walletAddress)
+    } catch {
+      role = 'buyer'
+    }
+  }
+
   return new Response(JSON.stringify({
     service: 'apeX Chat — AutoMALL Platform AI',
     tools: toolRegistry.size,
     model: process.env.AI_MODEL || 'gpt-4o',
     openaiConfigured: !!process.env.OPENAI_API_KEY,
     status: 'active',
+    ...(role ? { role } : {}),
   }), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },

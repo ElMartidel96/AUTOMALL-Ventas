@@ -2913,7 +2913,11 @@
       "suggestCreateDeal": "Crear un deal nuevo",
       "suggestReferralCode": "Mi codigo de referido",
       "suggestCalculator": "Calcular mensualidad",
-      "suggestVIN": "Decodificar un VIN"
+      "suggestVIN": "Decodificar un VIN",
+      "suggestCampaigns": "Mis campanas de ads",
+      "suggestNearbyDealers": "Dealers cerca de mi",
+      "suggestFeatured": "Vehiculos destacados",
+      "suggestCompare": "Comparar dos vehiculos"
     },
     "hub": {
       "connected": "IA Conectada",

@@ -30,6 +30,8 @@ import {
   Link2,
   Calculator,
   ScanLine,
+  Megaphone,
+  MapPin,
 } from 'lucide-react'
 import { useAccount } from '@/lib/thirdweb'
 import { useApexChat } from '@/hooks/useApexChat'
@@ -56,12 +58,15 @@ export function AgentChatWidget() {
 
 type WidgetMode = 'chat' | 'settings'
 
+type UserRole = 'buyer' | 'seller' | 'birddog' | 'admin'
+
 function ApexChatInner({ address }: { address: string }) {
   const t = useTranslations('agent')
   const [isOpen, setIsOpen] = useState(false)
   const [showTooltip, setShowTooltip] = useState(true)
   const [mode, setMode] = useState<WidgetMode>('chat')
   const [copiedUrl, setCopiedUrl] = useState(false)
+  const [userRole, setUserRole] = useState<UserRole>('buyer')
   const panelRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -79,6 +84,14 @@ function ApexChatInner({ address }: { address: string }) {
 
   const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://autosmall.org'
   const mcpUrl = `${appUrl}/api/mcp/gateway`
+
+  // Fetch user role on mount
+  useEffect(() => {
+    fetch('/api/agent/chat', { headers: { 'x-wallet-address': address } })
+      .then(r => r.json())
+      .then(d => { if (d.role) setUserRole(d.role) })
+      .catch(() => {})
+  }, [address])
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -143,6 +156,40 @@ function ApexChatInner({ address }: { address: string }) {
     el.style.height = 'auto'
     el.style.height = Math.min(el.scrollHeight, 120) + 'px'
   }, [handleInputChange])
+
+  const getSuggestions = (role: UserRole) => {
+    if (role === 'seller' || role === 'admin') {
+      return [
+        { key: 'suggestInventory', icon: Car, color: 'text-am-orange' },
+        { key: 'suggestLeads', icon: Users, color: 'text-sky-500' },
+        { key: 'suggestDashboard', icon: BarChart3, color: 'text-purple-500' },
+        { key: 'suggestPayments', icon: DollarSign, color: 'text-am-green' },
+        { key: 'suggestAddVehicle', icon: PlusCircle, color: 'text-am-orange' },
+        { key: 'suggestCreateDeal', icon: DollarSign, color: 'text-emerald-500' },
+        { key: 'suggestCampaigns', icon: Megaphone, color: 'text-pink-500' },
+        { key: 'suggestReferralCode', icon: Link2, color: 'text-am-blue' },
+      ]
+    }
+    if (role === 'birddog') {
+      return [
+        { key: 'suggestReferralCode', icon: Link2, color: 'text-am-blue' },
+        { key: 'suggestDashboard', icon: BarChart3, color: 'text-purple-500' },
+        { key: 'suggestSearch', icon: Search, color: 'text-am-blue' },
+        { key: 'suggestNearbyDealers', icon: MapPin, color: 'text-am-green' },
+        { key: 'suggestCalculator', icon: Calculator, color: 'text-amber-500' },
+        { key: 'suggestVIN', icon: ScanLine, color: 'text-gray-500' },
+      ]
+    }
+    // buyer
+    return [
+      { key: 'suggestSearch', icon: Search, color: 'text-am-blue' },
+      { key: 'suggestNearbyDealers', icon: MapPin, color: 'text-am-green' },
+      { key: 'suggestFeatured', icon: Sparkles, color: 'text-am-orange' },
+      { key: 'suggestCalculator', icon: Calculator, color: 'text-amber-500' },
+      { key: 'suggestCompare', icon: Car, color: 'text-purple-500' },
+      { key: 'suggestVIN', icon: ScanLine, color: 'text-gray-500' },
+    ]
+  }
 
   return (
     <div className="fixed bottom-6 right-6 z-50" style={{ zIndex: 9999 }}>
@@ -220,20 +267,9 @@ function ApexChatInner({ address }: { address: string }) {
                       {t('chat.welcomeMessage')}
                     </p>
 
-                    {/* Quick suggestions — all seller/birddog needs */}
+                    {/* Quick suggestions — role-based */}
                     <div className="grid grid-cols-2 gap-1.5">
-                      {([
-                        { key: 'suggestSearch', icon: Search, color: 'text-am-blue' },
-                        { key: 'suggestInventory', icon: Car, color: 'text-am-orange' },
-                        { key: 'suggestPayments', icon: DollarSign, color: 'text-am-green' },
-                        { key: 'suggestDashboard', icon: BarChart3, color: 'text-purple-500' },
-                        { key: 'suggestLeads', icon: Users, color: 'text-sky-500' },
-                        { key: 'suggestAddVehicle', icon: PlusCircle, color: 'text-am-orange' },
-                        { key: 'suggestCreateDeal', icon: DollarSign, color: 'text-emerald-500' },
-                        { key: 'suggestReferralCode', icon: Link2, color: 'text-am-blue' },
-                        { key: 'suggestCalculator', icon: Calculator, color: 'text-amber-500' },
-                        { key: 'suggestVIN', icon: ScanLine, color: 'text-gray-500' },
-                      ] as const).map(({ key, icon: Icon, color }) => (
+                      {getSuggestions(userRole).map(({ key, icon: Icon, color }) => (
                         <button
                           key={key}
                           onClick={() => sendSuggestion(t(`chat.${key}`))}

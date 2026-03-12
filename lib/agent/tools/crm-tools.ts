@@ -79,6 +79,16 @@ const RecordPaymentInput = z.object({
   payment_method: z.string().optional().describe('Payment method (cash, card, transfer, etc.)'),
 })
 
+const CreateLeadInput = z.object({
+  name: z.string().min(1).describe('Client full name'),
+  phone: z.string().optional().describe('Phone number'),
+  email: z.string().optional().describe('Email address'),
+  whatsapp: z.string().optional().describe('WhatsApp number'),
+  source: z.enum(['website', 'facebook', 'whatsapp', 'referral', 'walk_in', 'other']).optional().describe('Lead source (default: other)'),
+  interest_level: z.enum(['hot', 'warm', 'cold']).optional().describe('Interest level (default: warm)'),
+  notes: z.string().optional().describe('Additional notes about the lead'),
+})
+
 const GetDealStatsInput = z.object({})
 
 const ExportDealsUrlInput = z.object({})
@@ -130,6 +140,31 @@ async function handleGetLeads(input: z.infer<typeof GetLeadsInput>, ctx: ToolCon
   if (error) throw new Error(`Failed to get leads: ${error.message}`)
 
   return { leads: data ?? [], total: count ?? 0, page, limit }
+}
+
+async function handleCreateLead(input: z.infer<typeof CreateLeadInput>, ctx: ToolContext) {
+  const sellerId = await getSellerId(ctx.walletAddress)
+  const { getTypedClient } = await import('@/lib/supabase/client')
+  const supabase = getTypedClient()
+
+  const { data, error } = await supabase
+    .from('crm_leads')
+    .insert({
+      seller_id: sellerId,
+      name: input.name,
+      phone: input.phone || null,
+      email: input.email || null,
+      whatsapp: input.whatsapp || null,
+      source: input.source || 'other',
+      interest_level: input.interest_level || 'warm',
+      status: 'new',
+      notes: input.notes || null,
+    })
+    .select('id, name, phone, email, whatsapp, source, interest_level, status, created_at')
+    .single()
+
+  if (error) throw new Error(`Failed to create lead: ${error.message}`)
+  return data
 }
 
 async function handleGetDeals(input: z.infer<typeof GetDealsInput>, ctx: ToolContext) {
@@ -227,6 +262,15 @@ export const crmTools: AgentTool[] = [
     permission: 'read' as ToolPermission,
     roles: ['seller', 'admin'] as UserRole[],
     handler: handleGetLeads,
+  },
+  {
+    name: 'create_lead',
+    description: 'Create a new CRM lead (potential client). Only the name is required; phone, email, WhatsApp, source, and interest level are optional.',
+    category: 'CRM',
+    inputSchema: CreateLeadInput,
+    permission: 'write' as ToolPermission,
+    roles: ['seller', 'admin'] as UserRole[],
+    handler: handleCreateLead,
   },
   {
     name: 'get_deals',

@@ -13,6 +13,8 @@ import { profileTools } from './profile-tools'
 import { referralTools } from './referral-tools'
 import { geoTools } from './geo-tools'
 import { crmTools } from './crm-tools'
+import { campaignTools } from './campaign-tools'
+import { metaTools } from './meta-tools'
 
 // ===================================================
 // UTILITY TOOLS (inline — no DB needed)
@@ -116,6 +118,8 @@ class ToolRegistry {
       ...referralTools,
       ...geoTools,
       ...crmTools,
+      ...campaignTools,
+      ...metaTools,
       ...utilityTools,
     ]
 
