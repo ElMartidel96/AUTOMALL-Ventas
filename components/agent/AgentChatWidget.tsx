@@ -260,7 +260,7 @@ function ApexChatInner({ address }: { address: string }) {
       const userText = input.trim()
       const imageMsg = userText
         ? `${userText}\n\n[${stagedImages.length} ${stagedImages.length === 1 ? 'imagen' : 'imágenes'}]\n${urlList}`
-        : `Analizar estas ${stagedImages.length} ${stagedImages.length === 1 ? 'imagen' : 'imágenes'} de vehículo para crear un listado:\n${urlList}`
+        : `[${stagedImages.length} ${stagedImages.length === 1 ? 'imagen' : 'imágenes'}]\n${urlList}`
 
       // Clear images after sending
       stagedImages.forEach(img => URL.revokeObjectURL(img.preview_url))

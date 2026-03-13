@@ -243,43 +243,44 @@ export async function POST(req: NextRequest) {
 
     log.info(`tools=${registryTools.length} role=${role}`)
 
-    // ─── IMAGE DETECTION — Inject extraction instruction ───
-    // Use raw messages for URL detection (before SDK conversion strips formatting)
+    // ─── IMAGE DETECTION — Context-aware routing ───
+    // Detect staging image URLs but let the AI decide which tool to use based on conversation context.
+    // Previously this forced extract_vehicle_from_images for ALL images, breaking CRM workflows
+    // when users sent screenshots of client contacts, WhatsApp conversations, documents, etc.
     const detectedImageUrls = detectStagingImagesFromRaw(body.messages)
     const hasNewImages = detectedImageUrls.length > 0
 
     if (hasNewImages) {
       log.info(`IMAGES DETECTED: ${detectedImageUrls.length} staging URLs`)
 
-      // Extract user's text description (everything NOT a URL)
+      // Extract user's text (everything NOT a URL)
       const lastUserRaw = [...body.messages].reverse().find((m: any) => m.role === 'user')
       const userText = extractTextFromRawMessage(lastUserRaw || {})
         .replace(STAGING_URL_REGEX, '')
         .replace(/\[?\d+ im[aá]gen(es)?\]?/gi, '')
-        .replace(/Analizar estas \d+ im[aá]gen(es)? de veh[ií]culo para crear un listado:/gi, '')
         .trim() || ''
 
-      // Inject EXPLICIT system instruction — model MUST call the extraction tool
-      system += `\n\n## ACCIÓN INMEDIATA REQUERIDA — IMÁGENES DE VEHÍCULO DETECTADAS
+      // Inject context-aware instruction — AI decides which tool to use
+      system += `\n\n## IMÁGENES DETECTADAS — ANALIZAR SEGÚN CONTEXTO
 
-El usuario ha subido ${detectedImageUrls.length} foto(s) de un vehículo. DEBES analizar estas imágenes AHORA.
+El usuario ha enviado ${detectedImageUrls.length} imagen(es). URLs: ${JSON.stringify(detectedImageUrls)}
+${userText ? `Texto del usuario: "${userText}"` : 'El usuario no incluyó texto descriptivo.'}
 
-Llama a \`extract_vehicle_from_images\` con estos parámetros:
-- image_urls: ${JSON.stringify(detectedImageUrls)}${userText ? `\n- text_description: "${userText}"` : ''}
+**DECIDE qué herramienta usar basándote en el CONTEXTO DE LA CONVERSACIÓN:**
 
-Después de recibir el resultado, presenta un resumen claro y legible de los datos extraídos. Indica qué campos faltan. Pregunta al usuario si quiere crear el listado.`
+1. Si el contexto es sobre **inventario, listar un carro, publicar vehículo, o las imágenes muestran claramente un auto**:
+   → Usa \`extract_vehicle_from_images\` con las image_urls${userText ? ' y text_description' : ''}
+
+2. Si el contexto es sobre **CRM, leads, clientes, seguimientos, contactos**, o las imágenes parecen ser **screenshots, fotos de contacto, documentos, conversaciones de WhatsApp**:
+   → Usa \`analyze_image\` para extraer texto/información de la imagen y úsala para la acción CRM que el usuario pidió
+
+3. Si no está claro el propósito, **pregunta al usuario** qué quiere hacer con la imagen.
+
+IMPORTANTE: NUNCA asumas que toda imagen es un vehículo. Lee el historial de la conversación para determinar la intención.`
     }
 
-    // ─── Determine toolChoice ───
-    // Force extraction tool when images detected (if available for this role)
-    const extractToolAvailable = !!aiTools['extract_vehicle_from_images']
-    const toolChoiceValue = hasNewImages && extractToolAvailable
-      ? { type: 'tool' as const, toolName: 'extract_vehicle_from_images' }
-      : 'auto' as const
-
-    if (hasNewImages && extractToolAvailable) {
-      log.info('toolChoice FORCED: extract_vehicle_from_images')
-    }
+    // toolChoice always auto — let the model decide based on context
+    const toolChoiceValue = 'auto' as const
 
     // Stream — use .chat() to force Chat Completions API (Responses API rejects flexible Zod schemas)
     const modelId = process.env.AI_MODEL || 'gpt-4o'
