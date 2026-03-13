@@ -140,6 +140,12 @@ async function handleGetCampaignStats(input: z.infer<typeof GetCampaignStatsInpu
     fb: stats.fb,
     ad: stats.ad,
     published_at: stats.publishedAt,
+    // Surface errors so the AI can inform the user about permission issues,
+    // expired tokens, or other problems instead of showing zeros silently
+    ...(stats.errors && stats.errors.length > 0 ? {
+      data_warnings: stats.errors,
+      _agent_note: 'WARNING: Some stats could not be fetched from Facebook due to errors listed above. DO NOT present zeros as real data — inform the user about the specific issue and suggest reconnecting Facebook in Profile > Facebook & WhatsApp.',
+    } : {}),
   }
 }
 
@@ -153,15 +159,16 @@ async function handlePauseCampaign(input: z.infer<typeof PauseCampaignInput>, ct
   await updateCampaign(input.campaign_id, wallet, { status: 'paused' })
 
   // Also pause the paid ad if it exists
+  let fbAdWarning: string | undefined
   if (campaign.fb_ad_id && campaign.fb_ad_status && campaign.fb_ad_status !== 'none' && campaign.fb_ad_status !== 'error') {
     try {
       await pauseFBAd(input.campaign_id, wallet)
-    } catch {
-      // Non-critical
+    } catch (err) {
+      fbAdWarning = `Campaign paused locally but Facebook ad could not be paused: ${err instanceof Error ? err.message : 'Unknown error'}. Check Facebook Ads Manager.`
     }
   }
 
-  return { success: true, campaign_name: campaign.name, new_status: 'paused' }
+  return { success: true, campaign_name: campaign.name, new_status: 'paused', ...(fbAdWarning ? { fb_ad_warning: fbAdWarning } : {}) }
 }
 
 async function handleResumeCampaign(input: z.infer<typeof ResumeCampaignInput>, ctx: ToolContext) {
@@ -174,15 +181,16 @@ async function handleResumeCampaign(input: z.infer<typeof ResumeCampaignInput>, 
   await updateCampaign(input.campaign_id, wallet, { status: 'active' })
 
   // Also resume the paid ad if it exists
+  let fbAdWarning: string | undefined
   if (campaign.fb_ad_id && campaign.fb_ad_status && campaign.fb_ad_status !== 'none' && campaign.fb_ad_status !== 'error') {
     try {
       await resumeFBAd(input.campaign_id, wallet)
-    } catch {
-      // Non-critical
+    } catch (err) {
+      fbAdWarning = `Campaign resumed locally but Facebook ad could not be resumed: ${err instanceof Error ? err.message : 'Unknown error'}. Check Facebook Ads Manager.`
     }
   }
 
-  return { success: true, campaign_name: campaign.name, new_status: 'active' }
+  return { success: true, campaign_name: campaign.name, new_status: 'active', ...(fbAdWarning ? { fb_ad_warning: fbAdWarning } : {}) }
 }
 
 async function handleDeleteCampaign(input: z.infer<typeof DeleteCampaignInput>, ctx: ToolContext) {
@@ -297,7 +305,10 @@ async function handlePauseAllCampaigns(_input: z.infer<typeof PauseAllCampaignsI
     try {
       await updateCampaign(campaign.id, wallet, { status: 'paused' })
       if (campaign.fb_ad_id && campaign.fb_ad_status !== 'none' && campaign.fb_ad_status !== 'error') {
-        try { await pauseFBAd(campaign.id, wallet) } catch { /* non-critical */ }
+        try { await pauseFBAd(campaign.id, wallet) } catch (fbErr) {
+          results.push({ id: campaign.id, name: campaign.name, paused: true, error: `Paused locally but FB ad failed: ${fbErr instanceof Error ? fbErr.message : 'Unknown'}` })
+          continue
+        }
       }
       results.push({ id: campaign.id, name: campaign.name, paused: true })
     } catch (err) {
@@ -330,7 +341,10 @@ async function handleResumeAllCampaigns(_input: z.infer<typeof ResumeAllCampaign
     try {
       await updateCampaign(campaign.id, wallet, { status: 'active' })
       if (campaign.fb_ad_id && campaign.fb_ad_status !== 'none' && campaign.fb_ad_status !== 'error') {
-        try { await resumeFBAd(campaign.id, wallet) } catch { /* non-critical */ }
+        try { await resumeFBAd(campaign.id, wallet) } catch (fbErr) {
+          results.push({ id: campaign.id, name: campaign.name, resumed: true, error: `Resumed locally but FB ad failed: ${fbErr instanceof Error ? fbErr.message : 'Unknown'}` })
+          continue
+        }
       }
       results.push({ id: campaign.id, name: campaign.name, resumed: true })
     } catch (err) {

@@ -312,6 +312,9 @@ export async function deleteCampaign(
 
 /**
  * Full stats for a campaign: landing page metrics + Facebook engagement.
+ *
+ * IMPORTANT: Errors are surfaced in the response (not hidden as zeros) so the AI
+ * agent can tell the user what's wrong and suggest corrective actions.
  */
 export async function getCampaignFullStats(
   campaignId: string,
@@ -326,6 +329,7 @@ export async function getCampaignFullStats(
     comments: number;
     shares: number;
     clicks: number;
+    error?: string;
   };
   ad: {
     status: string;
@@ -335,18 +339,30 @@ export async function getCampaignFullStats(
     clicks: number;
     conversations: number;
     costPerConversation: number;
+    error?: string;
   } | null;
   publishedAt: string | null;
+  errors?: string[];
 }> {
   const supabase = getTypedClient();
   const wallet = walletAddress.toLowerCase();
+  const errors: string[] = [];
 
   // Landing page metrics
   const landing = await getCampaignMetrics(campaignId);
 
   // Campaign data
   const campaign = await getCampaignById(campaignId, walletAddress);
-  const fbResult = {
+  const fbResult: {
+    published: boolean;
+    impressions: number;
+    reach: number;
+    likes: number;
+    comments: number;
+    shares: number;
+    clicks: number;
+    error?: string;
+  } = {
     published: false,
     impressions: 0,
     reach: 0,
@@ -370,7 +386,11 @@ export async function getCampaignFullStats(
     .eq('is_active', true)
     .single();
 
-  if (connection) {
+  if (!connection) {
+    const noConnMsg = 'Facebook not connected — cannot fetch real-time stats. Reconnect Facebook in Profile > Facebook & WhatsApp.';
+    fbResult.error = noConnMsg;
+    errors.push(noConnMsg);
+  } else {
     const conn = connection as unknown as MetaConnection;
 
     for (const postId of campaign.fb_post_ids) {
@@ -409,7 +429,22 @@ export async function getCampaignFullStats(
           }
         }
       } catch (err) {
-        console.error(`[CampaignService] Failed to fetch engagement for ${postId}:`, safeErrorMsg(err));
+        const errMsg = safeErrorMsg(err);
+        console.error(`[CampaignService] Failed to fetch engagement for ${postId}:`, errMsg);
+
+        // Surface actionable error info instead of hiding as zeros
+        if (errMsg.includes('pages_read_engagement') || errMsg.includes('Page Public Content Access')) {
+          const permErr = 'Facebook permission missing: "pages_read_engagement". The seller needs to reconnect Facebook in Profile > Facebook & WhatsApp to grant this permission. Until then, organic post stats (likes, comments, shares, impressions, reach) cannot be fetched from Facebook.';
+          fbResult.error = permErr;
+          errors.push(permErr);
+        } else if (errMsg.includes('access token') || errMsg.includes('OAuthException') || errMsg.includes('Session has expired')) {
+          const tokenErr = 'Facebook access token expired or invalid. The seller needs to reconnect Facebook in Profile > Facebook & WhatsApp.';
+          fbResult.error = tokenErr;
+          errors.push(tokenErr);
+        } else {
+          fbResult.error = `Facebook API error: ${errMsg}`;
+          errors.push(`FB engagement error for post ${postId}: ${errMsg}`);
+        }
       }
     }
   }
@@ -423,42 +458,50 @@ export async function getCampaignFullStats(
     clicks: number;
     conversations: number;
     costPerConversation: number;
+    error?: string;
   } | null = null;
 
   if (campaign.fb_ad_id && campaign.fb_ad_status && campaign.fb_ad_status !== 'none' && connection) {
     const conn = connection as unknown as MetaConnection;
     const adToken = conn.fb_user_access_token || conn.fb_page_access_token;
-    try {
-      const insights = await getAdInsights(campaign.fb_ad_id, adToken);
-      if (insights) {
-        const spend = parseFloat(insights.spend) || 0;
-        const conversations = (insights.actions || [])
-          .filter(a => a.action_type === 'onsite_conversion.messaging_conversation_started_7d')
-          .reduce((sum, a) => sum + parseInt(a.value, 10), 0);
-        const costPerConv = (insights.cost_per_action_type || [])
-          .find(a => a.action_type === 'onsite_conversion.messaging_conversation_started_7d');
+    const adInsightsResult = await getAdInsights(campaign.fb_ad_id, adToken);
 
-        adResult = {
-          status: campaign.fb_ad_status,
-          spend,
-          impressions: parseInt(insights.impressions, 10) || 0,
-          reach: parseInt(insights.reach, 10) || 0,
-          clicks: parseInt(insights.clicks, 10) || 0,
-          conversations,
-          costPerConversation: costPerConv ? parseFloat(costPerConv.value) : 0,
-        };
-      } else {
-        adResult = {
-          status: campaign.fb_ad_status,
-          spend: 0, impressions: 0, reach: 0, clicks: 0, conversations: 0, costPerConversation: 0,
-        };
-      }
-    } catch (err) {
-      console.error(`[CampaignService] Ad insights failed for ${campaign.fb_ad_id}:`, safeErrorMsg(err));
+    if (adInsightsResult.data) {
+      const insights = adInsightsResult.data;
+      const spend = parseFloat(insights.spend) || 0;
+      const conversations = (insights.actions || [])
+        .filter(a => a.action_type === 'onsite_conversion.messaging_conversation_started_7d')
+        .reduce((sum, a) => sum + parseInt(a.value, 10), 0);
+      const costPerConv = (insights.cost_per_action_type || [])
+        .find(a => a.action_type === 'onsite_conversion.messaging_conversation_started_7d');
+
+      adResult = {
+        status: campaign.fb_ad_status,
+        spend,
+        impressions: parseInt(insights.impressions, 10) || 0,
+        reach: parseInt(insights.reach, 10) || 0,
+        clicks: parseInt(insights.clicks, 10) || 0,
+        conversations,
+        costPerConversation: costPerConv ? parseFloat(costPerConv.value) : 0,
+      };
+    } else {
+      // No data — could be an error or simply no data yet
       adResult = {
         status: campaign.fb_ad_status,
         spend: 0, impressions: 0, reach: 0, clicks: 0, conversations: 0, costPerConversation: 0,
       };
+
+      if (adInsightsResult.error) {
+        const adErrMsg = adInsightsResult.error;
+        if (adErrMsg.includes('ads_read') || adErrMsg.includes('ads_management')) {
+          adResult.error = 'Facebook permission missing for ad insights. Reconnect Facebook in Profile > Facebook & WhatsApp to grant "ads_read" permission.';
+        } else if (adErrMsg.includes('access token') || adErrMsg.includes('OAuthException') || adErrMsg.includes('Session has expired')) {
+          adResult.error = 'Facebook token expired. Reconnect Facebook in Profile > Facebook & WhatsApp.';
+        } else {
+          adResult.error = `Ad insights API error: ${adErrMsg}`;
+        }
+        errors.push(adResult.error);
+      }
     }
   }
 
@@ -467,6 +510,7 @@ export async function getCampaignFullStats(
     fb: fbResult,
     ad: adResult,
     publishedAt: campaign.fb_published_at,
+    ...(errors.length > 0 ? { errors } : {}),
   };
 }
 

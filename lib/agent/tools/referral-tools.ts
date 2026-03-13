@@ -39,6 +39,10 @@ async function getMyReferralCode(_input: z.infer<typeof GetMyReferralCodeInput>,
     .single()
 
   if (error) {
+    // Differentiate "table missing" from "no code"
+    if (error.message.includes('schema cache') || error.message.includes('relation') || error.code === '42P01') {
+      return { code: null, message: 'Referral system is being set up. This feature will be available soon.', system_status: 'not_configured' }
+    }
     return { code: null, message: 'No referral code found. Visit the referrals page to generate one.' }
   }
 
@@ -61,7 +65,12 @@ async function getReferralStats(_input: z.infer<typeof GetReferralStatsInput>, c
     .select('id, referred_address, status, level, created_at')
     .eq('referrer_address', ctx.walletAddress)
 
-  if (error) throw new Error(`Failed to get referral stats: ${error.message}`)
+  if (error) {
+    if (error.message.includes('schema cache') || error.message.includes('relation') || error.code === '42P01') {
+      return { total_referrals: 0, active_referrals: 0, pending_referrals: 0, by_level: {}, system_status: 'not_configured', message: 'Referral system is being set up.' }
+    }
+    throw new Error(`Failed to get referral stats: ${error.message}`)
+  }
 
   const all = referrals ?? []
   const active = all.filter((r: any) => r.status === 'active')
@@ -90,7 +99,12 @@ async function getReferralNetwork(input: z.infer<typeof GetReferralNetworkInput>
     .order('created_at', { ascending: false })
     .limit(input.limit ?? 20)
 
-  if (error) throw new Error(`Failed to get network: ${error.message}`)
+  if (error) {
+    if (error.message.includes('schema cache') || error.message.includes('relation') || error.code === '42P01') {
+      return { referrals: [], system_status: 'not_configured', message: 'Referral system is being set up.' }
+    }
+    throw new Error(`Failed to get network: ${error.message}`)
+  }
 
   return { referrals: data ?? [] }
 }
@@ -105,7 +119,12 @@ async function getReferralLeaderboard(input: z.infer<typeof GetReferralLeaderboa
     .order('total_referrals', { ascending: false })
     .limit(input.limit ?? 10)
 
-  if (error) throw new Error(`Failed to get leaderboard: ${error.message}`)
+  if (error) {
+    if (error.message.includes('schema cache') || error.message.includes('relation') || error.code === '42P01') {
+      return { leaderboard: [], system_status: 'not_configured', message: 'Referral system is being set up.' }
+    }
+    throw new Error(`Failed to get leaderboard: ${error.message}`)
+  }
 
   return {
     leaderboard: (data ?? []).map((entry: any, index: number) => ({

@@ -906,11 +906,12 @@ export async function deleteFBCampaignObject(
   throw new Error(_formatFBError('Delete campaign failed:', fbErr));
 }
 
-/** Get ad insights (spend, impressions, reach, clicks, conversations) */
+/** Get ad insights (spend, impressions, reach, clicks, conversations).
+ *  Returns { data, error } so callers can distinguish "no data" from "API error". */
 export async function getAdInsights(
   adId: string,
   accessToken: string
-): Promise<FBAdInsightsData | null> {
+): Promise<{ data: FBAdInsightsData | null; error?: string }> {
   const url = new URL(`${GRAPH_API}/${adId}/insights`);
   url.searchParams.set('fields', 'impressions,reach,clicks,spend,actions,cost_per_action_type');
   url.searchParams.set('access_token', accessToken);
@@ -919,11 +920,13 @@ export async function getAdInsights(
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     const fbErr = _extractFBError(err);
-    console.warn(`[FB-API] Ad insights failed for ${adId}:`, JSON.stringify(fbErr));
-    return null;
+    const errMsg = _formatFBError('Ad insights failed:', fbErr);
+    console.warn(`[FB-API] ${errMsg}`);
+    _logFBError(`getAdInsights(${adId})`, fbErr);
+    return { data: null, error: fbErr.message };
   }
 
   const data = await res.json();
-  if (!data.data || data.data.length === 0) return null;
-  return data.data[0] as FBAdInsightsData;
+  if (!data.data || data.data.length === 0) return { data: null };
+  return { data: data.data[0] as FBAdInsightsData };
 }

@@ -69,17 +69,35 @@ async function handleGetFacebookStatus(_input: z.infer<typeof GetFacebookStatusI
 
     let likes = 0, comments = 0
     if (pub.fb_post_id) {
-      const { data: eng } = await supabase
-        .from('fb_post_engagement')
-        .select('likes_count, comments_count')
-        .eq('publication_id', pub.id)
-        .order('fetched_at', { ascending: false })
-        .limit(1)
+      // Try live fetch from Facebook first, fall back to cached data
+      try {
+        const { fetchPostEngagement } = await import('@/lib/meta/facebook-api')
+        const { data: metaConn } = await supabase
+          .from('seller_meta_connections')
+          .select('fb_page_access_token')
+          .eq('wallet_address', wallet)
+          .eq('is_active', true)
+          .single()
 
-      if (eng && eng.length > 0) {
-        const e = eng[0] as { likes_count: number; comments_count: number }
-        likes = e.likes_count
-        comments = e.comments_count
+        if (metaConn) {
+          const eng = await fetchPostEngagement(pub.fb_post_id, (metaConn as { fb_page_access_token: string }).fb_page_access_token)
+          likes = eng.likes
+          comments = eng.comments
+        }
+      } catch {
+        // Fall back to cached engagement data
+        const { data: eng } = await supabase
+          .from('fb_post_engagement')
+          .select('likes_count, comments_count')
+          .eq('publication_id', pub.id)
+          .order('fetched_at', { ascending: false })
+          .limit(1)
+
+        if (eng && eng.length > 0) {
+          const e = eng[0] as { likes_count: number; comments_count: number }
+          likes = e.likes_count
+          comments = e.comments_count
+        }
       }
     }
 
