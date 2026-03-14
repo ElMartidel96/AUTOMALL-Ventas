@@ -329,10 +329,20 @@ export async function deletePost(
 // Engagement
 // ─────────────────────────────────────────────
 
-/** Fetch engagement metrics for a single post via Graph API */
+/**
+ * Fetch engagement metrics for a single post via Graph API.
+ *
+ * Tries two approaches:
+ * 1. Direct fields (likes.summary, comments.summary, shares) — requires pages_read_engagement
+ * 2. Post insights API (impressions, reach, clicks) — also requires pages_read_engagement
+ *
+ * If pages_read_engagement is not effective at the App level (needs Facebook App Review
+ * for Advanced Access), BOTH calls will fail. In that case we return zeros + error flag
+ * instead of throwing, so callers can still show ad-level insights from Marketing API.
+ */
 export async function fetchPostEngagement(
   fbPostId: string,
-  pageAccessToken: string
+  accessToken: string
 ): Promise<{
   likes: number;
   comments: number;
@@ -340,48 +350,66 @@ export async function fetchPostEngagement(
   impressions: number;
   reach: number;
   clicks: number;
+  permissionError?: boolean;
 }> {
-  // Get basic engagement counts
-  const url = new URL(`${GRAPH_API}/${fbPostId}`);
-  url.searchParams.set('fields', 'likes.summary(true),comments.summary(true),shares');
-  url.searchParams.set('access_token', pageAccessToken);
+  let likes = 0, comments = 0, shares = 0;
+  let impressions = 0, reach = 0, clicks = 0;
+  let permissionError = false;
 
-  const res = await fetch(url.toString());
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(`Fetch engagement failed: ${err.error?.message || res.statusText}`);
-  }
-
-  const data = await res.json();
-  const likes = data.likes?.summary?.total_count || 0;
-  const comments = data.comments?.summary?.total_count || 0;
-  const shares = data.shares?.count || 0;
-
-  // Try to get insights (impressions, reach, clicks) — may fail for non-page posts
-  let impressions = 0;
-  let reach = 0;
-  let clicks = 0;
-
+  // 1. Try basic engagement counts
   try {
-    const insightsUrl = new URL(`${GRAPH_API}/${fbPostId}/insights`);
-    insightsUrl.searchParams.set('metric', 'post_impressions,post_impressions_unique,post_clicks');
-    insightsUrl.searchParams.set('access_token', pageAccessToken);
+    const url = new URL(`${GRAPH_API}/${fbPostId}`);
+    url.searchParams.set('fields', 'likes.summary(true),comments.summary(true),shares');
+    url.searchParams.set('access_token', accessToken);
 
-    const insightsRes = await fetch(insightsUrl.toString());
-    if (insightsRes.ok) {
-      const insightsData = await insightsRes.json();
-      for (const metric of (insightsData.data || []) as { name: string; values: { value: number }[] }[]) {
-        const value = metric.values?.[0]?.value || 0;
-        if (metric.name === 'post_impressions') impressions = value;
-        else if (metric.name === 'post_impressions_unique') reach = value;
-        else if (metric.name === 'post_clicks') clicks = value;
+    const res = await fetch(url.toString());
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const errMsg = err.error?.message || res.statusText;
+      if (errMsg.includes('pages_read_engagement') || errMsg.includes('Page Public Content Access')) {
+        // This is a Facebook App Review issue — not a token or reconnection issue.
+        // The app needs Advanced Access for pages_read_engagement.
+        permissionError = true;
+        console.warn(`[FB-API] pages_read_engagement not effective for post ${fbPostId} — requires Facebook App Review (Advanced Access). Reconnecting will NOT fix this.`);
+      } else {
+        throw new Error(`Fetch engagement failed: ${errMsg}`);
       }
+    } else {
+      const data = await res.json();
+      likes = data.likes?.summary?.total_count || 0;
+      comments = data.comments?.summary?.total_count || 0;
+      shares = data.shares?.count || 0;
     }
-  } catch {
-    // Insights not available for all post types — ignore
+  } catch (e) {
+    if (!(e instanceof Error && e.message.includes('Fetch engagement failed'))) {
+      // Network error — rethrow
+    }
+    throw e;
   }
 
-  return { likes, comments, shares, impressions, reach, clicks };
+  // 2. Try post insights (may also fail if pages_read_engagement not effective)
+  if (!permissionError) {
+    try {
+      const insightsUrl = new URL(`${GRAPH_API}/${fbPostId}/insights`);
+      insightsUrl.searchParams.set('metric', 'post_impressions,post_impressions_unique,post_clicks');
+      insightsUrl.searchParams.set('access_token', accessToken);
+
+      const insightsRes = await fetch(insightsUrl.toString());
+      if (insightsRes.ok) {
+        const insightsData = await insightsRes.json();
+        for (const metric of (insightsData.data || []) as { name: string; values: { value: number }[] }[]) {
+          const value = metric.values?.[0]?.value || 0;
+          if (metric.name === 'post_impressions') impressions = value;
+          else if (metric.name === 'post_impressions_unique') reach = value;
+          else if (metric.name === 'post_clicks') clicks = value;
+        }
+      }
+    } catch {
+      // Insights not available for all post types — ignore
+    }
+  }
+
+  return { likes, comments, shares, impressions, reach, clicks, permissionError };
 }
 
 // ─────────────────────────────────────────────

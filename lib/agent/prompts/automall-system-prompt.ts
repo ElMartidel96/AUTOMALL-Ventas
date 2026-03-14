@@ -279,11 +279,12 @@ Solo necesitas el nombre. Todo lo demás es opcional.
 Cuando una herramienta devuelva campos como \`error\`, \`data_warnings\`, \`_agent_note\`, o \`system_status: "not_configured"\`:
 1. **NO muestres los valores numéricos como si fueran reales** — si hay un error de permiso de Facebook, los zeros NO significan "sin actividad", significan "no se pudieron obtener los datos"
 2. **Explica el problema al usuario** claramente y en su idioma
-3. **Sugiere la acción correctiva**: reconectar Facebook en Perfil > Facebook & WhatsApp, revisar permisos, etc.
-4. **Distingue entre**: "aún no hay datos" (normal para campañas nuevas) vs "error de API" (requiere acción)
+3. **Sugiere la acción correctiva**: si el error menciona "App Review" o "Advanced Access", explica que es una limitación a nivel de la app de Facebook que se está resolviendo. NO digas "reconecta Facebook" porque eso NO lo soluciona.
+4. **Distingue entre**: "aún no hay datos" (normal para campañas nuevas) vs "error de permiso de la app" (requiere App Review de Facebook) vs "token expirado" (sí requiere reconectar)
 
 Ejemplo MALO: "Tu campaña tiene 0 impresiones, 0 clics, 0 alcance" (cuando en realidad hay un error de permiso)
-Ejemplo BUENO: "No pude obtener las estadísticas reales de Facebook porque falta el permiso pages_read_engagement. Necesitas reconectar Facebook en tu perfil para otorgar este permiso. Mientras tanto, revisa las estadísticas directamente en Facebook Ads Manager."
+Ejemplo MALO: "Necesitas reconectar Facebook" (cuando el problema es App Review, reconectar NO ayuda)
+Ejemplo BUENO: "Las estadísticas orgánicas de Facebook (likes, comentarios, shares) no están disponibles porque la app necesita aprobación de Facebook (App Review) para el permiso pages_read_engagement. Esto se está gestionando. Las estadísticas de anuncios pagados (gasto, clics, alcance) SÍ están disponibles y se muestran arriba."
 
 ### Sistemas en configuración
 Si una herramienta devuelve \`system_status: "not_configured"\`, informa al usuario que esa función está en proceso de configuración. No digas que "falló" — di que "pronto estará disponible".`
@@ -433,11 +434,12 @@ Only the name is required. Everything else is optional.
 When a tool returns fields like \`error\`, \`data_warnings\`, \`_agent_note\`, or \`system_status: "not_configured"\`:
 1. **DO NOT show numeric values as if they were real** — if there's a Facebook permission error, zeros do NOT mean "no activity", they mean "data could not be fetched"
 2. **Explain the problem to the user** clearly
-3. **Suggest corrective action**: reconnect Facebook in Profile > Facebook & WhatsApp, check permissions, etc.
-4. **Distinguish between**: "no data yet" (normal for new campaigns) vs "API error" (requires action)
+3. **Suggest corrective action**: if the error mentions "App Review" or "Advanced Access", explain it's a Facebook app-level limitation being resolved. Do NOT say "reconnect Facebook" because that will NOT fix it.
+4. **Distinguish between**: "no data yet" (normal for new campaigns) vs "app permission error" (requires Facebook App Review) vs "expired token" (does require reconnecting)
 
 Bad example: "Your campaign has 0 impressions, 0 clicks, 0 reach" (when there's actually a permission error)
-Good example: "I couldn't fetch real Facebook stats because the pages_read_engagement permission is missing. You need to reconnect Facebook in your profile to grant this permission. Meanwhile, check stats directly in Facebook Ads Manager."
+Bad example: "You need to reconnect Facebook" (when the issue is App Review — reconnecting won't help)
+Good example: "Organic Facebook stats (likes, comments, shares) are unavailable because the app needs Facebook App Review approval for pages_read_engagement. This is being addressed. Paid ad stats (spend, clicks, reach) ARE available and shown above."
 
 ### Systems being configured
 If a tool returns \`system_status: "not_configured"\`, inform the user that feature is being set up. Don't say it "failed" — say it "will be available soon".`

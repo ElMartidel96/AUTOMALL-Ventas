@@ -394,13 +394,26 @@ export async function getCampaignFullStats(
   } else {
     const conn = connection as unknown as MetaConnection;
 
-    // pages_read_engagement is granted on the USER token, not the page token.
-    // Use user token first, fall back to page token.
+    // Try user token first (has pages_read_engagement granted), fall back to page token
     const engagementToken = conn.fb_user_access_token || conn.fb_page_access_token;
+    let permissionErrorLogged = false;
 
     for (const postId of campaign.fb_post_ids) {
+      // Skip remaining posts if we already know it's a permission issue (won't work for any post)
+      if (permissionErrorLogged) break;
+
       try {
         const eng = await fetchPostEngagement(postId, engagementToken);
+
+        // Check if engagement fetch hit the App Review permission wall
+        if (eng.permissionError) {
+          permissionErrorLogged = true;
+          const permErr = 'Organic engagement stats (likes, comments, shares) are unavailable. The Facebook app needs "pages_read_engagement" Advanced Access (requires Facebook App Review). Reconnecting Facebook will NOT fix this — it is an app-level limitation. Ad spend/clicks/reach from the Marketing API are still available above.';
+          fbResult.error = permErr;
+          errors.push(permErr);
+          continue;
+        }
+
         fbResult.likes += eng.likes;
         fbResult.comments += eng.comments;
         fbResult.shares += eng.shares;
@@ -437,13 +450,8 @@ export async function getCampaignFullStats(
         const errMsg = safeErrorMsg(err);
         console.error(`[CampaignService] Failed to fetch engagement for ${postId}:`, errMsg);
 
-        // Surface actionable error info instead of hiding as zeros
-        if (errMsg.includes('pages_read_engagement') || errMsg.includes('Page Public Content Access')) {
-          const permErr = 'Facebook permission missing: "pages_read_engagement". The seller needs to reconnect Facebook in Profile > Facebook & WhatsApp to grant this permission. Until then, organic post stats (likes, comments, shares, impressions, reach) cannot be fetched from Facebook.';
-          fbResult.error = permErr;
-          errors.push(permErr);
-        } else if (errMsg.includes('access token') || errMsg.includes('OAuthException') || errMsg.includes('Session has expired')) {
-          const tokenErr = 'Facebook access token expired or invalid. The seller needs to reconnect Facebook in Profile > Facebook & WhatsApp.';
+        if (errMsg.includes('access token') || errMsg.includes('OAuthException') || errMsg.includes('Session has expired')) {
+          const tokenErr = 'Facebook access token expired or invalid. Reconnect Facebook in Profile > Facebook & WhatsApp.';
           fbResult.error = tokenErr;
           errors.push(tokenErr);
         } else {

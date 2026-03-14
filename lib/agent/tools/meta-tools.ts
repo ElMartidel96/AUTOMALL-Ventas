@@ -82,8 +82,12 @@ async function handleGetFacebookStatus(_input: z.infer<typeof GetFacebookStatusI
         if (metaConn) {
           const mc = metaConn as { fb_user_access_token: string | null; fb_page_access_token: string }
           const eng = await fetchPostEngagement(pub.fb_post_id, mc.fb_user_access_token || mc.fb_page_access_token)
-          likes = eng.likes
-          comments = eng.comments
+          if (!eng.permissionError) {
+            likes = eng.likes
+            comments = eng.comments
+          }
+          // If permissionError, fall through to cached data below
+          if (eng.permissionError) throw new Error('App Review needed')
         }
       } catch {
         // Fall back to cached engagement data
