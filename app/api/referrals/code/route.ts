@@ -65,6 +65,20 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+
+    // Handle missing table gracefully (referral system not yet configured in Supabase)
+    if (errMsg.includes('schema cache') || errMsg.includes('referral_codes') || errMsg.includes('42P01')) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          code: null,
+          system_status: 'not_configured',
+          message: 'Referral system is being set up. This feature will be available soon.',
+        },
+      });
+    }
+
     console.error('Error in referral code API:', error);
     return NextResponse.json(
       { error: 'Failed to process referral code request' },

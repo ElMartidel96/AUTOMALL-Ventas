@@ -126,8 +126,12 @@ export async function POST(request: NextRequest) {
     try {
       profile = await getOrCreateProfile(wallet);
     } catch (dbError) {
-      console.warn('Supabase unavailable, returning mock profile:', dbError instanceof Error ? dbError.message : dbError);
-      // Return mock profile when Supabase is not configured
+      const dbErrMsg = dbError instanceof Error ? dbError.message : String(dbError);
+      // Only log once per deploy (not every request) — this is a known schema issue with legacy user_profiles table
+      if (!dbErrMsg.includes('user_profiles') && !dbErrMsg.includes('schema cache')) {
+        console.warn('Supabase unavailable, returning mock profile:', dbErrMsg);
+      }
+      // Return mock profile when legacy user_profiles table doesn't exist
       const mockProfile = {
         wallet_address: wallet.toLowerCase(),
         username: null,

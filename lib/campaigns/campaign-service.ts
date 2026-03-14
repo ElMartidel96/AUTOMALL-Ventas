@@ -461,46 +461,74 @@ export async function getCampaignFullStats(
     error?: string;
   } | null = null;
 
-  if (campaign.fb_ad_id && campaign.fb_ad_status && campaign.fb_ad_status !== 'none' && connection) {
+  const hasAdStatus = campaign.fb_ad_status && campaign.fb_ad_status !== 'none';
+  if (hasAdStatus && connection) {
     const conn = connection as unknown as MetaConnection;
-    const adToken = conn.fb_user_access_token || conn.fb_page_access_token;
-    const adInsightsResult = await getAdInsights(campaign.fb_ad_id, adToken);
+    // Marketing API REQUIRES user access token — page tokens cannot access ad insights
+    const adToken: string | undefined = conn.fb_user_access_token || undefined;
 
-    if (adInsightsResult.data) {
-      const insights = adInsightsResult.data;
-      const spend = parseFloat(insights.spend) || 0;
-      const conversations = (insights.actions || [])
-        .filter(a => a.action_type === 'onsite_conversion.messaging_conversation_started_7d')
-        .reduce((sum, a) => sum + parseInt(a.value, 10), 0);
-      const costPerConv = (insights.cost_per_action_type || [])
-        .find(a => a.action_type === 'onsite_conversion.messaging_conversation_started_7d');
-
+    if (!adToken) {
       adResult = {
-        status: campaign.fb_ad_status,
-        spend,
-        impressions: parseInt(insights.impressions, 10) || 0,
-        reach: parseInt(insights.reach, 10) || 0,
-        clicks: parseInt(insights.clicks, 10) || 0,
-        conversations,
-        costPerConversation: costPerConv ? parseFloat(costPerConv.value) : 0,
-      };
-    } else {
-      // No data — could be an error or simply no data yet
-      adResult = {
-        status: campaign.fb_ad_status,
+        status: campaign.fb_ad_status!,
         spend: 0, impressions: 0, reach: 0, clicks: 0, conversations: 0, costPerConversation: 0,
+        error: 'No user access token available for ad insights. Reconnect Facebook in Profile > Facebook & WhatsApp to grant Marketing API access.',
       };
+      errors.push(adResult.error!);
+    } else {
+      // Try multiple levels: ad → campaign (Facebook Ads Manager shows campaign-level data)
+      const idsToTry: Array<{ id: string; level: string }> = [];
+      if (campaign.fb_ad_id) idsToTry.push({ id: campaign.fb_ad_id, level: 'ad' });
+      if (campaign.fb_campaign_id) idsToTry.push({ id: campaign.fb_campaign_id, level: 'campaign' });
 
-      if (adInsightsResult.error) {
-        const adErrMsg = adInsightsResult.error;
-        if (adErrMsg.includes('ads_read') || adErrMsg.includes('ads_management')) {
-          adResult.error = 'Facebook permission missing for ad insights. Reconnect Facebook in Profile > Facebook & WhatsApp to grant "ads_read" permission.';
-        } else if (adErrMsg.includes('access token') || adErrMsg.includes('OAuthException') || adErrMsg.includes('Session has expired')) {
-          adResult.error = 'Facebook token expired. Reconnect Facebook in Profile > Facebook & WhatsApp.';
-        } else {
-          adResult.error = `Ad insights API error: ${adErrMsg}`;
+      let foundInsights = false;
+      let lastError = '';
+      for (const { id, level } of idsToTry) {
+        if (foundInsights) break;
+
+        const adInsightsResult = await getAdInsights(id, adToken);
+
+        if (adInsightsResult.data) {
+          const insights = adInsightsResult.data;
+          const spend = parseFloat(insights.spend) || 0;
+          const conversations = (insights.actions || [])
+            .filter(a => a.action_type === 'onsite_conversion.messaging_conversation_started_7d')
+            .reduce((sum, a) => sum + parseInt(a.value, 10), 0);
+          const costPerConv = (insights.cost_per_action_type || [])
+            .find(a => a.action_type === 'onsite_conversion.messaging_conversation_started_7d');
+
+          adResult = {
+            status: campaign.fb_ad_status!,
+            spend,
+            impressions: parseInt(insights.impressions, 10) || 0,
+            reach: parseInt(insights.reach, 10) || 0,
+            clicks: parseInt(insights.clicks, 10) || 0,
+            conversations,
+            costPerConversation: costPerConv ? parseFloat(costPerConv.value) : 0,
+          };
+          foundInsights = true;
+          console.log(`[CampaignService] Got ad insights from ${level} level (${id}): spend=$${spend} clicks=${adResult.clicks} reach=${adResult.reach}`);
+        } else if (adInsightsResult.error) {
+          lastError = adInsightsResult.error;
+          console.warn(`[CampaignService] Ad insights failed at ${level} level (${id}): ${lastError}`);
         }
-        errors.push(adResult.error);
+      }
+
+      if (!foundInsights) {
+        adResult = {
+          status: campaign.fb_ad_status!,
+          spend: 0, impressions: 0, reach: 0, clicks: 0, conversations: 0, costPerConversation: 0,
+        };
+
+        if (lastError) {
+          if (lastError.includes('ads_read') || lastError.includes('ads_management')) {
+            adResult.error = 'Facebook permission missing for ad insights. Reconnect Facebook in Profile > Facebook & WhatsApp to grant "ads_read" permission.';
+          } else if (lastError.includes('access token') || lastError.includes('OAuthException') || lastError.includes('Session has expired')) {
+            adResult.error = 'Facebook token expired. Reconnect Facebook in Profile > Facebook & WhatsApp.';
+          } else {
+            adResult.error = `Ad insights API error: ${lastError}`;
+          }
+          errors.push(adResult.error!);
+        }
       }
     }
   }
