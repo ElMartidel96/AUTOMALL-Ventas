@@ -17,6 +17,7 @@ import {
   createFBAdSet,
   createFBAdCreative,
   createFBLinkAdCreative,
+  createFBCTWACreative,
   createFBAd,
   updateFBObjectStatus,
   deleteFBCampaignObject,
@@ -822,17 +823,18 @@ export async function publishToFacebook(
     console.log(`[CampaignService] Published campaign ${campaignId} → FB post ${fbPostId}`);
 
     // ── 10. Paid ad creation — branching by fb_ad_objective ──
-    //   awareness:       OUTCOME_AWARENESS + REACH + boost organic post
-    //   whatsapp_clicks: OUTCOME_TRAFFIC + LINK_CLICKS + link ad with wa.me CTA
+    //   awareness:              OUTCOME_AWARENESS + REACH + boost organic post
+    //   whatsapp_clicks:        OUTCOME_TRAFFIC + LINK_CLICKS + link ad with wa.me CTA (legacy)
+    //   whatsapp_conversations: OUTCOME_ENGAGEMENT + CONVERSATIONS + native CTWA ad (recommended)
     let fbAdId: string | null = null;
     let adStatus: 'active' | 'organic_only' | 'error' | 'missing_requirements' = 'organic_only';
     let adMessage: string | null = null;
 
     if (hasBudget && adAccountId && userToken && fbPostId) {
-      const adObjective: FBAdObjective = campaign.fb_ad_objective || 'whatsapp_clicks';
+      const adObjective: FBAdObjective = campaign.fb_ad_objective || 'whatsapp_conversations';
 
-      // 10.0 Pre-check: whatsapp_clicks requires phone/whatsapp
-      if (adObjective === 'whatsapp_clicks') {
+      // 10.0 Pre-check: whatsapp objectives require phone/whatsapp
+      if (adObjective === 'whatsapp_clicks' || adObjective === 'whatsapp_conversations') {
         const whatsappPhone = seller.whatsapp || seller.phone;
         if (!whatsappPhone) {
           // ALL-OR-NOTHING: rollback organic post
@@ -893,6 +895,76 @@ export async function publishToFacebook(
             message: paidCopy.message,
             headline: paidCopy.headline,
             description: paidCopy.description,
+          });
+          fbCreativeId = fbCreative.id;
+
+          const fbAd = await createFBAd(adAccountId, userToken, {
+            name: `Ad — ${campaign.name}`,
+            adsetId: fbAdSetId,
+            creativeId: fbCreativeId,
+          });
+          fbAdIdResult = fbAd.id;
+
+        } else if (adObjective === 'whatsapp_conversations') {
+          // ── WHATSAPP CONVERSATIONS: OUTCOME_ENGAGEMENT + CONVERSATIONS + native CTWA ──
+          // This is the correct objective for WhatsApp messages. Facebook's algorithm
+          // targets people who are likely to START CONVERSATIONS (not just click links).
+          // Requires: WhatsApp Business linked to the Facebook Page in Meta Business Manager.
+          const whatsappPhone = (seller.whatsapp || seller.phone || '').replace(/\D/g, '');
+
+          const fbCampaign = await createFBCampaign(adAccountId, userToken, {
+            name: `AutoMALL — ${campaign.name}`,
+            objective: 'OUTCOME_ENGAGEMENT',
+          });
+          fbCampaignId = fbCampaign.id;
+
+          const fbAdSet = await createFBAdSet(adAccountId, userToken, {
+            name: `${campaign.name} — Houston Area`,
+            campaignId: fbCampaignId,
+            dailyBudgetCents,
+            pageId: conn.fb_page_id,
+            targeting,
+            optimizationGoal: 'CONVERSATIONS',
+            destinationType: 'WHATSAPP',
+            whatsappNumber: whatsappPhone,
+          });
+          fbAdSetId = fbAdSet.id;
+
+          const paidCopy = generatePaidAdCopy({
+            campaignType: campaign.type,
+            vehicles,
+            seller,
+            lang: campaign.caption_language,
+            discountAmount: 1500,
+          });
+
+          // Greeting text shown when WhatsApp opens + autofill message pre-typed for the user
+          const v0 = vehicles[0];
+          const greetingEs = v0
+            ? `Hola! Bienvenido a ${seller.business_name || 'Autos MALL'}. Preguntanos sobre el ${v0.year} ${v0.brand} ${v0.model} o cualquier vehiculo de nuestro inventario.`
+            : `Hola! Bienvenido a ${seller.business_name || 'Autos MALL'}. Preguntanos sobre nuestros vehiculos disponibles.`;
+          const greetingEn = v0
+            ? `Hi! Welcome to ${seller.business_name || 'Autos MALL'}. Ask us about the ${v0.year} ${v0.brand} ${v0.model} or any vehicle in our inventory.`
+            : `Hi! Welcome to ${seller.business_name || 'Autos MALL'}. Ask us about our available vehicles.`;
+          const greeting = campaign.caption_language === 'en' ? greetingEn : greetingEs;
+
+          const autofillEs = v0
+            ? `Hola! Vi su anuncio en Facebook. Me interesa el ${v0.year} ${v0.brand} ${v0.model}. Aun esta disponible el descuento de $1,500?`
+            : `Hola! Vi su anuncio en Facebook. Aun esta disponible el descuento de $1,500?`;
+          const autofillEn = v0
+            ? `Hi! I saw your ad on Facebook. I'm interested in the ${v0.year} ${v0.brand} ${v0.model}. Is the $1,500 discount still available?`
+            : `Hi! I saw your ad on Facebook. Is the $1,500 discount still available?`;
+          const autofill = campaign.caption_language === 'en' ? autofillEn : autofillEs;
+
+          const fbCreative = await createFBCTWACreative(adAccountId, userToken, {
+            name: `Creative — ${campaign.name}`,
+            pageId: conn.fb_page_id,
+            imageUrl: imageUrls[0],
+            message: paidCopy.message,
+            headline: paidCopy.headline,
+            description: paidCopy.description,
+            greetingText: greeting,
+            autofillMessage: autofill,
           });
           fbCreativeId = fbCreative.id;
 
@@ -1149,11 +1221,11 @@ export async function switchAdObjective(
   const adAccountId = conn.ad_account_id;
   if (!adAccountId) throw new Error('No ad account — reconnect Facebook');
 
-  // 4. Pre-check: whatsapp_clicks requires phone
-  if (newObjective === 'whatsapp_clicks') {
+  // 4. Pre-check: whatsapp objectives require phone
+  if (newObjective === 'whatsapp_clicks' || newObjective === 'whatsapp_conversations') {
     const seller = await getSellerByWallet(walletAddress);
     if (!seller || (!seller.whatsapp && !seller.phone)) {
-      throw new Error('Add your WhatsApp number in your profile to use WhatsApp Clicks objective / Agrega tu numero de WhatsApp para usar el objetivo de WhatsApp Clicks');
+      throw new Error('Add your WhatsApp number in your profile / Agrega tu numero de WhatsApp en tu perfil');
     }
   }
 
@@ -1194,8 +1266,75 @@ export async function switchAdObjective(
     let fbCreativeId: string;
     let fbAdIdResult: string;
 
-    if (newObjective === 'whatsapp_clicks') {
-      // ── WHATSAPP CLICKS: OUTCOME_TRAFFIC + LINK_CLICKS + wa.me link ad ──
+    if (newObjective === 'whatsapp_conversations') {
+      // ── WHATSAPP CONVERSATIONS: OUTCOME_ENGAGEMENT + CONVERSATIONS + native CTWA ──
+      const whatsappPhone = (seller.whatsapp || seller.phone || '').replace(/\D/g, '');
+
+      const fbCampaign = await createFBCampaign(adAccountId, userToken, {
+        name: `AutoMALL — ${campaign.name}`,
+        objective: 'OUTCOME_ENGAGEMENT',
+      });
+      fbCampaignId = fbCampaign.id;
+
+      const fbAdSet = await createFBAdSet(adAccountId, userToken, {
+        name: `${campaign.name} — Houston Area`,
+        campaignId: fbCampaignId,
+        dailyBudgetCents,
+        pageId: conn.fb_page_id,
+        targeting,
+        optimizationGoal: 'CONVERSATIONS',
+        destinationType: 'WHATSAPP',
+        whatsappNumber: whatsappPhone,
+      });
+      fbAdSetId = fbAdSet.id;
+
+      const imageUrls = await getVehicleImageUrls(campaign.vehicle_ids);
+      const paidCopy = generatePaidAdCopy({
+        campaignType: campaign.type,
+        vehicles,
+        seller,
+        lang: campaign.caption_language,
+        discountAmount: 1500,
+      });
+
+      const v0 = vehicles[0];
+      const greetingEs = v0
+        ? `Hola! Bienvenido a ${seller.business_name || 'Autos MALL'}. Preguntanos sobre el ${v0.year} ${v0.brand} ${v0.model} o cualquier vehiculo de nuestro inventario.`
+        : `Hola! Bienvenido a ${seller.business_name || 'Autos MALL'}. Preguntanos sobre nuestros vehiculos disponibles.`;
+      const greetingEn = v0
+        ? `Hi! Welcome to ${seller.business_name || 'Autos MALL'}. Ask us about the ${v0.year} ${v0.brand} ${v0.model} or any vehicle in our inventory.`
+        : `Hi! Welcome to ${seller.business_name || 'Autos MALL'}. Ask us about our available vehicles.`;
+      const greeting = campaign.caption_language === 'en' ? greetingEn : greetingEs;
+
+      const autofillEs = v0
+        ? `Hola! Vi su anuncio en Facebook. Me interesa el ${v0.year} ${v0.brand} ${v0.model}. Aun esta disponible el descuento de $1,500?`
+        : `Hola! Vi su anuncio en Facebook. Aun esta disponible el descuento de $1,500?`;
+      const autofillEn = v0
+        ? `Hi! I saw your ad on Facebook. I'm interested in the ${v0.year} ${v0.brand} ${v0.model}. Is the $1,500 discount still available?`
+        : `Hi! I saw your ad on Facebook. Is the $1,500 discount still available?`;
+      const autofill = campaign.caption_language === 'en' ? autofillEn : autofillEs;
+
+      const fbCreative = await createFBCTWACreative(adAccountId, userToken, {
+        name: `Creative — ${campaign.name}`,
+        pageId: conn.fb_page_id,
+        imageUrl: imageUrls[0] || '',
+        message: paidCopy.message,
+        headline: paidCopy.headline,
+        description: paidCopy.description,
+        greetingText: greeting,
+        autofillMessage: autofill,
+      });
+      fbCreativeId = fbCreative.id;
+
+      const fbAd = await createFBAd(adAccountId, userToken, {
+        name: `Ad — ${campaign.name}`,
+        adsetId: fbAdSetId,
+        creativeId: fbCreativeId,
+      });
+      fbAdIdResult = fbAd.id;
+
+    } else if (newObjective === 'whatsapp_clicks') {
+      // ── WHATSAPP CLICKS (legacy): OUTCOME_TRAFFIC + LINK_CLICKS + wa.me link ad ──
       const fbCampaign = await createFBCampaign(adAccountId, userToken, {
         name: `AutoMALL — ${campaign.name}`,
         objective: 'OUTCOME_TRAFFIC',

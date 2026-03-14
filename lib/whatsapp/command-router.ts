@@ -414,7 +414,7 @@ async function handleButtonAction(
 
   // Campaign switch objective
   if (actionId.startsWith('cmd_camp_sw_yes_')) {
-    const newObjective = (context?.data?.newObjective as string) || 'whatsapp_clicks';
+    const newObjective = (context?.data?.newObjective as string) || 'whatsapp_conversations';
     const campaignId = (context?.data?.campaignId as string) || '';
     if (!campaignId) return null;
     return handlers.handleCampaignSwitchConfirm(lang, link, campaignId, newObjective);

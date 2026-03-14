@@ -34,7 +34,7 @@ export type CaptionLanguage = 'en' | 'es' | 'both';
 
 export type FBAdStatus = 'none' | 'creating' | 'paused' | 'active' | 'completed' | 'error';
 
-export type FBAdObjective = 'awareness' | 'whatsapp_clicks';
+export type FBAdObjective = 'awareness' | 'whatsapp_clicks' | 'whatsapp_conversations';
 
 export type CampaignEventType =
   | 'page_view'

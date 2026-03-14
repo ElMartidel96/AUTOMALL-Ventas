@@ -18,7 +18,7 @@ import type { CampaignType, CampaignStatus, CaptionLanguage, FBAdObjective } fro
 const VALID_STATUSES: CampaignStatus[] = ['draft', 'active', 'paused', 'completed', 'archived'];
 const VALID_TYPES: CampaignType[] = ['inventory_showcase', 'seasonal_promo', 'clearance', 'financing', 'trade_in', 'custom'];
 const VALID_LANGS: CaptionLanguage[] = ['en', 'es', 'both'];
-const VALID_AD_OBJECTIVES: FBAdObjective[] = ['awareness', 'whatsapp_clicks'];
+const VALID_AD_OBJECTIVES: FBAdObjective[] = ['awareness', 'whatsapp_clicks', 'whatsapp_conversations'];
 
 async function getSellerId(wallet: string) {
   const supabase = getTypedClient();

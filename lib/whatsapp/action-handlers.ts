@@ -1278,8 +1278,8 @@ export async function handleCampaignSwitchObjective(
       };
     }
 
-    const currentObjective = campaign.fb_ad_objective || 'whatsapp_clicks';
-    const newObjective = currentObjective === 'awareness' ? 'whatsapp_clicks' : 'awareness';
+    const currentObjective = campaign.fb_ad_objective || 'whatsapp_conversations';
+    const newObjective = currentObjective === 'awareness' ? 'whatsapp_conversations' : 'awareness';
 
     const { text, buttons } = ct.campaignSwitchConfirm(lang, {
       id: campaign.id,
@@ -1314,12 +1314,13 @@ export async function handleCampaignSwitchConfirm(
     const result = await switchAdObjective(
       campaignId,
       link.wallet_address,
-      newObjective as 'awareness' | 'whatsapp_clicks'
+      newObjective as 'awareness' | 'whatsapp_clicks' | 'whatsapp_conversations'
     );
 
     const objLabels: Record<string, { es: string; en: string }> = {
       awareness: { es: '📡 Alcance (Awareness)', en: '📡 Reach (Awareness)' },
-      whatsapp_clicks: { es: '💬 WhatsApp Clicks', en: '💬 WhatsApp Clicks' },
+      whatsapp_clicks: { es: '💬 WhatsApp Clicks (legacy)', en: '💬 WhatsApp Clicks (legacy)' },
+      whatsapp_conversations: { es: '💬 WhatsApp Conversaciones', en: '💬 WhatsApp Conversations' },
     };
     const label = lang === 'es'
       ? (objLabels[newObjective]?.es || newObjective)

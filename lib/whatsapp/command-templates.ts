@@ -731,8 +731,8 @@ export function campaignDetail(lang: Lang, c: CampaignDetailData): { text: strin
 
   // Objective indicator (only when paid ad exists)
   const hasPaidAd = c.fb_ad_status && c.fb_ad_status !== 'none' && c.fb_ad_status !== 'error';
-  const objLabels: Record<string, string> = { awareness: '📡 Alcance', whatsapp_clicks: '💬 WhatsApp Clicks' };
-  const objLabelsEN: Record<string, string> = { awareness: '📡 Reach', whatsapp_clicks: '💬 WhatsApp Clicks' };
+  const objLabels: Record<string, string> = { awareness: '📡 Alcance', whatsapp_clicks: '💬 WA Clicks', whatsapp_conversations: '💬 WA Conversaciones' };
+  const objLabelsEN: Record<string, string> = { awareness: '📡 Reach', whatsapp_clicks: '💬 WA Clicks', whatsapp_conversations: '💬 WA Conversations' };
   const objLine = hasPaidAd && c.fb_ad_objective
     ? '\n🎯 ' + (lang === 'es' ? (objLabels[c.fb_ad_objective] || c.fb_ad_objective) : (objLabelsEN[c.fb_ad_objective] || c.fb_ad_objective))
     : '';
@@ -1090,7 +1090,8 @@ export function campaignSwitchConfirm(
 ): { text: string; buttons: WAButton[] } {
   const objLabels: Record<string, { es: string; en: string }> = {
     awareness: { es: '📡 Alcance (Awareness)', en: '📡 Reach (Awareness)' },
-    whatsapp_clicks: { es: '💬 WhatsApp Clicks', en: '💬 WhatsApp Clicks' },
+    whatsapp_clicks: { es: '💬 WhatsApp Clicks (legacy)', en: '💬 WhatsApp Clicks (legacy)' },
+    whatsapp_conversations: { es: '💬 WhatsApp Conversaciones', en: '💬 WhatsApp Conversations' },
   };
 
   const currentLabel = lang === 'es'

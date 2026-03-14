@@ -795,6 +795,90 @@ export async function createFBLinkAdCreative(
   return res.json();
 }
 
+/**
+ * Create a Click-to-WhatsApp (CTWA) ad creative.
+ * Uses WHATSAPP_MESSAGE CTA with native WhatsApp integration.
+ * The ad opens WhatsApp directly (no wa.me redirect through browser).
+ *
+ * Requires: WhatsApp Business linked to the Facebook Page in Meta Business Manager.
+ */
+export async function createFBCTWACreative(
+  adAccountId: string,
+  accessToken: string,
+  opts: {
+    name: string;
+    pageId: string;
+    imageUrl: string;
+    message: string;
+    headline: string;
+    description: string;
+    greetingText?: string;
+    autofillMessage?: string;
+  }
+): Promise<FBAdCreativeResponse> {
+  const accountId = adAccountId.replace(/^act_/, '');
+  const url = new URL(`${GRAPH_API}/act_${accountId}/adcreatives`);
+
+  // Build welcome message with autofill (pre-filled text in WhatsApp input)
+  const welcomeMessage = opts.greetingText ? JSON.stringify({
+    type: 'VISUAL_EDITOR',
+    version: 2,
+    landing_screen_type: 'welcome_message',
+    media_type: 'text',
+    text_format: {
+      customer_action_type: 'autofill_message',
+      message: {
+        text: opts.greetingText,
+        autofill_message: {
+          content: opts.autofillMessage || opts.greetingText,
+        },
+      },
+    },
+  }) : undefined;
+
+  const linkData: Record<string, unknown> = {
+    message: opts.message,
+    link: 'https://api.whatsapp.com/send',
+    picture: opts.imageUrl,
+    name: opts.headline,
+    description: opts.description,
+    call_to_action: {
+      type: 'WHATSAPP_MESSAGE',
+      value: { app_destination: 'WHATSAPP' },
+    },
+  };
+
+  if (welcomeMessage) {
+    linkData.page_welcome_message = welcomeMessage;
+  }
+
+  const objectStorySpec = {
+    page_id: opts.pageId,
+    link_data: linkData,
+  };
+
+  const body = new URLSearchParams();
+  body.set('name', opts.name);
+  body.set('object_story_spec', JSON.stringify(objectStorySpec));
+  body.set('access_token', accessToken);
+
+  console.log(`[FB-API] createFBCTWACreative: account=act_${accountId} page=${opts.pageId} headline="${opts.headline}" hasWelcome=${!!welcomeMessage}`);
+
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    const fbErr = _extractFBError(err);
+    _logFBError(`createFBCTWACreative(act_${accountId})`, fbErr);
+    throw new Error(_formatFBError('Create CTWA creative failed:', fbErr));
+  }
+  return res.json();
+}
+
 /** Create an ad creative using an existing organic post (object_story_id) */
 export async function createFBAdCreative(
   adAccountId: string,

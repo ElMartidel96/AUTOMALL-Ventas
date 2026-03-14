@@ -51,7 +51,7 @@ const CreateCampaignInput = z.object({
 
 const SwitchAdObjectiveInput = z.object({
   campaign_id: z.string().uuid().describe('Campaign UUID'),
-  new_objective: z.enum(['awareness', 'whatsapp_clicks']).describe('New Facebook ad objective'),
+  new_objective: z.enum(['awareness', 'whatsapp_clicks', 'whatsapp_conversations']).describe('New Facebook ad objective. Use whatsapp_conversations (recommended) for native Click-to-WhatsApp ads that maximize messaging conversations.'),
 })
 
 const PauseAllCampaignsInput = z.object({})
@@ -439,7 +439,7 @@ export const campaignTools: AgentTool[] = [
   },
   {
     name: 'switch_ad_objective',
-    description: 'Switch the Facebook ad objective between "awareness" (reach more people) and "whatsapp_clicks" (drive WhatsApp messages). Deletes the old ad and creates a new one with the new objective.',
+    description: 'Switch the Facebook ad objective. Options: "whatsapp_conversations" (recommended — native Click-to-WhatsApp, optimized for messaging conversations), "awareness" (maximize reach), "whatsapp_clicks" (legacy traffic-based, NOT recommended). Deletes the old ad and creates a new one with the new objective.',
     category: 'Campaigns',
     inputSchema: SwitchAdObjectiveInput,
     permission: 'write' as ToolPermission,
