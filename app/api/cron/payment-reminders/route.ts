@@ -16,6 +16,7 @@ import { sendTextMessage } from '@/lib/whatsapp/api';
 
 const LOG = '[PaymentCron]';
 
+type SellerRow = { id: string; business_name: string | null; handle: string | null; whatsapp: string | null; phone: string | null };
 type PaymentRow = { id: string; deal_id: string; payment_number: number; due_date: string; amount: number; status: string };
 type DealRow = { id: string; client_name: string; client_phone: string | null; vehicle_brand: string; vehicle_model: string; deal_status: string };
 
@@ -45,9 +46,10 @@ export async function GET(req: NextRequest) {
 
   try {
     // Get all active sellers with their WhatsApp numbers
+    // Columns: id, handle, business_name, phone, whatsapp
     const { data: sellers } = await supabase
       .from('sellers')
-      .select('id, name, whatsapp_number, phone')
+      .select('id, business_name, handle, whatsapp, phone')
       .eq('is_active', true);
 
     if (!sellers || sellers.length === 0) {
@@ -58,7 +60,7 @@ export async function GET(req: NextRequest) {
 
     for (const seller of sellers) {
       // Seller needs a WhatsApp number to receive reminders
-      const sellerWA = seller.whatsapp_number || seller.phone;
+      const sellerWA = seller.whatsapp || seller.phone;
       if (!sellerWA) continue;
 
       // Get today's payments for this seller
@@ -121,7 +123,7 @@ export async function GET(req: NextRequest) {
         .reduce((s, p) => s + Number(p.amount), 0);
 
       let msg = `🗓️ *COBROS DEL DÍA — ${today}*\n`;
-      msg += `Hola ${seller.name || 'Vendedor'},\n\n`;
+      msg += `Hola ${seller.business_name || seller.handle || 'Vendedor'},\n\n`;
 
       if (overdueItems.length > 0) {
         msg += `🚨 *ATRASADOS (${overdueItems.length}):* $${totalOverdue.toLocaleString()}\n`;

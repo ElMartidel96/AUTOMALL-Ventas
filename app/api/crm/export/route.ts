@@ -43,20 +43,21 @@ export async function GET(req: NextRequest) {
     const { getTypedClient } = await import('@/lib/supabase/client');
     const supabase = getTypedClient();
 
-    // Get seller info
-    const { data: seller } = await supabase
+    // Get seller info (columns: id, handle, business_name, phone, whatsapp)
+    const { data: seller, error: sellerErr } = await supabase
       .from('sellers')
-      .select('id, name')
+      .select('id, business_name, handle')
       .eq('wallet_address', wallet.toLowerCase())
       .eq('is_active', true)
       .single();
 
-    if (!seller) {
-      console.log(LOG, 'Seller not found for wallet');
+    if (sellerErr || !seller) {
+      console.log(LOG, 'Seller not found:', sellerErr?.message || 'no row', 'wallet:', wallet.slice(0, 10));
       return NextResponse.json({ error: 'Seller not found' }, { status: 404 });
     }
 
-    console.log(LOG, 'Seller found:', seller.id);
+    const sellerName = seller.business_name || seller.handle || 'Seller';
+    console.log(LOG, 'Seller found:', seller.id, sellerName);
 
     // Dynamic import of deal service and excel generator
     const { getDealsForExport } = await import('@/lib/crm/deal-service');
@@ -65,7 +66,7 @@ export async function GET(req: NextRequest) {
     const { deals, paymentsByDeal } = await getDealsForExport(seller.id);
     console.log(LOG, `Exporting ${deals.length} deals`);
 
-    const buffer = await generateDealExcel(deals, paymentsByDeal, seller.name);
+    const buffer = await generateDealExcel(deals, paymentsByDeal, sellerName);
     console.log(LOG, `Generated XLSX: ${buffer.length} bytes`);
 
     const dateStr = new Date().toISOString().split('T')[0];
