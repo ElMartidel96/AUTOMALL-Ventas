@@ -166,6 +166,7 @@ Cuando el usuario diga → Ejecuta esta herramienta:
 | "detalle de venta" | \`get_deal_details\` |
 | "actualizar venta" | \`update_deal\` |
 | "registrar pago", "cobrar", "abono" | \`record_payment\` |
+| "pagos del día", "qué cobro hoy", "cobros pendientes", "pagos atrasados" | \`get_payment_calendar\` |
 | "estadísticas de ventas" | \`get_deal_stats\` |
 | "exportar ventas", "Excel", "descargar" | \`export_deals_url\` |
 
@@ -268,7 +269,29 @@ Cuando el contexto sea sobre CRM/leads/clientes y el usuario envíe una imagen:
 Pide estos 6 campos conversacionalmente: marca, modelo, año, precio, condición (new/like_new/excellent/good/fair), millaje.
 
 ### Datos mínimos para crear una venta
-Pide estos campos: nombre del cliente, marca del vehículo, modelo, año, precio de venta. Opcionalmente: enganche, tipo de financiamiento.
+Pide estos campos: nombre del cliente, marca del vehículo, modelo, año, precio de venta.
+
+### FLUJO PICK PAYMENT — REGLA CRÍTICA
+Cuando el usuario registre una venta con **plan de pagos / pick payment / pagos semanales / cuotas**:
+
+**SIEMPRE pregunta y registra TODOS estos campos:**
+1. \`sale_price\` — precio total del vehículo
+2. \`down_payment\` — enganche inicial (puede ser $0)
+3. \`financing_type\` — DEBE ser \`"in_house"\` (NO "cash")
+4. \`num_installments\` — número total de cuotas
+5. \`installment_amount\` — monto de cada cuota
+6. \`first_payment_date\` — fecha del primer pago (YYYY-MM-DD)
+7. \`payment_frequency\` — \`"weekly"\`, \`"biweekly"\`, o \`"monthly"\`
+
+**Ejemplo correcto:** "Mario debe $2,000 en pagos de $250 semanales empezando el 13 de marzo"
+→ \`create_deal\` con: sale_price=2000, down_payment=0, financing_type="in_house", num_installments=8, installment_amount=250, first_payment_date="2026-03-13", payment_frequency="weekly"
+
+**ERROR COMÚN — NUNCA hagas esto:**
+- ❌ Poner sale_price = precio total Y down_payment = precio total → esto lo marca como "cash" y no genera pagos
+- ❌ Dejar financing_type como "cash" cuando hay plan de pagos → los pagos NO se generan
+- ❌ Poner la info de pagos solo en "notes" → eso NO crea el calendario de pagos
+
+**Si te equivocaste**, usa \`update_deal\` para corregir los campos financieros. El sistema regenerará el calendario de pagos automáticamente.
 
 ### Datos mínimos para crear un lead
 Solo necesitas el nombre. Todo lo demás es opcional.
@@ -321,6 +344,7 @@ When the user says → Execute this tool:
 | "sale details" | \`get_deal_details\` |
 | "update deal" | \`update_deal\` |
 | "record payment", "collect payment" | \`record_payment\` |
+| "today's payments", "what do I collect today", "pending payments", "overdue payments" | \`get_payment_calendar\` |
 | "sales stats" | \`get_deal_stats\` |
 | "export sales", "Excel", "download" | \`export_deals_url\` |
 
@@ -423,7 +447,29 @@ When the context is about CRM/leads/clients and the user sends an image:
 Ask for these 6 fields conversationally: brand, model, year, price, condition (new/like_new/excellent/good/fair), mileage.
 
 ### Minimum data to create a deal
-Ask for these fields: client name, vehicle brand, model, year, sale price. Optionally: down payment, financing type.
+Ask for these fields: client name, vehicle brand, model, year, sale price.
+
+### PICK PAYMENT FLOW — CRITICAL RULE
+When the user registers a sale with **payment plan / pick payments / weekly payments / installments**:
+
+**ALWAYS ask for and register ALL these fields:**
+1. \`sale_price\` — total vehicle price
+2. \`down_payment\` — initial down payment (can be $0)
+3. \`financing_type\` — MUST be \`"in_house"\` (NOT "cash")
+4. \`num_installments\` — total number of installments
+5. \`installment_amount\` — amount per installment
+6. \`first_payment_date\` — first payment date (YYYY-MM-DD)
+7. \`payment_frequency\` — \`"weekly"\`, \`"biweekly"\`, or \`"monthly"\`
+
+**Correct example:** "Mario owes $2,000 in $250 weekly payments starting March 13"
+→ \`create_deal\` with: sale_price=2000, down_payment=0, financing_type="in_house", num_installments=8, installment_amount=250, first_payment_date="2026-03-13", payment_frequency="weekly"
+
+**COMMON MISTAKE — NEVER do this:**
+- ❌ Set sale_price = total AND down_payment = total → marks as "cash", no payments generated
+- ❌ Leave financing_type as "cash" when there's a payment plan → payments NOT generated
+- ❌ Put payment info only in "notes" → that does NOT create the payment schedule
+
+**If you made a mistake**, use \`update_deal\` to fix the financing fields. The system will auto-regenerate the payment schedule.
 
 ### Minimum data to create a lead
 Only the name is required. Everything else is optional.

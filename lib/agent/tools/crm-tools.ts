@@ -66,6 +66,18 @@ const UpdateDealInput = z.object({
   deal_status: z.enum(['active', 'completed', 'default', 'cancelled']).optional().describe('New deal status'),
   client_name: z.string().optional().describe('Updated client name'),
   client_phone: z.string().optional().describe('Updated phone'),
+  client_email: z.string().optional().describe('Updated email'),
+  client_whatsapp: z.string().optional().describe('Updated WhatsApp number'),
+  referred_by: z.string().optional().describe('Referral source'),
+  sale_price: z.number().min(1).optional().describe('Sale price in USD'),
+  down_payment: z.number().min(0).optional().describe('Down payment in USD'),
+  financing_type: z.enum(['cash', 'in_house', 'external']).optional().describe('Financing type'),
+  finance_company: z.string().optional().describe('Finance company name'),
+  num_installments: z.number().int().min(0).optional().describe('Number of installments (0 for cash)'),
+  first_payment_date: z.string().optional().describe('First payment date (YYYY-MM-DD)'),
+  payment_day: z.number().int().min(1).max(31).optional().describe('Day of month for payments'),
+  payment_frequency: z.enum(['weekly', 'biweekly', 'monthly']).optional().describe('Payment frequency'),
+  installment_amount: z.number().min(0).optional().describe('Amount per installment'),
   notes: z.string().optional().describe('Updated notes'),
   gps_installed: z.boolean().optional().describe('GPS tracker status'),
   commission: z.number().min(0).optional().describe('Commission amount'),
@@ -197,9 +209,61 @@ async function handleCreateDeal(input: z.infer<typeof CreateDealInput>, ctx: Too
 
 async function handleUpdateDeal(input: z.infer<typeof UpdateDealInput>, ctx: ToolContext) {
   const sellerId = await getSellerId(ctx.walletAddress)
-  const { updateDeal } = await import('@/lib/crm/deal-service')
+  const { updateDeal, getDealById } = await import('@/lib/crm/deal-service')
+  const { getTypedClient } = await import('@/lib/supabase/client')
   const { deal_id, ...updates } = input
-  return updateDeal(deal_id, sellerId, updates)
+
+  // If financing fields are being set, auto-calculate derived values
+  const isFinancingUpdate = updates.financing_type || updates.num_installments || updates.installment_amount || updates.first_payment_date
+
+  const deal = await updateDeal(deal_id, sellerId, updates)
+
+  // If financing fields changed AND payment schedule needs regeneration
+  if (isFinancingUpdate && updates.financing_type !== 'cash') {
+    const fullDeal = await getDealById(deal_id, sellerId)
+    if (fullDeal) {
+      const numInstallments = updates.num_installments ?? fullDeal.deal.num_installments
+      const installmentAmount = updates.installment_amount ?? fullDeal.deal.installment_amount
+      const firstPaymentDate = updates.first_payment_date ?? fullDeal.deal.first_payment_date
+      const frequency = updates.payment_frequency ?? fullDeal.deal.payment_frequency
+
+      // Only regenerate if we have all required fields AND no payments exist yet
+      if (numInstallments > 0 && installmentAmount && firstPaymentDate && fullDeal.payments.length === 0) {
+        const supabase = getTypedClient()
+        const startDate = new Date(firstPaymentDate + 'T12:00:00')
+        const payments = []
+        for (let i = 0; i < numInstallments; i++) {
+          const dueDate = new Date(startDate)
+          if (frequency === 'weekly') dueDate.setDate(dueDate.getDate() + (7 * i))
+          else if (frequency === 'biweekly') dueDate.setDate(dueDate.getDate() + (14 * i))
+          else dueDate.setMonth(dueDate.getMonth() + i)
+
+          payments.push({
+            deal_id,
+            seller_id: sellerId,
+            payment_number: i + 1,
+            due_date: dueDate.toISOString().split('T')[0],
+            amount: installmentAmount,
+            paid_amount: 0,
+            status: 'pending',
+          })
+        }
+        await supabase.from('crm_payments').insert(payments)
+
+        // Update deal financials
+        const financedAmount = Number(fullDeal.deal.sale_price) - Number(updates.down_payment ?? fullDeal.deal.down_payment)
+        await supabase.from('crm_deals').update({
+          financed_amount: financedAmount,
+          outstanding_balance: financedAmount,
+          total_collected: Number(updates.down_payment ?? fullDeal.deal.down_payment),
+        }).eq('id', deal_id).eq('seller_id', sellerId)
+      }
+    }
+  }
+
+  // Return full deal with payments
+  const result = await getDealById(deal_id, sellerId)
+  return result || deal
 }
 
 async function handleRecordPayment(input: z.infer<typeof RecordPaymentInput>, ctx: ToolContext) {
