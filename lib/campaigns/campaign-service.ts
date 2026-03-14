@@ -910,67 +910,102 @@ export async function publishToFacebook(
           fbAdIdResult = fbAd.id;
 
         } else if (adObjective === 'whatsapp_conversations') {
-          // ── WHATSAPP CONVERSATIONS: OUTCOME_ENGAGEMENT + CONVERSATIONS + native CTWA ──
-          // This is the correct objective for WhatsApp messages. Facebook's algorithm
-          // targets people who are likely to START CONVERSATIONS (not just click links).
-          // Requires: WhatsApp Business linked to the Facebook Page in Meta Business Manager.
+          // ── WHATSAPP CONVERSATIONS: OUTCOME_ENGAGEMENT + CONVERSATIONS ──
+          // Strategy: try native CTWA first (best). If WhatsApp not linked to page
+          // (error 1487246), fallback to boosting the organic post with ENGAGEMENT
+          // objective (same approach as the friend's campaign that gets 55 conversations).
           const whatsappPhone = (seller.whatsapp || seller.phone || '').replace(/\D/g, '');
+          let usedCTWA = false;
 
+          // Always start with OUTCOME_ENGAGEMENT campaign
           const fbCampaign = await createFBCampaign(adAccountId, userToken, {
             name: `AutoMALL — ${campaign.name}`,
             objective: 'OUTCOME_ENGAGEMENT',
           });
           fbCampaignId = fbCampaign.id;
 
-          const fbAdSet = await createFBAdSet(adAccountId, userToken, {
-            name: `${campaign.name} — Houston Area`,
-            campaignId: fbCampaignId,
-            dailyBudgetCents,
-            pageId: conn.fb_page_id,
-            targeting,
-            optimizationGoal: 'CONVERSATIONS',
-            destinationType: 'WHATSAPP',
-            whatsappNumber: whatsappPhone,
-          });
-          fbAdSetId = fbAdSet.id;
+          // Try native CTWA ad set (CONVERSATIONS + WHATSAPP destination)
+          try {
+            const fbAdSet = await createFBAdSet(adAccountId, userToken, {
+              name: `${campaign.name} — Houston Area`,
+              campaignId: fbCampaignId,
+              dailyBudgetCents,
+              pageId: conn.fb_page_id,
+              targeting,
+              optimizationGoal: 'CONVERSATIONS',
+              destinationType: 'WHATSAPP',
+              whatsappNumber: whatsappPhone,
+            });
+            fbAdSetId = fbAdSet.id;
+            usedCTWA = true;
+          } catch (ctwaErr) {
+            const ctwaMsg = safeErrorMsg(ctwaErr);
+            const isWhatsAppNotLinked = ctwaMsg.includes('1487246') || ctwaMsg.includes('Invalid parameter');
+            if (!isWhatsAppNotLinked) throw ctwaErr; // Unknown error — don't swallow
 
-          const paidCopy = generatePaidAdCopy({
-            campaignType: campaign.type,
-            vehicles,
-            seller,
-            lang: campaign.caption_language,
-            discountAmount: 1500,
-          });
+            // Fallback: boost organic post with ENGAGEMENT (like friend's campaign)
+            console.warn(`[CampaignService] CTWA failed (WhatsApp not linked to page), falling back to engagement boost: ${ctwaMsg}`);
+            const fbAdSet = await createFBAdSet(adAccountId, userToken, {
+              name: `${campaign.name} — Houston Area`,
+              campaignId: fbCampaignId,
+              dailyBudgetCents,
+              pageId: conn.fb_page_id,
+              targeting,
+              // No destinationType, no whatsappNumber — simple engagement boost
+            });
+            fbAdSetId = fbAdSet.id;
+          }
 
-          // Greeting text shown when WhatsApp opens + autofill message pre-typed for the user
-          const v0 = vehicles[0];
-          const greetingEs = v0
-            ? `Hola! Bienvenido a ${seller.business_name || 'Autos MALL'}. Preguntanos sobre el ${v0.year} ${v0.brand} ${v0.model} o cualquier vehiculo de nuestro inventario.`
-            : `Hola! Bienvenido a ${seller.business_name || 'Autos MALL'}. Preguntanos sobre nuestros vehiculos disponibles.`;
-          const greetingEn = v0
-            ? `Hi! Welcome to ${seller.business_name || 'Autos MALL'}. Ask us about the ${v0.year} ${v0.brand} ${v0.model} or any vehicle in our inventory.`
-            : `Hi! Welcome to ${seller.business_name || 'Autos MALL'}. Ask us about our available vehicles.`;
-          const greeting = campaign.caption_language === 'en' ? greetingEn : greetingEs;
+          if (usedCTWA) {
+            // ── Full CTWA: native WhatsApp button + greeting + autofill ──
+            const paidCopy = generatePaidAdCopy({
+              campaignType: campaign.type,
+              vehicles,
+              seller,
+              lang: campaign.caption_language,
+              discountAmount: 1500,
+            });
 
-          const autofillEs = v0
-            ? `Hola! Vi su anuncio en Facebook. Me interesa el ${v0.year} ${v0.brand} ${v0.model}. Aun esta disponible el descuento de $1,500?`
-            : `Hola! Vi su anuncio en Facebook. Aun esta disponible el descuento de $1,500?`;
-          const autofillEn = v0
-            ? `Hi! I saw your ad on Facebook. I'm interested in the ${v0.year} ${v0.brand} ${v0.model}. Is the $1,500 discount still available?`
-            : `Hi! I saw your ad on Facebook. Is the $1,500 discount still available?`;
-          const autofill = campaign.caption_language === 'en' ? autofillEn : autofillEs;
+            const v0 = vehicles[0];
+            const greetingEs = v0
+              ? `Hola! Bienvenido a ${seller.business_name || 'Autos MALL'}. Preguntanos sobre el ${v0.year} ${v0.brand} ${v0.model} o cualquier vehiculo de nuestro inventario.`
+              : `Hola! Bienvenido a ${seller.business_name || 'Autos MALL'}. Preguntanos sobre nuestros vehiculos disponibles.`;
+            const greetingEn = v0
+              ? `Hi! Welcome to ${seller.business_name || 'Autos MALL'}. Ask us about the ${v0.year} ${v0.brand} ${v0.model} or any vehicle in our inventory.`
+              : `Hi! Welcome to ${seller.business_name || 'Autos MALL'}. Ask us about our available vehicles.`;
+            const greeting = campaign.caption_language === 'en' ? greetingEn : greetingEs;
 
-          const fbCreative = await createFBCTWACreative(adAccountId, userToken, {
-            name: `Creative — ${campaign.name}`,
-            pageId: conn.fb_page_id,
-            imageUrl: imageUrls[0],
-            message: paidCopy.message,
-            headline: paidCopy.headline,
-            description: paidCopy.description,
-            greetingText: greeting,
-            autofillMessage: autofill,
-          });
-          fbCreativeId = fbCreative.id;
+            const autofillEs = v0
+              ? `Hola! Vi su anuncio en Facebook. Me interesa el ${v0.year} ${v0.brand} ${v0.model}. Aun esta disponible el descuento de $1,500?`
+              : `Hola! Vi su anuncio en Facebook. Aun esta disponible el descuento de $1,500?`;
+            const autofillEn = v0
+              ? `Hi! I saw your ad on Facebook. I'm interested in the ${v0.year} ${v0.brand} ${v0.model}. Is the $1,500 discount still available?`
+              : `Hi! I saw your ad on Facebook. Is the $1,500 discount still available?`;
+            const autofill = campaign.caption_language === 'en' ? autofillEn : autofillEs;
+
+            const fbCreative = await createFBCTWACreative(adAccountId, userToken, {
+              name: `Creative — ${campaign.name}`,
+              pageId: conn.fb_page_id,
+              imageUrl: imageUrls[0],
+              message: paidCopy.message,
+              headline: paidCopy.headline,
+              description: paidCopy.description,
+              greetingText: greeting,
+              autofillMessage: autofill,
+            });
+            fbCreativeId = fbCreative.id;
+          } else {
+            // ── Fallback: boost organic post with ENGAGEMENT ──
+            // Same approach as the friend's campaign that gets 55 conversations.
+            // OUTCOME_ENGAGEMENT still targets engagers (messagers included).
+            const objectStoryId = `${conn.fb_page_id}_${fbPostId.split('_').pop()}`;
+            const fbCreative = await createFBAdCreative(adAccountId, userToken, {
+              name: `Creative — ${campaign.name}`,
+              objectStoryId,
+            });
+            fbCreativeId = fbCreative.id;
+            console.log(`[CampaignService] Using engagement boost fallback for ${campaignId} (link WhatsApp to Page for full CTWA)`);
+          }
 
           const fbAd = await createFBAd(adAccountId, userToken, {
             name: `Ad — ${campaign.name}`,
@@ -1273,6 +1308,7 @@ export async function switchAdObjective(
     if (newObjective === 'whatsapp_conversations') {
       // ── WHATSAPP CONVERSATIONS: OUTCOME_ENGAGEMENT + CONVERSATIONS + native CTWA ──
       const whatsappPhone = (seller.whatsapp || seller.phone || '').replace(/\D/g, '');
+      let usedCTWA = false;
 
       const fbCampaign = await createFBCampaign(adAccountId, userToken, {
         name: `AutoMALL — ${campaign.name}`,
@@ -1280,55 +1316,83 @@ export async function switchAdObjective(
       });
       fbCampaignId = fbCampaign.id;
 
-      const fbAdSet = await createFBAdSet(adAccountId, userToken, {
-        name: `${campaign.name} — Houston Area`,
-        campaignId: fbCampaignId,
-        dailyBudgetCents,
-        pageId: conn.fb_page_id,
-        targeting,
-        optimizationGoal: 'CONVERSATIONS',
-        destinationType: 'WHATSAPP',
-        whatsappNumber: whatsappPhone,
-      });
-      fbAdSetId = fbAdSet.id;
+      // Try native CTWA, fallback to engagement boost if WhatsApp not linked
+      try {
+        const fbAdSet = await createFBAdSet(adAccountId, userToken, {
+          name: `${campaign.name} — Houston Area`,
+          campaignId: fbCampaignId,
+          dailyBudgetCents,
+          pageId: conn.fb_page_id,
+          targeting,
+          optimizationGoal: 'CONVERSATIONS',
+          destinationType: 'WHATSAPP',
+          whatsappNumber: whatsappPhone,
+        });
+        fbAdSetId = fbAdSet.id;
+        usedCTWA = true;
+      } catch (ctwaErr) {
+        const ctwaMsg = safeErrorMsg(ctwaErr);
+        const isWhatsAppNotLinked = ctwaMsg.includes('1487246') || ctwaMsg.includes('Invalid parameter');
+        if (!isWhatsAppNotLinked) throw ctwaErr;
 
-      const imageUrls = await getVehicleImageUrls(campaign.vehicle_ids);
-      const paidCopy = generatePaidAdCopy({
-        campaignType: campaign.type,
-        vehicles,
-        seller,
-        lang: campaign.caption_language,
-        discountAmount: 1500,
-      });
+        console.warn(`[CampaignService] CTWA failed (WhatsApp not linked), falling back to engagement boost: ${ctwaMsg}`);
+        const fbAdSet = await createFBAdSet(adAccountId, userToken, {
+          name: `${campaign.name} — Houston Area`,
+          campaignId: fbCampaignId,
+          dailyBudgetCents,
+          pageId: conn.fb_page_id,
+          targeting,
+        });
+        fbAdSetId = fbAdSet.id;
+      }
 
-      const v0 = vehicles[0];
-      const greetingEs = v0
-        ? `Hola! Bienvenido a ${seller.business_name || 'Autos MALL'}. Preguntanos sobre el ${v0.year} ${v0.brand} ${v0.model} o cualquier vehiculo de nuestro inventario.`
-        : `Hola! Bienvenido a ${seller.business_name || 'Autos MALL'}. Preguntanos sobre nuestros vehiculos disponibles.`;
-      const greetingEn = v0
-        ? `Hi! Welcome to ${seller.business_name || 'Autos MALL'}. Ask us about the ${v0.year} ${v0.brand} ${v0.model} or any vehicle in our inventory.`
-        : `Hi! Welcome to ${seller.business_name || 'Autos MALL'}. Ask us about our available vehicles.`;
-      const greeting = campaign.caption_language === 'en' ? greetingEn : greetingEs;
+      if (usedCTWA) {
+        const imageUrls = await getVehicleImageUrls(campaign.vehicle_ids);
+        const paidCopy = generatePaidAdCopy({
+          campaignType: campaign.type,
+          vehicles,
+          seller,
+          lang: campaign.caption_language,
+          discountAmount: 1500,
+        });
 
-      const autofillEs = v0
-        ? `Hola! Vi su anuncio en Facebook. Me interesa el ${v0.year} ${v0.brand} ${v0.model}. Aun esta disponible el descuento de $1,500?`
-        : `Hola! Vi su anuncio en Facebook. Aun esta disponible el descuento de $1,500?`;
-      const autofillEn = v0
-        ? `Hi! I saw your ad on Facebook. I'm interested in the ${v0.year} ${v0.brand} ${v0.model}. Is the $1,500 discount still available?`
-        : `Hi! I saw your ad on Facebook. Is the $1,500 discount still available?`;
-      const autofill = campaign.caption_language === 'en' ? autofillEn : autofillEs;
+        const v0 = vehicles[0];
+        const greetingEs = v0
+          ? `Hola! Bienvenido a ${seller.business_name || 'Autos MALL'}. Preguntanos sobre el ${v0.year} ${v0.brand} ${v0.model} o cualquier vehiculo de nuestro inventario.`
+          : `Hola! Bienvenido a ${seller.business_name || 'Autos MALL'}. Preguntanos sobre nuestros vehiculos disponibles.`;
+        const greetingEn = v0
+          ? `Hi! Welcome to ${seller.business_name || 'Autos MALL'}. Ask us about the ${v0.year} ${v0.brand} ${v0.model} or any vehicle in our inventory.`
+          : `Hi! Welcome to ${seller.business_name || 'Autos MALL'}. Ask us about our available vehicles.`;
+        const greeting = campaign.caption_language === 'en' ? greetingEn : greetingEs;
 
-      const fbCreative = await createFBCTWACreative(adAccountId, userToken, {
-        name: `Creative — ${campaign.name}`,
-        pageId: conn.fb_page_id,
-        imageUrl: imageUrls[0] || '',
-        message: paidCopy.message,
-        headline: paidCopy.headline,
-        description: paidCopy.description,
-        greetingText: greeting,
-        autofillMessage: autofill,
-      });
-      fbCreativeId = fbCreative.id;
+        const autofillEs = v0
+          ? `Hola! Vi su anuncio en Facebook. Me interesa el ${v0.year} ${v0.brand} ${v0.model}. Aun esta disponible el descuento de $1,500?`
+          : `Hola! Vi su anuncio en Facebook. Aun esta disponible el descuento de $1,500?`;
+        const autofillEn = v0
+          ? `Hi! I saw your ad on Facebook. I'm interested in the ${v0.year} ${v0.brand} ${v0.model}. Is the $1,500 discount still available?`
+          : `Hi! I saw your ad on Facebook. Is the $1,500 discount still available?`;
+        const autofill = campaign.caption_language === 'en' ? autofillEn : autofillEs;
+
+        const fbCreative = await createFBCTWACreative(adAccountId, userToken, {
+          name: `Creative — ${campaign.name}`,
+          pageId: conn.fb_page_id,
+          imageUrl: imageUrls[0] || '',
+          message: paidCopy.message,
+          headline: paidCopy.headline,
+          description: paidCopy.description,
+          greetingText: greeting,
+          autofillMessage: autofill,
+        });
+        fbCreativeId = fbCreative.id;
+      } else {
+        const objectStoryId = `${conn.fb_page_id}_${fbPostId.split('_').pop()}`;
+        const fbCreative = await createFBAdCreative(adAccountId, userToken, {
+          name: `Creative — ${campaign.name}`,
+          objectStoryId,
+        });
+        fbCreativeId = fbCreative.id;
+        console.log(`[CampaignService] Switch: using engagement boost fallback for ${campaignId}`);
+      }
 
       const fbAd = await createFBAd(adAccountId, userToken, {
         name: `Ad — ${campaign.name}`,
