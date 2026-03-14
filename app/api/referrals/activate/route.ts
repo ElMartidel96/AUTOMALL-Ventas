@@ -180,6 +180,13 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    if (errMsg.includes('schema cache') || errMsg.includes('referral') || errMsg.includes('42P01')) {
+      return NextResponse.json({
+        success: true,
+        data: { activated: false, system_status: 'not_configured', message: 'Referral system is being set up.' },
+      });
+    }
     console.error('❌ Referral activation failed:', error);
     return NextResponse.json(
       { error: 'Failed to activate referral', success: false },
@@ -225,6 +232,13 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (error && error.code !== 'PGRST116') {
+      // Table doesn't exist yet — return graceful response
+      if (error.code === '42P01' || error.message?.includes('schema cache') || error.message?.includes('referral')) {
+        return NextResponse.json({
+          success: true,
+          data: { hasReferrer: false, isActive: false, status: null, system_status: 'not_configured', message: 'Referral system is being set up.' },
+        });
+      }
       console.error('Error fetching referral status:', error);
       return NextResponse.json(
         { error: 'Failed to fetch referral status', success: false },
@@ -243,6 +257,13 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    if (errMsg.includes('schema cache') || errMsg.includes('referral') || errMsg.includes('42P01')) {
+      return NextResponse.json({
+        success: true,
+        data: { hasReferrer: false, isActive: false, status: null, system_status: 'not_configured', message: 'Referral system is being set up.' },
+      });
+    }
     console.error('❌ Activation status check failed:', error);
     return NextResponse.json(
       { error: 'Failed to check activation status', success: false },

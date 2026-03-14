@@ -394,9 +394,13 @@ export async function getCampaignFullStats(
   } else {
     const conn = connection as unknown as MetaConnection;
 
+    // pages_read_engagement is granted on the USER token, not the page token.
+    // Use user token first, fall back to page token.
+    const engagementToken = conn.fb_user_access_token || conn.fb_page_access_token;
+
     for (const postId of campaign.fb_post_ids) {
       try {
-        const eng = await fetchPostEngagement(postId, conn.fb_page_access_token);
+        const eng = await fetchPostEngagement(postId, engagementToken);
         fbResult.likes += eng.likes;
         fbResult.comments += eng.comments;
         fbResult.shares += eng.shares;

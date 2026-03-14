@@ -175,6 +175,13 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    if (errMsg.includes('schema cache') || errMsg.includes('referral') || errMsg.includes('42P01')) {
+      return NextResponse.json({
+        success: true,
+        data: { isValid: false, system_status: 'not_configured', message: 'Referral system is being set up.' },
+      });
+    }
     console.error('Error validating referral code:', error);
     return NextResponse.json(
       { error: 'Failed to validate referral code' },
@@ -294,6 +301,13 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    if (errMsg.includes('schema cache') || errMsg.includes('referral') || errMsg.includes('42P01')) {
+      return NextResponse.json({
+        success: true,
+        data: { tracked: false, system_status: 'not_configured', message: 'Referral system is being set up.' },
+      });
+    }
     console.error('Error tracking referral click:', error);
     return NextResponse.json(
       { error: 'Failed to track click' },
@@ -405,6 +419,13 @@ export async function PUT(request: NextRequest) {
 
     return response;
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    if (errMsg.includes('schema cache') || errMsg.includes('referral') || errMsg.includes('42P01')) {
+      return NextResponse.json({
+        success: true,
+        data: { registered: false, system_status: 'not_configured', message: 'Referral system is being set up.' },
+      });
+    }
     console.error('Error registering referral conversion:', error);
     return NextResponse.json(
       { error: 'Failed to register conversion' },

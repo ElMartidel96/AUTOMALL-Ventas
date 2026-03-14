@@ -83,6 +83,27 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+
+    // Handle missing table gracefully (referral system not yet configured in Supabase)
+    if (errMsg.includes('schema cache') || errMsg.includes('referral') || errMsg.includes('42P01')) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          referrals: [],
+          stats: {
+            total: 0,
+            byLevel: { level1: 0, level2: 0, level3: 0 },
+            byStatus: { active: 0, pending: 0, inactive: 0 },
+            totalEarningsFromNetwork: 0,
+          },
+          pagination: { total: 0, limit: 50, offset: 0, hasMore: false },
+          system_status: 'not_configured',
+          message: 'Referral system is being set up. This feature will be available soon.',
+        },
+      });
+    }
+
     console.error('Error fetching referral network:', error);
     return NextResponse.json(
       { error: 'Failed to fetch referral network' },

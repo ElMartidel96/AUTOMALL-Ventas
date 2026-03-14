@@ -114,6 +114,29 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+
+    // Handle missing table gracefully (referral system not yet configured in Supabase)
+    if (errMsg.includes('schema cache') || errMsg.includes('referral_codes') || errMsg.includes('referrals') || errMsg.includes('42P01')) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          referralCode: null,
+          totalReferrals: 0,
+          activeReferrals: 0,
+          pendingRewards: 0,
+          totalEarned: 0,
+          network: { level1: 0, level2: 0, level3: 0, total: 0 },
+          commissionRates: { level1: 10, level2: 5, level3: 2.5 },
+          milestones: { reached: [], next: null, progress: 0 },
+          engagement: { clickCount: 0, conversionRate: 0 },
+          rank: null,
+          system_status: 'not_configured',
+          message: 'Referral system is being set up. This feature will be available soon.',
+        },
+      });
+    }
+
     console.error('Error fetching referral stats:', error);
     return NextResponse.json(
       { error: 'Failed to fetch referral statistics' },

@@ -74,13 +74,14 @@ async function handleGetFacebookStatus(_input: z.infer<typeof GetFacebookStatusI
         const { fetchPostEngagement } = await import('@/lib/meta/facebook-api')
         const { data: metaConn } = await supabase
           .from('seller_meta_connections')
-          .select('fb_page_access_token')
+          .select('fb_user_access_token, fb_page_access_token')
           .eq('wallet_address', wallet)
           .eq('is_active', true)
           .single()
 
         if (metaConn) {
-          const eng = await fetchPostEngagement(pub.fb_post_id, (metaConn as { fb_page_access_token: string }).fb_page_access_token)
+          const mc = metaConn as { fb_user_access_token: string | null; fb_page_access_token: string }
+          const eng = await fetchPostEngagement(pub.fb_post_id, mc.fb_user_access_token || mc.fb_page_access_token)
           likes = eng.likes
           comments = eng.comments
         }

@@ -89,6 +89,20 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    if (errMsg.includes('schema cache') || errMsg.includes('referral') || errMsg.includes('42P01')) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          isReferred: false,
+          hasOwnCode: false,
+          ownCode: null,
+          recentRewards: [],
+          system_status: 'not_configured',
+          message: 'Referral system is being set up.',
+        },
+      });
+    }
     console.error('Error in referral status API:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

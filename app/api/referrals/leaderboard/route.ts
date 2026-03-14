@@ -88,6 +88,13 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    if (errMsg.includes('schema cache') || errMsg.includes('referral') || errMsg.includes('42P01')) {
+      return NextResponse.json({
+        success: true,
+        data: { leaderboard: [], pagination: { total: 0, limit: 20, offset: 0, hasMore: false }, system_status: 'not_configured', message: 'Referral system is being set up.' },
+      });
+    }
     console.error('Error fetching leaderboard:', error);
     return NextResponse.json(
       { error: 'Failed to fetch leaderboard' },

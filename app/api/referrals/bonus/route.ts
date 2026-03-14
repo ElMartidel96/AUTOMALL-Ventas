@@ -79,6 +79,13 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    if (errMsg.includes('schema cache') || errMsg.includes('referral') || errMsg.includes('42P01')) {
+      return NextResponse.json({
+        success: true,
+        data: { eligible: false, system_status: 'not_configured', message: 'Referral system is being set up.' },
+      });
+    }
     console.error('Error checking bonus status:', error);
     return NextResponse.json(
       { error: 'Failed to check bonus status' },
@@ -177,6 +184,14 @@ export const POST = authHelpers.protected(async (request: NextRequest, context: 
     });
 
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    if (errMsg.includes('schema cache') || errMsg.includes('referral') || errMsg.includes('42P01')) {
+      return NextResponse.json({
+        success: false,
+        error: 'Referral system is being set up. This feature will be available soon.',
+        system_status: 'not_configured',
+      });
+    }
     console.error('Error distributing bonus:', error);
     return NextResponse.json(
       { error: 'Failed to distribute bonus' },

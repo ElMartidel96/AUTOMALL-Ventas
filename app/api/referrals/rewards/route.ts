@@ -127,6 +127,28 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+
+    // Handle missing table gracefully (referral system not yet configured in Supabase)
+    if (errMsg.includes('schema cache') || errMsg.includes('referral') || errMsg.includes('42P01')) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          rewards: [],
+          summary: {
+            totalRewards: 0,
+            totalAmount: 0,
+            byStatus: { pending: 0, processing: 0, paid: 0, failed: 0 },
+            byType: { commission: 0, milestone: 0, other: 0 },
+            pendingAmount: 0,
+          },
+          pagination: { total: 0, limit: 50, offset: 0, hasMore: false },
+          system_status: 'not_configured',
+          message: 'Referral system is being set up. This feature will be available soon.',
+        },
+      });
+    }
+
     console.error('Error fetching reward history:', error);
     return NextResponse.json(
       { error: 'Failed to fetch reward history' },
@@ -229,6 +251,16 @@ export async function POST(request: NextRequest) {
         );
     }
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+
+    if (errMsg.includes('schema cache') || errMsg.includes('referral') || errMsg.includes('42P01')) {
+      return NextResponse.json({
+        success: false,
+        error: 'Referral system is being set up. This feature will be available soon.',
+        system_status: 'not_configured',
+      });
+    }
+
     console.error('Error processing rewards:', error);
     return NextResponse.json(
       { error: 'Failed to process rewards' },
