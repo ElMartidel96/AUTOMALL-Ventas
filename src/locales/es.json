@@ -3483,6 +3483,27 @@
       "totalCollected": "Cobrado",
       "outstanding": "Pendiente",
       "overduePayments": "Atrasados"
+    },
+    "calendar": {
+      "tabTitle": "Pagos",
+      "title": "Calendario de Cobros",
+      "subtitle": "Seguimiento de pagos pendientes, cobros del dia y atrasados",
+      "loading": "Cargando calendario de pagos...",
+      "noData": "No hay datos de pagos disponibles",
+      "overdue": "Atrasados",
+      "dueToday": "Cobrar Hoy",
+      "upcoming": "Proximos",
+      "totalDue": "Total por Cobrar",
+      "refresh": "Actualizar",
+      "allClear": "Todo al dia!",
+      "allClearDesc": "No tienes pagos pendientes ni atrasados. Excelente trabajo!",
+      "overdueTitle": "ATRASADOS — Cobrar Urgente",
+      "todayTitle": "HOY — Cobros del Dia",
+      "upcomingTitle": "PROXIMOS — Siguiente 30 Dias",
+      "markPaid": "Pagado",
+      "paid": "Pagado",
+      "paymentNum": "Pago #{num}",
+      "daysLate": "dias de atraso"
     }
   }
 }

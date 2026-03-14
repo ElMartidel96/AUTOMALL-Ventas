@@ -91,6 +91,10 @@ const CreateLeadInput = z.object({
 
 const GetDealStatsInput = z.object({})
 
+const GetPaymentCalendarInput = z.object({
+  view: z.enum(['today', 'week', 'overdue', 'all']).optional().describe('Calendar view: today (due today), week (this week), overdue (past due), all (next 30 days). Default: all'),
+})
+
 const ExportDealsUrlInput = z.object({})
 
 // ===================================================
@@ -238,6 +242,108 @@ async function handleGetDealStats(_input: z.infer<typeof GetDealStatsInput>, ctx
   return getDealStats(sellerId)
 }
 
+async function handleGetPaymentCalendar(input: z.infer<typeof GetPaymentCalendarInput>, ctx: ToolContext) {
+  const sellerId = await getSellerId(ctx.walletAddress)
+  const { getTypedClient } = await import('@/lib/supabase/client')
+  const supabase = getTypedClient()
+  const today = new Date().toISOString().split('T')[0]
+  const view = input.view || 'all'
+
+  // Overdue
+  const { data: overdue } = await supabase
+    .from('crm_payments')
+    .select('id, deal_id, payment_number, due_date, amount, status')
+    .eq('seller_id', sellerId)
+    .in('status', ['pending', 'overdue'])
+    .lt('due_date', today)
+    .order('due_date', { ascending: true })
+    .limit(50)
+
+  // Today
+  const { data: todayPayments } = await supabase
+    .from('crm_payments')
+    .select('id, deal_id, payment_number, due_date, amount, status')
+    .eq('seller_id', sellerId)
+    .eq('due_date', today)
+    .in('status', ['pending', 'overdue'])
+    .limit(50)
+
+  // Upcoming (next 30 days)
+  const thirtyDays = new Date()
+  thirtyDays.setDate(thirtyDays.getDate() + 30)
+  const { data: upcoming } = await supabase
+    .from('crm_payments')
+    .select('id, deal_id, payment_number, due_date, amount, status')
+    .eq('seller_id', sellerId)
+    .in('status', ['pending'])
+    .gt('due_date', today)
+    .lte('due_date', thirtyDays.toISOString().split('T')[0])
+    .order('due_date', { ascending: true })
+    .limit(100)
+
+  // Get deal info
+  const allPayments = [...(overdue ?? []), ...(todayPayments ?? []), ...(upcoming ?? [])]
+  const dealIds = [...new Set(allPayments.map(p => p.deal_id))]
+  let dealMap = new Map<string, { client_name: string; client_phone: string | null; vehicle: string }>()
+
+  if (dealIds.length > 0) {
+    const { data: deals } = await supabase
+      .from('crm_deals')
+      .select('id, client_name, client_phone, vehicle_brand, vehicle_model, vehicle_year, deal_status')
+      .in('id', dealIds)
+      .eq('deal_status', 'active')
+
+    for (const d of deals ?? []) {
+      dealMap.set(d.id, {
+        client_name: d.client_name,
+        client_phone: d.client_phone,
+        vehicle: `${d.vehicle_brand} ${d.vehicle_model} ${d.vehicle_year}`,
+      })
+    }
+  }
+
+  function enrichList(payments: typeof allPayments) {
+    return payments
+      .filter(p => dealMap.has(p.deal_id))
+      .map(p => {
+        const d = dealMap.get(p.deal_id)!
+        return {
+          payment_id: p.id,
+          deal_id: p.deal_id,
+          client: d.client_name,
+          phone: d.client_phone,
+          vehicle: d.vehicle,
+          payment_num: p.payment_number,
+          due_date: p.due_date,
+          amount: Number(p.amount),
+        }
+      })
+  }
+
+  const result: Record<string, unknown> = { date: today }
+
+  if (view === 'all' || view === 'overdue') {
+    result.overdue = enrichList(overdue ?? [])
+    result.overdue_total = (overdue ?? []).reduce((s: number, p: { amount: number }) => s + Number(p.amount), 0)
+  }
+  if (view === 'all' || view === 'today') {
+    result.today = enrichList(todayPayments ?? [])
+    result.today_total = (todayPayments ?? []).reduce((s: number, p: { amount: number }) => s + Number(p.amount), 0)
+  }
+  if (view === 'all' || view === 'week') {
+    result.upcoming = enrichList(upcoming ?? [])
+    result.upcoming_total = (upcoming ?? []).reduce((s: number, p: { amount: number }) => s + Number(p.amount), 0)
+  }
+
+  result.summary = {
+    overdue_count: (overdue ?? []).length,
+    today_count: (todayPayments ?? []).length,
+    upcoming_count: (upcoming ?? []).length,
+  }
+
+  return result
+}
+
 async function handleExportDealsUrl(_input: z.infer<typeof ExportDealsUrlInput>, ctx: ToolContext) {
   // Verify seller exists
   await getSellerId(ctx.walletAddress)
@@ -325,6 +431,15 @@ export const crmTools: AgentTool[] = [
     permission: 'read' as ToolPermission,
     roles: ['seller', 'admin'] as UserRole[],
     handler: handleGetDealStats,
+  },
+  {
+    name: 'get_payment_calendar',
+    description: 'Get payment collection calendar — shows overdue, today\'s, and upcoming payments with client name, phone, vehicle, and amount. Use this when seller asks "what do I need to collect today?", "who owes me money?", "pending payments", "pagos del dia", "cobros".',
+    category: 'CRM',
+    inputSchema: GetPaymentCalendarInput,
+    permission: 'read' as ToolPermission,
+    roles: ['seller', 'admin'] as UserRole[],
+    handler: handleGetPaymentCalendar,
   },
   {
     name: 'export_deals_url',

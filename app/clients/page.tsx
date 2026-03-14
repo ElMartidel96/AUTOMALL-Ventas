@@ -15,7 +15,7 @@ import { Footer } from '@/components/layout/Footer';
 import { useAccount } from '@/lib/thirdweb';
 import { useUser } from '@/hooks/useUser';
 import { useLeads, useCreateLead, useUpdateLead, useCRMStats } from '@/hooks/useCRM';
-import { useDeals, useCreateDeal, useUpdateDeal, useDealStats, useExportDeals } from '@/hooks/useDeals';
+import { useDeals, useCreateDeal, useUpdateDeal, useDealStats, useExportDeals, usePaymentCalendar, useCalendarRecordPayment } from '@/hooks/useDeals';
 import { CRMStats } from '@/components/crm/CRMStats';
 import { LeadList } from '@/components/crm/LeadList';
 import { LeadDetail } from '@/components/crm/LeadDetail';
@@ -25,13 +25,14 @@ import { DealStats } from '@/components/crm/DealStats';
 import { DealList } from '@/components/crm/DealList';
 import { DealDetail } from '@/components/crm/DealDetail';
 import { DealForm, type DealFormData } from '@/components/crm/DealForm';
-import { Users, Plus, LayoutGrid, List, ShoppingCart } from 'lucide-react';
+import { PaymentCalendar } from '@/components/crm/PaymentCalendar';
+import { Users, Plus, LayoutGrid, List, ShoppingCart, CalendarClock } from 'lucide-react';
 import type { CRMLead } from '@/hooks/useCRM';
 import type { CRMDeal } from '@/lib/crm/types';
 
-type Tab = 'leads' | 'deals';
+type Tab = 'leads' | 'deals' | 'payments';
 type ViewMode = 'list' | 'pipeline' | 'detail' | 'form'
-  | 'deals' | 'deal-detail' | 'deal-form';
+  | 'deals' | 'deal-detail' | 'deal-form' | 'payments';
 
 export default function ClientsPage() {
   const t = useTranslations('crm');
@@ -83,6 +84,26 @@ export default function ClientsPage() {
   const createDeal = useCreateDeal(walletAddress);
   const updateDeal2 = useUpdateDeal(walletAddress);
   const exportDeals = useExportDeals(walletAddress);
+
+  // ── Payment Calendar hooks ──
+  const { data: calendarData, isLoading: calendarLoading, refetch: refetchCalendar } = usePaymentCalendar(walletAddress);
+  const calendarRecord = useCalendarRecordPayment(walletAddress);
+  const [recordingPaymentId, setRecordingPaymentId] = useState<string | null>(null);
+
+  const handleCalendarRecordPayment = useCallback(async (payment: { id: string; deal_id: string }) => {
+    setRecordingPaymentId(payment.id);
+    try {
+      await calendarRecord.mutateAsync({ dealId: payment.deal_id, paymentId: payment.id });
+    } finally {
+      setRecordingPaymentId(null);
+    }
+  }, [calendarRecord]);
+
+  const handleCalendarDealClick = useCallback((dealId: string) => {
+    setSelectedDealId(dealId);
+    setView('deal-detail');
+    setTab('deals');
+  }, []);
 
   // ── Lead handlers ──
   const handleLeadClick = useCallback((lead: CRMLead) => {
@@ -168,7 +189,9 @@ export default function ClientsPage() {
 
   const handleTabChange = useCallback((newTab: Tab) => {
     setTab(newTab);
-    setView(newTab === 'deals' ? 'deals' : 'list');
+    if (newTab === 'deals') setView('deals');
+    else if (newTab === 'payments') setView('payments');
+    else setView('list');
     setSelectedLead(null);
     setSelectedDealId(null);
   }, []);
@@ -176,8 +199,10 @@ export default function ClientsPage() {
   // ── Render helpers ──
   const isLeadView = view === 'list' || view === 'pipeline' || view === 'detail' || view === 'form';
   const isDealView = view === 'deals' || view === 'deal-detail' || view === 'deal-form';
+  const isPaymentView = view === 'payments';
   const showHeader = (tab === 'leads' && (view === 'list' || view === 'pipeline'))
-    || (tab === 'deals' && view === 'deals');
+    || (tab === 'deals' && view === 'deals')
+    || (tab === 'payments' && view === 'payments');
 
   return (
     <div className="min-h-screen theme-gradient-bg">
@@ -305,6 +330,20 @@ export default function ClientsPage() {
                         <ShoppingCart className="w-3.5 h-3.5" />
                         {td('tabTitle')}
                       </button>
+                      <button
+                        onClick={() => handleTabChange('payments')}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                          tab === 'payments' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'
+                        }`}
+                      >
+                        <CalendarClock className="w-3.5 h-3.5" />
+                        {td('calendar.tabTitle')}
+                        {calendarData && calendarData.summary.overdue_count > 0 && (
+                          <span className="ml-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                            {calendarData.summary.overdue_count}
+                          </span>
+                        )}
+                      </button>
                     </div>
 
                     {/* View toggle (leads only) */}
@@ -327,8 +366,8 @@ export default function ClientsPage() {
                       </div>
                     )}
 
-                    {/* New button */}
-                    {isDealer && (
+                    {/* New button (not shown on payments tab) */}
+                    {isDealer && tab !== 'payments' && (
                       <button
                         onClick={tab === 'leads' ? handleNewLead : handleNewDeal}
                         className="flex items-center gap-2 bg-am-green hover:bg-am-green/80 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
@@ -347,7 +386,17 @@ export default function ClientsPage() {
             {tab === 'deals' && dealStats && <div className="mb-6"><DealStats stats={dealStats} /></div>}
 
             {/* Content */}
-            {tab === 'leads' ? (
+            {tab === 'payments' ? (
+              <PaymentCalendar
+                data={calendarData}
+                isLoading={calendarLoading}
+                onRecordPayment={handleCalendarRecordPayment}
+                isRecording={calendarRecord.isPending}
+                recordingPaymentId={recordingPaymentId}
+                onRefresh={() => refetchCalendar()}
+                onDealClick={handleCalendarDealClick}
+              />
+            ) : tab === 'leads' ? (
               view === 'pipeline' ? (
                 <PipelineView
                   leads={allLeadsData?.leads || []}

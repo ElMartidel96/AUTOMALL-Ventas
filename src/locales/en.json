@@ -3483,6 +3483,27 @@
       "totalCollected": "Collected",
       "outstanding": "Outstanding",
       "overduePayments": "Overdue"
+    },
+    "calendar": {
+      "tabTitle": "Payments",
+      "title": "Payment Calendar",
+      "subtitle": "Track pending payments, today's collections and overdue accounts",
+      "loading": "Loading payment calendar...",
+      "noData": "No payment data available",
+      "overdue": "Overdue",
+      "dueToday": "Due Today",
+      "upcoming": "Upcoming",
+      "totalDue": "Total Due",
+      "refresh": "Refresh",
+      "allClear": "All Clear!",
+      "allClearDesc": "You have no pending or overdue payments. Great job!",
+      "overdueTitle": "OVERDUE — Collect Now",
+      "todayTitle": "TODAY — Due for Collection",
+      "upcomingTitle": "UPCOMING — Next 30 Days",
+      "markPaid": "Paid",
+      "paid": "Paid",
+      "paymentNum": "Payment #{num}",
+      "daysLate": "days late"
     }
   }
 }

@@ -208,6 +208,89 @@ export function useDealStats(walletAddress: string | undefined) {
 }
 
 // ─────────────────────────────────────────────
+// Payment Calendar
+// ─────────────────────────────────────────────
+
+export interface PaymentCalendarData {
+  date: string;
+  view: string;
+  overdue: { payments: CalendarPayment[]; total: number; count: number };
+  today: { payments: CalendarPayment[]; total: number; count: number };
+  upcoming: { payments: CalendarPayment[]; total: number; count: number };
+  summary: {
+    total_due_today: number;
+    total_overdue: number;
+    total_upcoming: number;
+    overdue_count: number;
+    today_count: number;
+    upcoming_count: number;
+  };
+}
+
+export interface CalendarPayment {
+  id: string;
+  deal_id: string;
+  payment_number: number;
+  due_date: string;
+  amount: number;
+  paid_amount: number;
+  paid_date: string | null;
+  status: string;
+  payment_method: string | null;
+  client_name: string;
+  client_phone: string | null;
+  client_whatsapp: string | null;
+  vehicle_brand: string;
+  vehicle_model: string;
+  vehicle_year: number;
+  deal_status: string;
+  installment_amount: number | null;
+}
+
+export function usePaymentCalendar(walletAddress: string | undefined, view: string = 'all') {
+  return useQuery<PaymentCalendarData>({
+    queryKey: ['payment-calendar', walletAddress, view],
+    queryFn: async () => {
+      const res = await fetch(`/api/crm/payments/calendar?view=${view}`, {
+        headers: { 'x-wallet-address': walletAddress! },
+      });
+      if (!res.ok) throw new Error('Failed to fetch payment calendar');
+      return res.json();
+    },
+    enabled: !!walletAddress,
+    staleTime: 30_000,
+    refetchInterval: 60_000, // Auto-refresh every minute
+  });
+}
+
+export function useCalendarRecordPayment(walletAddress: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation<{ payment: CRMPayment }, Error, { dealId: string; paymentId: string }>({
+    mutationFn: async ({ dealId, paymentId }) => {
+      const res = await fetch(`/api/crm/deals/${dealId}/payments`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': walletAddress!,
+        },
+        body: JSON.stringify({ payment_id: paymentId, status: 'paid' }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to record payment');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payment-calendar', walletAddress] });
+      queryClient.invalidateQueries({ queryKey: ['deals', walletAddress] });
+      queryClient.invalidateQueries({ queryKey: ['deal-stats', walletAddress] });
+    },
+  });
+}
+
+// ─────────────────────────────────────────────
 // Export to Excel
 // ─────────────────────────────────────────────
 
