@@ -6,8 +6,13 @@
  * Uses exceljs to create in-memory buffer (no temp files).
  */
 
-import ExcelJS from 'exceljs';
 import type { CRMDeal, CRMPayment } from './types';
+
+// ExcelJS is loaded dynamically inside generateDealExcel() to avoid
+// webpack bundling issues on Vercel (exceljs uses native Node streams/fs).
+type Fill = import('exceljs').Fill;
+type Font = import('exceljs').Font;
+type FillPattern = import('exceljs').FillPattern;
 
 // ── Brand Colors ──
 const AM_BLUE = 'FF1B3A6B';
@@ -15,25 +20,25 @@ const AM_BLUE_LIGHT = 'FF2B5EA7';
 const AM_ORANGE = 'FFE8832A';
 const AM_GREEN = 'FF2D8F4E';
 
-const HEADER_FILL: ExcelJS.Fill = {
+const HEADER_FILL: Fill = {
   type: 'pattern',
   pattern: 'solid',
   fgColor: { argb: AM_BLUE },
 };
 
-const CATEGORY_FILL: ExcelJS.Fill = {
+const CATEGORY_FILL: Fill = {
   type: 'pattern',
   pattern: 'solid',
   fgColor: { argb: AM_BLUE_LIGHT },
 };
 
-const WHITE_FONT: Partial<ExcelJS.Font> = {
+const WHITE_FONT: Partial<Font> = {
   bold: true,
   color: { argb: 'FFFFFFFF' },
   size: 11,
 };
 
-const TITLE_FONT: Partial<ExcelJS.Font> = {
+const TITLE_FONT: Partial<Font> = {
   bold: true,
   color: { argb: 'FFFFFFFF' },
   size: 14,
@@ -154,6 +159,9 @@ export async function generateDealExcel(
   paymentsByDeal: Map<string, CRMPayment[]>,
   sellerName?: string
 ): Promise<Buffer> {
+  // Dynamic import — avoids webpack bundling exceljs at module level
+  const ExcelJS = await import('exceljs');
+
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Autos MALL';
   wb.created = new Date();
@@ -376,7 +384,7 @@ export async function generateDealExcel(
     if (idx % 2 === 1) {
       for (let c = 1; c <= 40; c++) {
         const cell = row.getCell(c);
-        if (!cell.fill || (cell.fill as ExcelJS.FillPattern).pattern !== 'solid') {
+        if (!cell.fill || (cell.fill as FillPattern).pattern !== 'solid') {
           cell.fill = {
             type: 'pattern',
             pattern: 'solid',
