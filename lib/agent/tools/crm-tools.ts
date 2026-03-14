@@ -348,9 +348,10 @@ async function handleExportDealsUrl(_input: z.infer<typeof ExportDealsUrlInput>,
   // Verify seller exists
   await getSellerId(ctx.walletAddress)
   const APP_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || 'autosmall.org'
+  const url = `https://www.${APP_DOMAIN}/api/crm/export?wallet=${encodeURIComponent(ctx.walletAddress)}`
   return {
-    url: `https://${APP_DOMAIN}/api/crm/export`,
-    note: 'Send a GET request with header x-wallet-address to download the XLSX file.',
+    url,
+    note: 'Click the link to download the XLSX file directly. The wallet is embedded in the URL.',
     format: 'XLSX (Excel)',
   }
 }

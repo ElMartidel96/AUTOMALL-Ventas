@@ -12,8 +12,6 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
 
-  // Exclude native Node.js packages from webpack bundling in server routes
-  serverExternalPackages: ['exceljs'],
 
   // Image optimization - Allow external images from Supabase Storage
   images: {
