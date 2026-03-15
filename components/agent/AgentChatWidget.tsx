@@ -318,9 +318,20 @@ function ApexChatInner({ address }: { address: string }) {
     }
   }, [input, isLoading, stagedFiles.length, handleSendWithFiles])
 
-  // Quick suggestion
-  const sendSuggestion = (text: string) => {
-    appendMessage(text)
+  // Quick suggestion — pre-fills the textarea with editable prompt text
+  const prefillSuggestion = (promptText: string) => {
+    // Set the input value and trigger resize
+    const fakeEvent = { target: { value: promptText } } as React.ChangeEvent<HTMLTextAreaElement>
+    handleInputChange(fakeEvent)
+    // Focus the textarea
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.value = promptText
+        textareaRef.current.style.height = 'auto'
+        textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px'
+        textareaRef.current.focus()
+      }
+    }, 50)
   }
 
   // Auto-resize textarea
@@ -334,34 +345,34 @@ function ApexChatInner({ address }: { address: string }) {
   const getSuggestions = (role: UserRole) => {
     if (role === 'seller' || role === 'admin') {
       return [
-        { key: 'suggestInventory', icon: Car, color: 'text-am-orange' },
-        { key: 'suggestLeads', icon: Users, color: 'text-sky-500' },
-        { key: 'suggestDashboard', icon: BarChart3, color: 'text-purple-500' },
-        { key: 'suggestPayments', icon: DollarSign, color: 'text-am-green' },
-        { key: 'suggestAddVehicle', icon: PlusCircle, color: 'text-am-orange' },
-        { key: 'suggestCreateDeal', icon: DollarSign, color: 'text-emerald-500' },
-        { key: 'suggestCampaigns', icon: Megaphone, color: 'text-pink-500' },
-        { key: 'suggestReferralCode', icon: Link2, color: 'text-am-blue' },
+        { key: 'suggestInventory', promptKey: 'promptInventory', icon: Car, color: 'text-am-orange' },
+        { key: 'suggestLeads', promptKey: 'promptLeads', icon: Users, color: 'text-sky-500' },
+        { key: 'suggestDashboard', promptKey: 'promptDashboard', icon: BarChart3, color: 'text-purple-500' },
+        { key: 'suggestPayments', promptKey: 'promptPayments', icon: DollarSign, color: 'text-am-green' },
+        { key: 'suggestAddVehicle', promptKey: 'promptAddVehicle', icon: PlusCircle, color: 'text-am-orange' },
+        { key: 'suggestCreateDeal', promptKey: 'promptCreateDeal', icon: DollarSign, color: 'text-emerald-500' },
+        { key: 'suggestCampaigns', promptKey: 'promptCampaigns', icon: Megaphone, color: 'text-pink-500' },
+        { key: 'suggestReferralCode', promptKey: 'promptReferralCode', icon: Link2, color: 'text-am-blue' },
       ]
     }
     if (role === 'birddog') {
       return [
-        { key: 'suggestReferralCode', icon: Link2, color: 'text-am-blue' },
-        { key: 'suggestDashboard', icon: BarChart3, color: 'text-purple-500' },
-        { key: 'suggestSearch', icon: Search, color: 'text-am-blue' },
-        { key: 'suggestNearbyDealers', icon: MapPin, color: 'text-am-green' },
-        { key: 'suggestCalculator', icon: Calculator, color: 'text-amber-500' },
-        { key: 'suggestVIN', icon: ScanLine, color: 'text-gray-500' },
+        { key: 'suggestReferralCode', promptKey: 'promptReferralCode', icon: Link2, color: 'text-am-blue' },
+        { key: 'suggestDashboard', promptKey: 'promptDashboard', icon: BarChart3, color: 'text-purple-500' },
+        { key: 'suggestSearch', promptKey: undefined, icon: Search, color: 'text-am-blue' },
+        { key: 'suggestNearbyDealers', promptKey: undefined, icon: MapPin, color: 'text-am-green' },
+        { key: 'suggestCalculator', promptKey: undefined, icon: Calculator, color: 'text-amber-500' },
+        { key: 'suggestVIN', promptKey: undefined, icon: ScanLine, color: 'text-gray-500' },
       ]
     }
     // buyer
     return [
-      { key: 'suggestSearch', icon: Search, color: 'text-am-blue' },
-      { key: 'suggestNearbyDealers', icon: MapPin, color: 'text-am-green' },
-      { key: 'suggestFeatured', icon: Sparkles, color: 'text-am-orange' },
-      { key: 'suggestCalculator', icon: Calculator, color: 'text-amber-500' },
-      { key: 'suggestCompare', icon: Car, color: 'text-purple-500' },
-      { key: 'suggestVIN', icon: ScanLine, color: 'text-gray-500' },
+      { key: 'suggestSearch', promptKey: undefined, icon: Search, color: 'text-am-blue' },
+      { key: 'suggestNearbyDealers', promptKey: undefined, icon: MapPin, color: 'text-am-green' },
+      { key: 'suggestFeatured', promptKey: undefined, icon: Sparkles, color: 'text-am-orange' },
+      { key: 'suggestCalculator', promptKey: undefined, icon: Calculator, color: 'text-amber-500' },
+      { key: 'suggestCompare', promptKey: undefined, icon: Car, color: 'text-purple-500' },
+      { key: 'suggestVIN', promptKey: undefined, icon: ScanLine, color: 'text-gray-500' },
     ]
   }
 
@@ -446,10 +457,10 @@ function ApexChatInner({ address }: { address: string }) {
 
                     {/* Quick suggestions — role-based */}
                     <div className="grid grid-cols-2 gap-1.5">
-                      {getSuggestions(userRole).map(({ key, icon: Icon, color }) => (
+                      {getSuggestions(userRole).map(({ key, promptKey, icon: Icon, color }) => (
                         <button
                           key={key}
-                          onClick={() => sendSuggestion(t(`chat.${key}`))}
+                          onClick={() => prefillSuggestion(t(`chat.${promptKey || key}`))}
                           className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 hover:bg-am-blue/10 dark:hover:bg-am-blue/20 transition-colors text-left"
                         >
                           <Icon className={`w-3.5 h-3.5 ${color} shrink-0`} />

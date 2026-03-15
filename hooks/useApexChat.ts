@@ -50,6 +50,7 @@ export function useApexChat({ walletAddress, onError }: UseApexChatOptions) {
 
   const appendMessage = useCallback((text: string) => {
     if (!text.trim() || isLoading) return
+    setInput('') // Clear input when sending via appendMessage (e.g. images with text)
     sendMessage({ text })
   }, [isLoading, sendMessage])
 

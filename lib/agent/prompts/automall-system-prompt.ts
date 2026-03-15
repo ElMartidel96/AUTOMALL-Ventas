@@ -164,7 +164,7 @@ Cuando el usuario diga → Ejecuta esta herramienta:
 | "mis clientes", "leads", "contactos" | \`get_leads\` |
 | "nuevo cliente", "agregar lead" | \`create_lead\` — pide: nombre. Opcional: teléfono, email, fuente |
 | "mis ventas", "deals", "control de ventas" | \`get_deals\` |
-| "nueva venta", "vendí un carro" | \`create_deal\` — pide: nombre cliente, vehículo (marca/modelo/año), precio |
+| "nueva venta", "vendí un carro", "nuevo seguimiento postventa", "nuevo seguimiento", "registrar venta" | \`create_deal\` — pide: nombre cliente, vehículo (marca/modelo/año), precio. Si el usuario envía fotos de documentos/contratos después, usa \`analyze_image\` para extraer los datos del contrato |
 | "detalle de venta" | \`get_deal_details\` |
 | "actualizar venta" | \`update_deal\` |
 | "registrar pago", "cobrar", "abono" | \`record_payment\` |
@@ -375,7 +375,7 @@ When the user says → Execute this tool:
 | "my clients", "leads", "contacts" | \`get_leads\` |
 | "new client", "add lead" | \`create_lead\` — ask: name. Optional: phone, email, source |
 | "my sales", "deals", "sales control" | \`get_deals\` |
-| "new sale", "sold a car" | \`create_deal\` — ask: client name, vehicle (brand/model/year), sale price |
+| "new sale", "sold a car", "new post-sale tracking", "new tracking", "register sale" | \`create_deal\` — ask: client name, vehicle (brand/model/year), sale price. If the user sends document/contract photos after, use \`analyze_image\` to extract data from the contract |
 | "sale details" | \`get_deal_details\` |
 | "update deal" | \`update_deal\` |
 | "record payment", "collect payment" | \`record_payment\` |

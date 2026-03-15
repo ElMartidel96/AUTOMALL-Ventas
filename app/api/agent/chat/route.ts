@@ -274,8 +274,30 @@ export async function POST(req: NextRequest) {
         .replace(/\[?\d+ (?:im[aá]gen(?:es)?|archivo[s]?|documento[s]?|file[s]?)\]?/gi, '')
         .trim() || ''
 
+      // ─── CONVERSATION CONTEXT DETECTION ───
+      // Scan the last 6 messages (user + assistant) for CRM/deal keywords
+      // to determine if we're in a CRM flow (deals, leads, payments) or inventory flow
+      const CRM_KEYWORDS = /deal|venta|seguimiento|postventa|pick\s*payment|pago|cobro|lead|cliente|contrato|financ|cuota|enganche|down\s*payment|installment/i
+      const INVENTORY_KEYWORDS = /inventario|inventory|agregar.*veh[ií]culo|add.*vehicle|listar.*carro|publicar|nuevo.*auto|new.*car|fotos.*auto/i
+
+      const recentMessages = body.messages.slice(-6)
+      const recentText = recentMessages
+        .map((m: any) => extractTextFromRawMessage(m))
+        .join(' ')
+
+      const isCRMContext = CRM_KEYWORDS.test(recentText)
+      const isInventoryContext = INVENTORY_KEYWORDS.test(recentText) && !isCRMContext
+
+      if (isCRMContext) {
+        log.info('CONTEXT: CRM/deals detected — images will route to analyze_image')
+      } else if (isInventoryContext) {
+        log.info('CONTEXT: Inventory detected — images will route to extract_vehicle_from_images')
+      } else {
+        log.info('CONTEXT: Ambiguous — agent will decide')
+      }
+
       // Build file-aware routing instructions
-      let fileInstruction = '\n\n## ARCHIVOS DETECTADOS — ANALIZAR SEGÚN CONTEXTO\n\n'
+      let fileInstruction = '\n\n## ARCHIVOS DETECTADOS\n\n'
 
       if (hasNewDocs) {
         fileInstruction += `El usuario ha enviado ${detectedDocUrls.length} documento(s) (PDF/texto). URLs: ${JSON.stringify(detectedDocUrls)}
@@ -293,11 +315,31 @@ ${userText ? `Texto del usuario: "${userText}"` : 'El usuario no incluyó texto 
         fileInstruction += `\n${hasNewDocs ? 'Además, e' : 'E'}l usuario ha enviado ${detectedImageUrls.length} imagen(es). URLs: ${JSON.stringify(detectedImageUrls)}
 ${!hasNewDocs && userText ? `Texto del usuario: "${userText}"` : ''}
 
-**PARA IMÁGENES — DECIDE por CONTEXTO:**
-1. Inventario / listar carro / fotos de vehículo → \`extract_vehicle_from_images\`
-2. CRM / leads / clientes / screenshots / WhatsApp → \`analyze_image\`
-3. Si no está claro → pregunta al usuario
 `
+        // STRONG routing based on detected conversation context
+        if (isCRMContext) {
+          fileInstruction += `**CONTEXTO DETECTADO: CRM / VENTAS / SEGUIMIENTO POSTVENTA**
+La conversación está en modo de gestión de ventas/deals/pagos.
+Estas imágenes son MUY PROBABLEMENTE **fotos de documentos** (contratos, Pick Payments, formularios de pago, autorizaciones).
+
+→ USA \`analyze_image\` con context="extract all client, vehicle, and financial data from this Pick Payment / sale document"
+→ NUNCA uses \`extract_vehicle_from_images\` — estas NO son fotos de vehículos para catálogo
+→ Del texto extraído por analyze_image, ejecuta \`create_deal\` con TODOS los campos: nombre, teléfono, email, vehículo (marca/modelo/año/VIN), precio, enganche, cuotas, frecuencia, fecha primer pago
+→ financing_type SIEMPRE = "in_house" para Pick Payments
+→ Si hay múltiples imágenes, cada una puede ser un contrato diferente — procésalas una por una
+`
+        } else if (isInventoryContext) {
+          fileInstruction += `**CONTEXTO DETECTADO: INVENTARIO / CATÁLOGO**
+La conversación está en modo de gestión de inventario.
+→ Usa \`extract_vehicle_from_images\` con las image_urls${userText ? ' y text_description' : ''}
+`
+        } else {
+          fileInstruction += `**DECIDE qué herramienta usar basándote en el HISTORIAL DE LA CONVERSACIÓN:**
+1. Si venían hablando de **ventas, deals, pagos, clientes, seguimiento postventa** → \`analyze_image\` (fotos de contratos/documentos)
+2. Si venían hablando de **inventario, listar carros, agregar vehículos, catálogo** → \`extract_vehicle_from_images\`
+3. Si no hay contexto previo claro → **pregunta al usuario**: "¿Estas fotos son de un vehículo para catálogo o de documentos/contratos de venta?"
+`
+        }
       }
 
       fileInstruction += '\nIMPORTANTE: NUNCA asumas que toda imagen es un vehículo. Lee el historial de la conversación para determinar la intención.'
