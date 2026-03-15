@@ -192,7 +192,7 @@ function ApexAgentInner() {
               <div className="h-8 w-8 rounded-full overflow-hidden border border-purple-500/30">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/apeX11.png"
+                  src="/apeX-bubble-flip.png"
                   alt="apeX"
                   className="w-full h-full object-cover"
                 />
@@ -248,7 +248,7 @@ function ApexAgentInner() {
                 <div className="h-12 w-12 rounded-full overflow-hidden border-2 border-purple-500/20 mb-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="/apeX11.png"
+                    src="/apeX-bubble-flip.png"
                     alt="apeX"
                     className="w-full h-full object-cover"
                   />
@@ -362,7 +362,7 @@ function ApexAgentInner() {
         {/* apeX Avatar */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/apeX22.PNG"
+          src="/apeX-bubble.png"
           alt="apeX Assistant"
           className="w-full h-full object-cover"
         />

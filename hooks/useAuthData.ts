@@ -114,20 +114,59 @@ export function useAuthData(): AuthData {
         capturedForRef.current = address!;
         setAuthData(captured);
 
-        // Auto-save to users table if we captured useful data
+        // Auto-save to users table if we captured useful data.
+        // CRITICAL: Do NOT overwrite avatar_url or display_name if the user already
+        // has a custom one (uploaded via profile page). Only set them if currently empty
+        // or still the same OAuth URL. This prevents "Google photo resets my custom avatar" bug.
         if (email || phone || displayName || avatarUrl) {
-          const updates: Record<string, string> = {};
-          if (email) updates.email = email;
-          if (phone) updates.phone = phone;
-          if (displayName) updates.display_name = displayName;
-          if (avatarUrl) updates.avatar_url = avatarUrl;
+          try {
+            // Check what the user currently has in DB
+            const currentRes = await fetch(`/api/users?wallet=${encodeURIComponent(address!)}`);
+            const currentUser = currentRes.ok ? (await currentRes.json()).data : null;
 
-          // Save to users table (may fail if user record doesn't exist yet — that's ok)
-          fetch('/api/users', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ wallet: address, ...updates }),
-          }).catch(() => {});
+            const updates: Record<string, string> = {};
+            if (email) updates.email = email;
+            if (phone) updates.phone = phone;
+
+            // Only set display_name if user has no name yet
+            if (displayName && !currentUser?.display_name) {
+              updates.display_name = displayName;
+            }
+
+            // Only set avatar_url if user has no avatar OR current avatar is from OAuth
+            // (Google, Facebook, Apple CDNs). If user uploaded a custom one, preserve it.
+            const currentAvatar = currentUser?.avatar_url || '';
+            const isOAuthAvatar = !currentAvatar
+              || currentAvatar.includes('googleusercontent.com')
+              || currentAvatar.includes('ggpht.com')
+              || currentAvatar.includes('graph.facebook.com')
+              || currentAvatar.includes('platform-lookaside.fbsbx.com')
+              || currentAvatar.includes('appleid.apple.com');
+
+            if (avatarUrl && isOAuthAvatar) {
+              updates.avatar_url = avatarUrl;
+            }
+
+            if (Object.keys(updates).length > 0) {
+              fetch('/api/users', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ wallet: address, ...updates }),
+              }).catch(() => {});
+            }
+          } catch {
+            // If check fails, still save email/phone but skip avatar/name to be safe
+            const safeUpdates: Record<string, string> = {};
+            if (email) safeUpdates.email = email;
+            if (phone) safeUpdates.phone = phone;
+            if (Object.keys(safeUpdates).length > 0) {
+              fetch('/api/users', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ wallet: address, ...safeUpdates }),
+              }).catch(() => {});
+            }
+          }
         }
       } catch {
         // getProfiles fails if user is not authenticated via inAppWallet — expected for crypto wallets

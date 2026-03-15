@@ -1,8 +1,9 @@
 /**
- * Image Upload Endpoint — /api/agent/chat/upload
+ * File Upload Endpoint — /api/agent/chat/upload
  *
- * Stages vehicle images in Supabase Storage for AI analysis.
- * Uses the SAME bucket and path structure as the WhatsApp pipeline.
+ * Stages images AND documents (PDF, TXT, CSV) in Supabase Storage for AI analysis.
+ * Images use the same bucket/path structure as the WhatsApp pipeline.
+ * Documents go to the same staging path for text extraction by extract_document_text.
  *
  * Auth: x-wallet-address header (platform chat, same-origin).
  */
@@ -16,8 +17,11 @@ export const maxDuration = 30
 
 const BUCKET = 'vehicle-images'
 const MAX_FILES = 10
-const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB per file (client compresses first)
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB per image (client compresses to ~1.5MB, this is safety net matching inventory endpoint)
+const MAX_DOC_SIZE = 10 * 1024 * 1024 // 10MB per document
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const DOC_TYPES = ['application/pdf', 'text/plain', 'text/csv']
+const ALLOWED_TYPES = [...IMAGE_TYPES, ...DOC_TYPES]
 
 let bucketChecked = false
 
@@ -28,7 +32,8 @@ async function ensureBucket() {
   if (!buckets?.some(b => b.name === BUCKET)) {
     await db.storage.createBucket(BUCKET, {
       public: true,
-      allowedMimeTypes: ALLOWED_TYPES,
+      // Allow both images and documents
+      allowedMimeTypes: [...ALLOWED_TYPES],
     })
   }
   bucketChecked = true
@@ -49,27 +54,32 @@ export async function POST(req: NextRequest) {
     }
 
     const formData = await req.formData()
-    const files = formData.getAll('images') as File[]
+    // Accept files from both 'images' (legacy) and 'files' (new) fields
+    const files = [
+      ...formData.getAll('images') as File[],
+      ...formData.getAll('files') as File[],
+    ]
 
     if (!files.length) {
-      return NextResponse.json({ error: 'No images provided' }, { status: 400 })
+      return NextResponse.json({ error: 'No files provided' }, { status: 400 })
     }
 
     if (files.length > MAX_FILES) {
-      return NextResponse.json({ error: `Maximum ${MAX_FILES} images allowed` }, { status: 400 })
+      return NextResponse.json({ error: `Maximum ${MAX_FILES} files allowed` }, { status: 400 })
     }
 
     // Validate files
     for (const file of files) {
       if (!ALLOWED_TYPES.includes(file.type)) {
         return NextResponse.json(
-          { error: `Invalid file type: ${file.type}. Allowed: JPEG, PNG, WebP` },
+          { error: `Invalid file type: ${file.type}. Allowed: JPEG, PNG, WebP, PDF, TXT, CSV` },
           { status: 400 },
         )
       }
-      if (file.size > MAX_FILE_SIZE) {
+      const maxSize = DOC_TYPES.includes(file.type) ? MAX_DOC_SIZE : MAX_IMAGE_SIZE
+      if (file.size > maxSize) {
         return NextResponse.json(
-          { error: `File too large: ${(file.size / 1024 / 1024).toFixed(1)}MB. Max: 5MB` },
+          { error: `File too large: ${(file.size / 1024 / 1024).toFixed(1)}MB. Max: ${DOC_TYPES.includes(file.type) ? '10MB' : '5MB'}` },
           { status: 400 },
         )
       }
@@ -90,7 +100,12 @@ export async function POST(req: NextRequest) {
       const file = files[i]
       const buffer = Buffer.from(await file.arrayBuffer())
 
-      const ext = file.type.includes('png') ? 'png' : file.type.includes('webp') ? 'webp' : 'jpg'
+      const ext = file.type === 'application/pdf' ? 'pdf'
+        : file.type === 'text/csv' ? 'csv'
+        : file.type === 'text/plain' ? 'txt'
+        : file.type.includes('png') ? 'png'
+        : file.type.includes('webp') ? 'webp'
+        : 'jpg'
       const storagePath = `${sellerAddr}/staging/${i}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
 
       const { error: uploadError } = await db.storage

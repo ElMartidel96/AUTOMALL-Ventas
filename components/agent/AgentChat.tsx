@@ -164,7 +164,7 @@ export function AgentChat({
                 <div className="h-8 w-8 rounded-full overflow-hidden border border-purple-500/30 shadow-sm shadow-purple-500/20">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="/apeX11.png"
+                    src="/apeX-bubble-flip.png"
                     alt="apeX"
                     className="w-full h-full object-cover"
                   />
@@ -409,7 +409,7 @@ function MessageBubble({ message, onCopy, isCopied, t }: MessageBubbleProps) {
         <div className="h-8 w-8 flex-shrink-0 rounded-full overflow-hidden border border-purple-500/30 shadow-sm shadow-purple-500/20">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/apeX11.png"
+            src="/apeX-bubble-flip.png"
             alt="apeX"
             className="w-full h-full object-cover"
           />

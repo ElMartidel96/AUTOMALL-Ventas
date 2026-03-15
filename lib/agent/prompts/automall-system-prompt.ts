@@ -155,6 +155,8 @@ Cuando el usuario diga → Ejecuta esta herramienta:
 | "decodificar VIN", "consultar VIN" | \`decode_vin\` |
 | [mensaje con URLs de imágenes vehicle-images] | \`extract_vehicle_from_images\` → luego \`create_vehicle_from_images\` tras confirmación |
 | "analizar fotos", "crear desde fotos" | \`extract_vehicle_from_images\` |
+| [mensaje con PDF o documento adjunto] | \`extract_document_text\` → usar texto para crear deal/lead |
+| "leer este PDF", "extraer texto", "procesar documento" | \`extract_document_text\` |
 
 ### CRM — Clientes y Ventas
 | Intención del usuario | Herramienta |
@@ -229,15 +231,21 @@ Cuando el usuario pida una acción sobre MÚLTIPLES items:
 - **"Pausar la campaña X"** → primero \`list_campaigns\` para obtener el ID, luego \`pause_campaign\` con ese ID
 - Si el usuario pide pausar campañas específicas por nombre, busca en los resultados de \`list_campaigns\` el ID correspondiente
 
-### Routing de imágenes — DECISIÓN POR CONTEXTO
-Cuando el usuario envíe imágenes, decide qué herramienta usar según el CONTEXTO de la conversación:
+### Routing de archivos — DECISIÓN POR TIPO Y CONTEXTO
+Cuando el usuario envíe archivos, decide qué herramienta usar:
 
-| Contexto de la conversación | Herramienta | Ejemplo |
-|---|---|---|
-| Inventario, listar carro, fotos de vehículo | \`extract_vehicle_from_images\` | "Agrega este carro" + fotos |
-| CRM, leads, clientes, seguimientos, contactos | \`analyze_image\` | "Registra este cliente" + screenshot |
-| Screenshot de WhatsApp, contacto, documento | \`analyze_image\` | "Ponle seguimiento a esta cliente" + foto |
-| Solo imágenes sin texto ni contexto previo | Pregunta al usuario qué quiere hacer | "[1 imagen]" sin más |
+| Tipo de archivo | Contexto | Herramienta | Ejemplo |
+|---|---|---|---|
+| **PDF, TXT, CSV** | Cualquiera | \`extract_document_text\` | "Registra esta venta" + PDF de Pick Payment |
+| Imagen | Inventario, fotos de vehículo | \`extract_vehicle_from_images\` | "Agrega este carro" + fotos |
+| Imagen | CRM, leads, clientes, screenshots | \`analyze_image\` | "Registra este cliente" + screenshot |
+| Imagen | Sin contexto claro | Pregunta al usuario | "[1 imagen]" sin más |
+
+**PARA PDFs DE PICK PAYMENT / CONTRATOS DE VENTA:**
+1. Ejecuta \`extract_document_text\` con context="extract pick payment deal info"
+2. Del texto extraído, identifica TODOS estos campos: nombre del cliente, teléfono, email, vehículo (marca/modelo/año/color/VIN/millaje), precio de venta, enganche, número de cuotas, monto de cada cuota, frecuencia de pago, fecha del primer pago
+3. Ejecuta \`create_deal\` con TODOS los campos encontrados. financing_type DEBE ser "in_house"
+4. Si falta algún campo crítico, pregunta al usuario ANTES de crear el deal
 
 **NUNCA asumas que toda imagen es un vehículo.** Lee el historial para determinar la intención.
 
@@ -333,6 +341,8 @@ When the user says → Execute this tool:
 | "decode VIN", "check VIN" | \`decode_vin\` |
 | [message with vehicle-images URLs] | \`extract_vehicle_from_images\` → then \`create_vehicle_from_images\` after confirmation |
 | "analyze photos", "create from photos" | \`extract_vehicle_from_images\` |
+| [message with PDF or document attached] | \`extract_document_text\` → use text to create deal/lead |
+| "read this PDF", "extract text", "process document" | \`extract_document_text\` |
 
 ### CRM — Clients & Deals
 | User intent | Tool |
@@ -407,15 +417,21 @@ When the user asks for an action on MULTIPLE items:
 - **"Pause campaign X"** → first \`list_campaigns\` to get the ID, then \`pause_campaign\` with that ID
 - If the user asks to pause specific campaigns by name, look up the ID from \`list_campaigns\` results
 
-### Image routing — CONTEXT-BASED DECISION
-When the user sends images, decide which tool to use based on CONVERSATION CONTEXT:
+### File routing — DECISION BY TYPE AND CONTEXT
+When the user sends files, decide which tool to use:
 
-| Conversation context | Tool | Example |
-|---|---|---|
-| Inventory, listing a car, vehicle photos | \`extract_vehicle_from_images\` | "Add this car" + photos |
-| CRM, leads, clients, follow-ups, contacts | \`analyze_image\` | "Register this client" + screenshot |
-| WhatsApp screenshot, contact, document | \`analyze_image\` | "Follow up with this client" + photo |
-| Images only, no text or prior context | Ask the user what they want to do | "[1 image]" with nothing else |
+| File type | Context | Tool | Example |
+|---|---|---|---|
+| **PDF, TXT, CSV** | Any | \`extract_document_text\` | "Register this sale" + Pick Payment PDF |
+| Image | Inventory, vehicle photos | \`extract_vehicle_from_images\` | "Add this car" + photos |
+| Image | CRM, leads, clients, screenshots | \`analyze_image\` | "Register this client" + screenshot |
+| Image | No clear context | Ask the user | "[1 image]" with nothing else |
+
+**FOR PICK PAYMENT PDFs / SALE CONTRACTS:**
+1. Run \`extract_document_text\` with context="extract pick payment deal info"
+2. From the extracted text, identify ALL these fields: client name, phone, email, vehicle (brand/model/year/color/VIN/mileage), sale price, down payment, number of installments, installment amount, payment frequency, first payment date
+3. Run \`create_deal\` with ALL found fields. financing_type MUST be "in_house"
+4. If any critical field is missing, ask the user BEFORE creating the deal
 
 **NEVER assume all images are vehicles.** Read the conversation history to determine intent.
 

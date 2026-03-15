@@ -152,11 +152,7 @@ export const Navbar: React.FC = () => {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center gap-3">
-            {mounted && isConnected && address && (
-              <MobileUserBadge address={address} />
-            )}
-
+          <div className="md:hidden flex items-center gap-2">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white focus:outline-none transition-colors"
@@ -169,6 +165,13 @@ export const Navbar: React.FC = () => {
                 )}
               </svg>
             </button>
+
+            {/* Avatar flush to top-right corner of navbar */}
+            {mounted && isConnected && address && (
+              <div className="-mr-3 -mt-3 self-start">
+                <MobileUserBadge address={address} />
+              </div>
+            )}
           </div>
         </div>
 

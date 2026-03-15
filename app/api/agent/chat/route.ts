@@ -60,10 +60,25 @@ const rateLimiter = createRateLimiter()
 // ===================================================
 
 /**
- * Detect staging image URLs in a raw UIMessage.
+ * Detect staging file URLs in a raw UIMessage.
  * Pattern: https://{host}/vehicle-images/{seller}/staging/{filename}
  */
 const STAGING_URL_REGEX = /https:\/\/[^\s]+\/vehicle-images\/[^\s]+\/staging\/[^\s]+\.\w+/g
+
+/** Separate staging URLs into images vs documents */
+const DOC_EXTENSIONS = /\.(pdf|txt|csv)$/i
+function classifyStagingUrls(urls: string[]): { imageUrls: string[]; docUrls: string[] } {
+  const imageUrls: string[] = []
+  const docUrls: string[] = []
+  for (const url of urls) {
+    if (DOC_EXTENSIONS.test(url)) {
+      docUrls.push(url)
+    } else {
+      imageUrls.push(url)
+    }
+  }
+  return { imageUrls, docUrls }
+}
 
 /**
  * Extract text content from a raw UIMessage (handles both parts and content formats).
@@ -243,40 +258,51 @@ export async function POST(req: NextRequest) {
 
     log.info(`tools=${registryTools.length} role=${role}`)
 
-    // ─── IMAGE DETECTION — Context-aware routing ───
-    // Detect staging image URLs but let the AI decide which tool to use based on conversation context.
-    // Previously this forced extract_vehicle_from_images for ALL images, breaking CRM workflows
-    // when users sent screenshots of client contacts, WhatsApp conversations, documents, etc.
-    const detectedImageUrls = detectStagingImagesFromRaw(body.messages)
+    // ─── FILE DETECTION — Context-aware routing (images + documents) ───
+    const detectedAllUrls = detectStagingImagesFromRaw(body.messages)
+    const { imageUrls: detectedImageUrls, docUrls: detectedDocUrls } = classifyStagingUrls(detectedAllUrls)
     const hasNewImages = detectedImageUrls.length > 0
+    const hasNewDocs = detectedDocUrls.length > 0
 
-    if (hasNewImages) {
-      log.info(`IMAGES DETECTED: ${detectedImageUrls.length} staging URLs`)
+    if (hasNewImages || hasNewDocs) {
+      log.info(`FILES DETECTED: ${detectedImageUrls.length} images, ${detectedDocUrls.length} documents`)
 
       // Extract user's text (everything NOT a URL)
       const lastUserRaw = [...body.messages].reverse().find((m: any) => m.role === 'user')
       const userText = extractTextFromRawMessage(lastUserRaw || {})
         .replace(STAGING_URL_REGEX, '')
-        .replace(/\[?\d+ im[aá]gen(es)?\]?/gi, '')
+        .replace(/\[?\d+ (?:im[aá]gen(?:es)?|archivo[s]?|documento[s]?|file[s]?)\]?/gi, '')
         .trim() || ''
 
-      // Inject context-aware instruction — AI decides which tool to use
-      system += `\n\n## IMÁGENES DETECTADAS — ANALIZAR SEGÚN CONTEXTO
+      // Build file-aware routing instructions
+      let fileInstruction = '\n\n## ARCHIVOS DETECTADOS — ANALIZAR SEGÚN CONTEXTO\n\n'
 
-El usuario ha enviado ${detectedImageUrls.length} imagen(es). URLs: ${JSON.stringify(detectedImageUrls)}
+      if (hasNewDocs) {
+        fileInstruction += `El usuario ha enviado ${detectedDocUrls.length} documento(s) (PDF/texto). URLs: ${JSON.stringify(detectedDocUrls)}
 ${userText ? `Texto del usuario: "${userText}"` : 'El usuario no incluyó texto descriptivo.'}
 
-**DECIDE qué herramienta usar basándote en el CONTEXTO DE LA CONVERSACIÓN:**
+**PARA DOCUMENTOS (PDF, TXT, CSV):**
+→ Usa \`extract_document_text\` con las document_urls${userText ? ` y context="${userText}"` : ''}
+→ Luego usa el texto extraído para la acción que el usuario pidió (crear deal, lead, etc.)
+→ Para **Pick Payment / contratos de venta**: extrae TODOS los campos financieros y del cliente del texto, y luego ejecuta \`create_deal\` con financing_type="in_house" y TODOS los campos requeridos.
+→ SIEMPRE extrae: nombre del cliente, teléfono, email, vehículo, precio, enganche, cuotas, frecuencia de pago, fecha primer pago.
+`
+      }
 
-1. Si el contexto es sobre **inventario, listar un carro, publicar vehículo, o las imágenes muestran claramente un auto**:
-   → Usa \`extract_vehicle_from_images\` con las image_urls${userText ? ' y text_description' : ''}
+      if (hasNewImages) {
+        fileInstruction += `\n${hasNewDocs ? 'Además, e' : 'E'}l usuario ha enviado ${detectedImageUrls.length} imagen(es). URLs: ${JSON.stringify(detectedImageUrls)}
+${!hasNewDocs && userText ? `Texto del usuario: "${userText}"` : ''}
 
-2. Si el contexto es sobre **CRM, leads, clientes, seguimientos, contactos**, o las imágenes parecen ser **screenshots, fotos de contacto, documentos, conversaciones de WhatsApp**:
-   → Usa \`analyze_image\` para extraer texto/información de la imagen y úsala para la acción CRM que el usuario pidió
+**PARA IMÁGENES — DECIDE por CONTEXTO:**
+1. Inventario / listar carro / fotos de vehículo → \`extract_vehicle_from_images\`
+2. CRM / leads / clientes / screenshots / WhatsApp → \`analyze_image\`
+3. Si no está claro → pregunta al usuario
+`
+      }
 
-3. Si no está claro el propósito, **pregunta al usuario** qué quiere hacer con la imagen.
+      fileInstruction += '\nIMPORTANTE: NUNCA asumas que toda imagen es un vehículo. Lee el historial de la conversación para determinar la intención.'
 
-IMPORTANTE: NUNCA asumas que toda imagen es un vehículo. Lee el historial de la conversación para determinar la intención.`
+      system += fileInstruction
     }
 
     // toolChoice always auto — let the model decide based on context

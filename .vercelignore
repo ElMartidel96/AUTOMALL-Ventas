@@ -71,6 +71,8 @@ build
 !public/apeX22.PNG
 !public/apeX-aro.png
 !public/apeX-avatar.png
+!public/apeX-bubble.png
+!public/apeX-bubble-flip.png
 # Farcaster Mini App Images (CRITICAL for Warpcast Hosted Manifest)
 !public/farcaster-icon-1024.png
 !public/farcaster-splash-200.png

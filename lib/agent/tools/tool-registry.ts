@@ -16,6 +16,7 @@ import { crmTools } from './crm-tools'
 import { campaignTools } from './campaign-tools'
 import { metaTools } from './meta-tools'
 import { visionTools } from './vision-tools'
+import { documentTools } from './document-tools'
 
 // ===================================================
 // UTILITY TOOLS (inline — no DB needed)
@@ -122,6 +123,7 @@ class ToolRegistry {
       ...campaignTools,
       ...metaTools,
       ...visionTools,
+      ...documentTools,
       ...utilityTools,
     ]
 

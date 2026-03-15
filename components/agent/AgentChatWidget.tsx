@@ -38,6 +38,7 @@ import {
   Paperclip,
   X,
   ImageIcon,
+  FileText,
 } from 'lucide-react'
 import { useAccount } from '@/lib/thirdweb'
 import { useApexChat } from '@/hooks/useApexChat'
@@ -49,12 +50,14 @@ import { compressImageSmart } from '@/lib/inventory/image-utils'
 // TYPES
 // ===================================================
 
-interface StagedImageInfo {
+interface StagedFileInfo {
   public_url: string
   storage_path: string
   file_size: number
   mime_type: string
-  preview_url: string // Local blob URL for thumbnails
+  preview_url: string // Local blob URL for image thumbnails, empty for documents
+  file_name: string // Original file name for display
+  is_document: boolean // true for PDF/TXT/CSV, false for images
 }
 
 // ===================================================
@@ -91,8 +94,8 @@ function ApexChatInner({ address }: { address: string }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Image upload state
-  const [stagedImages, setStagedImages] = useState<StagedImageInfo[]>([])
+  // File upload state (images + documents)
+  const [stagedFiles, setStagedFiles] = useState<StagedFileInfo[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
 
@@ -153,7 +156,7 @@ function ApexChatInner({ address }: { address: string }) {
   // Cleanup preview URLs on unmount
   useEffect(() => {
     return () => {
-      stagedImages.forEach(img => URL.revokeObjectURL(img.preview_url))
+      stagedFiles.forEach(f => { if (f.preview_url) URL.revokeObjectURL(f.preview_url) })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -168,8 +171,10 @@ function ApexChatInner({ address }: { address: string }) {
   const cursorDeepLink = `cursor://anysphere.cursor-deeplink/mcp/install?name=AutoMALL&config=${cursorConfig}`
 
   // ===================================================
-  // IMAGE UPLOAD — Same pipeline as WhatsApp
+  // FILE UPLOAD — Images (compressed) + Documents (raw)
   // ===================================================
+
+  const DOC_MIME_TYPES = ['application/pdf', 'text/plain', 'text/csv']
 
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
@@ -178,7 +183,7 @@ function ApexChatInner({ address }: { address: string }) {
     // Reset file input so same files can be selected again
     if (fileInputRef.current) fileInputRef.current.value = ''
 
-    const remaining = 10 - stagedImages.length
+    const remaining = 10 - stagedFiles.length
     if (remaining <= 0) {
       setUploadError(t('chat.maxImages'))
       return
@@ -189,18 +194,28 @@ function ApexChatInner({ address }: { address: string }) {
     setUploadError(null)
 
     try {
-      // Phase 1: Client-side compression (same compressImageSmart as WhatsApp)
-      const compressed: { blob: Blob; preview: string; name: string }[] = []
-      for (const file of filesToProcess) {
+      // Separate images (need compression) from documents (upload raw)
+      const imageFiles = filesToProcess.filter(f => !DOC_MIME_TYPES.includes(f.type))
+      const docFiles = filesToProcess.filter(f => DOC_MIME_TYPES.includes(f.type))
+
+      // Phase 1: Compress images (same compressImageSmart as WhatsApp)
+      const prepared: { blob: Blob; preview: string; name: string; isDoc: boolean }[] = []
+
+      for (const file of imageFiles) {
         const { blob } = await compressImageSmart(file)
         const preview = URL.createObjectURL(blob)
-        compressed.push({ blob, preview, name: file.name })
+        prepared.push({ blob, preview, name: file.name, isDoc: false })
+      }
+
+      // Documents: no compression, no preview thumbnail
+      for (const file of docFiles) {
+        prepared.push({ blob: file, preview: '', name: file.name, isDoc: true })
       }
 
       // Phase 2: Upload to staging endpoint
       const formData = new FormData()
-      for (const { blob, name } of compressed) {
-        formData.append('images', blob, name)
+      for (const { blob, name, isDoc } of prepared) {
+        formData.append(isDoc ? 'files' : 'images', blob, name)
       }
 
       const res = await fetch('/api/agent/chat/upload', {
@@ -217,69 +232,82 @@ function ApexChatInner({ address }: { address: string }) {
       const data = await res.json()
 
       // Merge staged results with local previews
-      const newStaged: StagedImageInfo[] = data.images.map((img: any, i: number) => ({
-        ...img,
-        preview_url: compressed[i]?.preview || img.public_url,
-      }))
+      const newStaged: StagedFileInfo[] = data.images.map((item: any, i: number) => {
+        const isDoc = DOC_MIME_TYPES.includes(item.mime_type)
+        return {
+          ...item,
+          preview_url: isDoc ? '' : (prepared[i]?.preview || item.public_url),
+          file_name: prepared[i]?.name || 'file',
+          is_document: isDoc,
+        }
+      })
 
-      setStagedImages(prev => [...prev, ...newStaged])
+      setStagedFiles(prev => [...prev, ...newStaged])
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : 'Upload failed')
-      // Cleanup any previews we created
     } finally {
       setIsUploading(false)
     }
-  }, [address, stagedImages.length, t])
+  }, [address, stagedFiles.length, t])
 
-  const removeImage = useCallback((index: number) => {
-    setStagedImages(prev => {
+  const removeFile = useCallback((index: number) => {
+    setStagedFiles(prev => {
       const removed = prev[index]
-      if (removed) URL.revokeObjectURL(removed.preview_url)
+      if (removed?.preview_url) URL.revokeObjectURL(removed.preview_url)
       return prev.filter((_, i) => i !== index)
     })
   }, [])
 
-  const clearImages = useCallback(() => {
-    stagedImages.forEach(img => URL.revokeObjectURL(img.preview_url))
-    setStagedImages([])
+  const clearFiles = useCallback(() => {
+    stagedFiles.forEach(f => { if (f.preview_url) URL.revokeObjectURL(f.preview_url) })
+    setStagedFiles([])
     setUploadError(null)
-  }, [stagedImages])
+  }, [stagedFiles])
 
   // ===================================================
-  // MESSAGE SUBMISSION — Includes image URLs when present
+  // MESSAGE SUBMISSION — Includes file URLs when present
   // ===================================================
 
-  const handleSendWithImages = useCallback((e?: React.FormEvent) => {
+  const handleSendWithFiles = useCallback((e?: React.FormEvent) => {
     e?.preventDefault?.()
 
-    if (stagedImages.length > 0) {
-      // Build message with image URLs for AI to detect and analyze
-      const imageUrls = stagedImages.map(img => img.public_url)
-      const urlList = imageUrls.join('\n')
+    if (stagedFiles.length > 0) {
+      // Build message with file URLs for AI to detect and process
+      const fileUrls = stagedFiles.map(f => f.public_url)
+      const urlList = fileUrls.join('\n')
+
+      const numFiles = stagedFiles.length
+      const hasImages = stagedFiles.some(f => !f.is_document)
+      const hasDocs = stagedFiles.some(f => f.is_document)
+      const label = hasImages && hasDocs
+        ? `${numFiles} archivo${numFiles > 1 ? 's' : ''}`
+        : hasDocs
+          ? `${numFiles} documento${numFiles > 1 ? 's' : ''}`
+          : `${numFiles} ${numFiles === 1 ? 'imagen' : 'imágenes'}`
 
       const userText = input.trim()
-      const imageMsg = userText
-        ? `${userText}\n\n[${stagedImages.length} ${stagedImages.length === 1 ? 'imagen' : 'imágenes'}]\n${urlList}`
-        : `[${stagedImages.length} ${stagedImages.length === 1 ? 'imagen' : 'imágenes'}]\n${urlList}`
+      const fileMsg = userText
+        ? `${userText}\n\n[${label}]\n${urlList}`
+        : `[${label}]\n${urlList}`
 
-      // Clear images after sending
-      stagedImages.forEach(img => URL.revokeObjectURL(img.preview_url))
-      setStagedImages([])
-      appendMessage(imageMsg)
+      // Clear files after sending
+      stagedFiles.forEach(f => { if (f.preview_url) URL.revokeObjectURL(f.preview_url) })
+      setStagedFiles([])
+      appendMessage(fileMsg)
     } else {
       handleSubmit(e as any)
     }
-  }, [input, stagedImages, handleSubmit, appendMessage])
+  }, [input, stagedFiles, handleSubmit, appendMessage])
 
   // Handle Enter to send, Shift+Enter for newline
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      if ((input.trim() || stagedImages.length > 0) && !isLoading) {
-        handleSendWithImages()
+      if ((input.trim() || stagedFiles.length > 0) && !isLoading) {
+        handleSendWithFiles()
       }
     }
-  }, [input, isLoading, stagedImages.length, handleSendWithImages])
+  }, [input, isLoading, stagedFiles.length, handleSendWithFiles])
 
   // Quick suggestion
   const sendSuggestion = (text: string) => {
@@ -328,8 +356,8 @@ function ApexChatInner({ address }: { address: string }) {
     ]
   }
 
-  // Check if role supports image upload (only sellers/admin)
-  const canUploadImages = userRole === 'seller' || userRole === 'admin'
+  // Check if role supports file upload (only sellers/admin)
+  const canUploadFiles = userRole === 'seller' || userRole === 'admin'
 
   return (
     <div className="fixed bottom-6 right-6" style={{ zIndex: 10001 }}>
@@ -354,7 +382,7 @@ function ApexChatInner({ address }: { address: string }) {
               )}
               <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white/30 shadow-md shrink-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/apeX11.png" alt="apeX" className="w-full h-full object-cover" />
+                <img src="/apeX-bubble-flip.png" alt="apeX" className="w-full h-full object-cover" />
               </div>
               <div>
                 <p className="font-bold text-sm leading-tight">apeX</p>
@@ -401,7 +429,7 @@ function ApexChatInner({ address }: { address: string }) {
                   <div className="text-center py-6">
                     <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-am-blue/20 shadow-md mx-auto mb-3">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/apeX11.png" alt="apeX" className="w-full h-full object-cover" />
+                      <img src="/apeX-bubble-flip.png" alt="apeX" className="w-full h-full object-cover" />
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 max-w-[280px] mx-auto">
                       {t('chat.welcomeMessage')}
@@ -501,24 +529,33 @@ function ApexChatInner({ address }: { address: string }) {
 
               {/* Input area */}
               <div className="shrink-0 border-t border-gray-200/50 dark:border-gray-700/50 p-3">
-                {/* Image thumbnails strip */}
-                {stagedImages.length > 0 && (
+                {/* File thumbnails strip */}
+                {stagedFiles.length > 0 && (
                   <div className="flex items-center gap-1.5 mb-2 overflow-x-auto pb-1">
-                    {stagedImages.map((img, i) => (
+                    {stagedFiles.map((file, i) => (
                       <div key={i} className="relative shrink-0 w-14 h-14 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 group">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={img.preview_url} alt={`Preview ${i + 1}`} className="w-full h-full object-cover" />
+                        {file.is_document ? (
+                          <div className="w-full h-full bg-red-50 dark:bg-red-900/30 flex flex-col items-center justify-center">
+                            <FileText className="w-5 h-5 text-red-500" />
+                            <span className="text-[8px] text-red-600 dark:text-red-400 font-bold mt-0.5 uppercase">
+                              {file.mime_type.includes('pdf') ? 'PDF' : file.mime_type.includes('csv') ? 'CSV' : 'TXT'}
+                            </span>
+                          </div>
+                        ) : (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={file.preview_url} alt={`Preview ${i + 1}`} className="w-full h-full object-cover" />
+                        )}
                         <button
-                          onClick={() => removeImage(i)}
+                          onClick={() => removeFile(i)}
                           className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <X className="w-2.5 h-2.5" />
                         </button>
                       </div>
                     ))}
-                    {stagedImages.length > 1 && (
+                    {stagedFiles.length > 1 && (
                       <button
-                        onClick={clearImages}
+                        onClick={clearFiles}
                         className="shrink-0 text-[10px] text-red-500 hover:text-red-700 px-1"
                       >
                         {t('chat.clearAll')}
@@ -540,31 +577,31 @@ function ApexChatInner({ address }: { address: string }) {
                   </div>
                 )}
 
-                <form onSubmit={handleSendWithImages} className="flex items-end gap-2">
-                  {/* Hidden file input */}
+                <form onSubmit={handleSendWithFiles} className="flex items-end gap-2">
+                  {/* Hidden file input — accepts images + documents */}
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/jpeg,image/png,image/webp,image/heic"
+                    accept="image/jpeg,image/png,image/webp,image/heic,application/pdf,text/plain,text/csv,.pdf,.txt,.csv"
                     multiple
                     onChange={handleFileSelect}
                     className="hidden"
                   />
 
-                  {/* Image upload button — only for sellers/admin */}
-                  {canUploadImages && (
+                  {/* File upload button — only for sellers/admin */}
+                  {canUploadFiles && (
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      disabled={isUploading || isLoading || stagedImages.length >= 10}
+                      disabled={isUploading || isLoading || stagedFiles.length >= 10}
                       className="shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-500 hover:text-am-blue hover:border-am-blue/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                       title={t('chat.attachImages')}
                     >
-                      {stagedImages.length > 0 ? (
+                      {stagedFiles.length > 0 ? (
                         <div className="relative">
-                          <ImageIcon className="w-4 h-4" />
+                          {stagedFiles.some(f => f.is_document) ? <FileText className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />}
                           <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-am-blue text-white text-[8px] font-bold flex items-center justify-center">
-                            {stagedImages.length}
+                            {stagedFiles.length}
                           </span>
                         </div>
                       ) : (
@@ -578,7 +615,7 @@ function ApexChatInner({ address }: { address: string }) {
                     value={input}
                     onChange={handleTextareaChange}
                     onKeyDown={handleKeyDown}
-                    placeholder={stagedImages.length > 0 ? t('chat.placeholderWithImages') : t('chat.placeholder')}
+                    placeholder={stagedFiles.length > 0 ? t('chat.placeholderWithImages') : t('chat.placeholder')}
                     rows={1}
                     className="flex-1 resize-none bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-am-blue/30 focus:border-am-blue/50 transition-colors"
                     style={{ maxHeight: '120px' }}
@@ -586,7 +623,7 @@ function ApexChatInner({ address }: { address: string }) {
                   />
                   <button
                     type="submit"
-                    disabled={(!input.trim() && stagedImages.length === 0) || isLoading || isUploading}
+                    disabled={(!input.trim() && stagedFiles.length === 0) || isLoading || isUploading}
                     className="shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-am-blue text-white hover:bg-am-blue-light disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     <Send className="w-4 h-4" />
@@ -687,7 +724,7 @@ function ApexChatInner({ address }: { address: string }) {
         aria-label={t('chat.open')}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/apeX22.PNG" alt="apeX Assistant" className="w-full h-full object-cover" />
+        <img src="/apeX-bubble.png" alt="apeX Assistant" className="w-full h-full object-cover" />
 
         {isOpen && (
           <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
