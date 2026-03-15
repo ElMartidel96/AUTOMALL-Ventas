@@ -201,10 +201,30 @@ async function handleCreateDeal(input: z.infer<typeof CreateDealInput>, ctx: Too
   const sellerId = await getSellerId(ctx.walletAddress)
   const { createDeal, convertLeadToDeal } = await import('@/lib/crm/deal-service')
 
-  if (input.lead_id) {
-    return convertLeadToDeal(input.lead_id, sellerId, input)
+  try {
+    if (input.lead_id) {
+      return convertLeadToDeal(input.lead_id, sellerId, input)
+    }
+    return createDeal(sellerId, input)
+  } catch (err: any) {
+    // Surface duplicate detection as structured data (not a crash)
+    if (err?.duplicate && err?.existing_deal) {
+      return {
+        duplicate_detected: true,
+        message: err.message,
+        existing_deal: {
+          id: err.existing_deal.id,
+          client_name: err.existing_deal.client_name,
+          vehicle: `${err.existing_deal.vehicle_brand} ${err.existing_deal.vehicle_model} ${err.existing_deal.vehicle_year}`,
+          sale_price: err.existing_deal.sale_price,
+          sale_date: err.existing_deal.sale_date,
+          deal_status: err.existing_deal.deal_status,
+        },
+        suggestion: 'This deal already exists. Use update_deal with the existing deal ID to modify it, or confirm with the user if this is intentionally a different deal.',
+      }
+    }
+    throw err // Re-throw non-duplicate errors
   }
-  return createDeal(sellerId, input)
 }
 
 async function handleUpdateDeal(input: z.infer<typeof UpdateDealInput>, ctx: ToolContext) {

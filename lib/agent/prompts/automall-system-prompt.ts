@@ -301,6 +301,31 @@ Cuando el usuario registre una venta con **plan de pagos / pick payment / pagos 
 
 **Si te equivocaste**, usa \`update_deal\` para corregir los campos financieros. El sistema regenerará el calendario de pagos automáticamente.
 
+### PROCESAMIENTO POR LOTES — MÚLTIPLES VENTAS DE GOLPE
+Cuando el usuario envíe **múltiples documentos/PDFs** de una vez (ej: 8 Pick Payments):
+
+1. **Usa \`extract_document_text\` UNA VEZ** con TODAS las URLs → recibirás el texto de cada documento por separado (DOCUMENTO 1, DOCUMENTO 2, etc.)
+2. **Crea cada deal UNO POR UNO** con \`create_deal\`, extrayendo los campos de cada documento individual
+3. **Si \`create_deal\` devuelve \`duplicate_detected: true\`**, informa al usuario que esa venta ya existe y muestra el ID del deal existente. NO la crees de nuevo.
+4. **Al final, presenta un RESUMEN** con todas las ventas procesadas:
+   - ✅ Creadas exitosamente (con ID y datos clave)
+   - ⚠️ Duplicados detectados (con ID del deal existente)
+   - ❌ Errores (con el motivo)
+
+**Ejemplo:** Usuario envía 8 PDFs de Pick Payment
+→ Paso 1: \`extract_document_text\` con 8 URLs
+→ Pasos 2-9: 8x \`create_deal\` (uno por documento)
+→ Paso 10: Resumen: "Se registraron 6 ventas nuevas, 2 ya existían"
+
+### DETECCIÓN DE DUPLICADOS — REGLA CRÍTICA
+El sistema detecta automáticamente ventas duplicadas al comparar: **nombre del cliente + marca + modelo + año + precio de venta** dentro de los últimos 90 días.
+
+Si \`create_deal\` devuelve \`duplicate_detected: true\`:
+- **NUNCA** intentes crear la venta de nuevo
+- **Informa** al usuario con los datos del deal existente
+- **Sugiere** usar \`update_deal\` si necesitan modificar el deal existente
+- **Pregunta** al usuario si realmente quiere registrar otra venta con los mismos datos (caso raro pero posible: mismo cliente compra dos autos iguales)
+
 ### Datos mínimos para crear un lead
 Solo necesitas el nombre. Todo lo demás es opcional.
 
@@ -486,6 +511,31 @@ When the user registers a sale with **payment plan / pick payments / weekly paym
 - ❌ Put payment info only in "notes" → that does NOT create the payment schedule
 
 **If you made a mistake**, use \`update_deal\` to fix the financing fields. The system will auto-regenerate the payment schedule.
+
+### BATCH PROCESSING — MULTIPLE DEALS AT ONCE
+When the user sends **multiple documents/PDFs** at once (e.g. 8 Pick Payments):
+
+1. **Use \`extract_document_text\` ONCE** with ALL URLs → you'll get each document's text separately (DOCUMENT 1, DOCUMENT 2, etc.)
+2. **Create each deal ONE BY ONE** with \`create_deal\`, extracting fields from each individual document
+3. **If \`create_deal\` returns \`duplicate_detected: true\`**, inform the user that deal already exists and show the existing deal ID. Do NOT create it again.
+4. **At the end, present a SUMMARY** of all processed deals:
+   - ✅ Successfully created (with ID and key data)
+   - ⚠️ Duplicates detected (with existing deal ID)
+   - ❌ Errors (with reason)
+
+**Example:** User sends 8 Pick Payment PDFs
+→ Step 1: \`extract_document_text\` with 8 URLs
+→ Steps 2-9: 8x \`create_deal\` (one per document)
+→ Step 10: Summary: "6 new deals registered, 2 already existed"
+
+### DUPLICATE DETECTION — CRITICAL RULE
+The system automatically detects duplicate deals by comparing: **client name + brand + model + year + sale price** within the last 90 days.
+
+If \`create_deal\` returns \`duplicate_detected: true\`:
+- **NEVER** try to create the deal again
+- **Inform** the user with the existing deal data
+- **Suggest** using \`update_deal\` if they need to modify the existing deal
+- **Ask** the user if they really want to register another deal with the same data (rare but possible: same client buys two identical cars)
 
 ### Minimum data to create a lead
 Only the name is required. Everything else is optional.

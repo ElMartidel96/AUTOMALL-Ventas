@@ -123,12 +123,68 @@ export async function getDealById(dealId: string, sellerId: string) {
 }
 
 // ─────────────────────────────────────────────
+// Duplicate Detection
+// ─────────────────────────────────────────────
+
+/**
+ * Check for an existing deal with matching key fields (same seller, within 90 days).
+ * Criteria: client_name (case-insensitive) + vehicle_brand + vehicle_model + vehicle_year + sale_price
+ * Returns the existing deal if found, null otherwise.
+ */
+export async function checkDuplicateDeal(
+  sellerId: string,
+  clientName: string,
+  vehicleBrand: string,
+  vehicleModel: string,
+  vehicleYear: number,
+  salePrice: number,
+): Promise<CRMDeal | null> {
+  const supabase = getTypedClient();
+  const ninetyDaysAgo = new Date();
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+  const { data, error } = await supabase
+    .from('crm_deals')
+    .select('*')
+    .eq('seller_id', sellerId)
+    .ilike('client_name', clientName.trim())
+    .ilike('vehicle_brand', vehicleBrand.trim())
+    .ilike('vehicle_model', vehicleModel.trim())
+    .eq('vehicle_year', vehicleYear)
+    .eq('sale_price', salePrice)
+    .gte('created_at', ninetyDaysAgo.toISOString())
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.warn(LOG, 'Duplicate check failed (non-blocking):', error.message);
+    return null; // Fail open — don't block creation if check fails
+  }
+
+  return data as CRMDeal | null;
+}
+
+// ─────────────────────────────────────────────
 // Create Deal + Payment Schedule
 // ─────────────────────────────────────────────
 
 export async function createDeal(sellerId: string, data: DealInsert) {
   console.log(LOG, 'Creating deal for', data.client_name);
   const supabase = getTypedClient();
+
+  // ── Duplicate detection ──
+  const existing = await checkDuplicateDeal(
+    sellerId, data.client_name, data.vehicle_brand,
+    data.vehicle_model, data.vehicle_year, data.sale_price,
+  );
+  if (existing) {
+    const err = new Error(
+      `DUPLICATE: A deal for "${data.client_name}" with ${data.vehicle_brand} ${data.vehicle_model} ${data.vehicle_year} at $${data.sale_price} already exists (ID: ${existing.id}, created ${existing.sale_date}). Use update_deal to modify it instead.`
+    );
+    (err as any).duplicate = true;
+    (err as any).existing_deal = existing;
+    throw err;
+  }
 
   const downPayment = data.down_payment || 0;
   const financingType = data.financing_type || 'cash';

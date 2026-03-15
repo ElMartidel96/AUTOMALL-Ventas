@@ -318,9 +318,9 @@ ${!hasNewDocs && userText ? `Texto del usuario: "${userText}"` : ''}
       toolChoice: toolChoiceValue,
       // CRITICAL: stopWhen controls how many steps the model can take.
       // Default is stepCountIs(1) — model makes ONE call, never processes tool results.
-      // With stepCountIs(5), the model can call tools and then process their output.
-      // This was THE root cause of tools not working.
-      stopWhen: stepCountIs(5),
+      // stepCountIs(15) allows batch operations: e.g. 1 extract_document_text (8 PDFs)
+      // + 8 create_deal calls + summary = ~10 steps. 15 gives headroom for retries.
+      stopWhen: stepCountIs(15),
       maxOutputTokens: 2000,
       providerOptions: {
         openai: { structuredOutputs: false },

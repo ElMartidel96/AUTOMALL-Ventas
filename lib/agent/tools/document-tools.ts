@@ -21,8 +21,8 @@ const MAX_PDF_SIZE_BYTES = 10 * 1024 * 1024 // 10MB
 // ===================================================
 
 const ExtractDocumentTextInput = z.object({
-  document_urls: z.array(z.string().url()).min(1).max(3)
-    .describe('Public URLs of documents to extract text from (PDF, TXT, CSV)'),
+  document_urls: z.array(z.string().url()).min(1).max(10)
+    .describe('Public URLs of documents to extract text from (PDF, TXT, CSV). Supports batch: up to 10 documents at once.'),
   context: z.string().optional()
     .describe('What the user wants to extract or do with the document (e.g. "extract pick payment deal info", "read this contract")'),
 })
@@ -184,19 +184,30 @@ async function handleExtractDocumentText(
     }
   }
 
-  // Combine all extracted text
-  const allText = results
-    .filter(r => r.text)
-    .map(r => r.text)
-    .join('\n\n---\n\n')
-
   const errors = results.filter(r => r.error)
 
+  // For batch processing: return each document's text separately so the agent
+  // can create individual deals from each one without confusion
+  const documents = results.map((r, i) => ({
+    document_number: i + 1,
+    url: r.url,
+    text: r.text || '(No text extracted)',
+    method: r.method,
+    has_text: !!r.text,
+    ...(r.error ? { error: r.error } : {}),
+  }))
+
+  // Also provide combined text for single-document convenience
+  const allText = results
+    .filter(r => r.text)
+    .map((r, i) => `=== DOCUMENTO ${i + 1} ===\n${r.text}`)
+    .join('\n\n')
+
   return {
-    extracted_text: allText || '(No text could be extracted from the document)',
+    extracted_text: allText || '(No text could be extracted from any document)',
+    documents,
     documents_processed: results.length,
     documents_with_text: results.filter(r => r.text).length,
-    extraction_methods: results.map(r => ({ url: r.url, method: r.method, has_text: !!r.text })),
     ...(errors.length > 0 ? { errors: errors.map(e => ({ url: e.url, error: e.error })) } : {}),
   }
 }
