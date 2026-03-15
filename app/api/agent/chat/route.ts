@@ -320,13 +320,21 @@ ${!hasNewDocs && userText ? `Texto del usuario: "${userText}"` : ''}
         if (isCRMContext) {
           fileInstruction += `**CONTEXTO DETECTADO: CRM / VENTAS / SEGUIMIENTO POSTVENTA**
 La conversación está en modo de gestión de ventas/deals/pagos.
-Estas imágenes son MUY PROBABLEMENTE **fotos de documentos** (contratos, Pick Payments, formularios de pago, autorizaciones).
+Estas imágenes son MUY PROBABLEMENTE **fotos de documentos** (contratos, Pick Payments, formularios de pago, autorizaciones de pago con tarjeta).
 
-→ USA \`analyze_image\` con context="extract all client, vehicle, and financial data from this Pick Payment / sale document"
+**REGLA ABSOLUTA: Pick Payment = VENTA COMPLETADA, nunca un lead.**
+Un Pick Payment es un contrato firmado de una venta que YA se realizó. SIEMPRE usa \`create_deal\`, NUNCA \`create_lead\`.
+
+→ USA \`analyze_image\` con context="extract all client, vehicle, and financial data from this Pick Payment / sale document: client name, phone, email, address, vehicle year/make/model/VIN, down payment, deferred payment, installment amounts, payment dates, payment frequency"
 → NUNCA uses \`extract_vehicle_from_images\` — estas NO son fotos de vehículos para catálogo
-→ Del texto extraído por analyze_image, ejecuta \`create_deal\` con TODOS los campos: nombre, teléfono, email, vehículo (marca/modelo/año/VIN), precio, enganche, cuotas, frecuencia, fecha primer pago
-→ financing_type SIEMPRE = "in_house" para Pick Payments
-→ Si hay múltiples imágenes, cada una puede ser un contrato diferente — procésalas una por una
+→ Del texto extraído, ejecuta \`create_deal\` (NUNCA create_lead) con TODOS los campos:
+   - client_name, client_phone, client_email, client_whatsapp
+   - vehicle_brand, vehicle_model, vehicle_year, vehicle_vin
+   - sale_price (down_payment + deferred_payment), down_payment
+   - financing_type = "in_house" SIEMPRE
+   - num_installments, installment_amount, first_payment_date, payment_frequency
+→ Si hay múltiples imágenes, cada una puede ser un contrato diferente — crea un deal por cada una
+→ Si el usuario ya tiene leads que ahora son ventas, usa \`create_deal\` con el lead_id para convertirlos
 `
         } else if (isInventoryContext) {
           fileInstruction += `**CONTEXTO DETECTADO: INVENTARIO / CATÁLOGO**
@@ -334,10 +342,13 @@ La conversación está en modo de gestión de inventario.
 → Usa \`extract_vehicle_from_images\` con las image_urls${userText ? ' y text_description' : ''}
 `
         } else {
-          fileInstruction += `**DECIDE qué herramienta usar basándote en el HISTORIAL DE LA CONVERSACIÓN:**
-1. Si venían hablando de **ventas, deals, pagos, clientes, seguimiento postventa** → \`analyze_image\` (fotos de contratos/documentos)
-2. Si venían hablando de **inventario, listar carros, agregar vehículos, catálogo** → \`extract_vehicle_from_images\`
-3. Si no hay contexto previo claro → **pregunta al usuario**: "¿Estas fotos son de un vehículo para catálogo o de documentos/contratos de venta?"
+          fileInstruction += `**SIN CONTEXTO CLARO — USA analyze_image PRIMERO para determinar el tipo de imagen.**
+1. Ejecuta \`analyze_image\` con context="Determine if this is a photo of a vehicle for catalog listing OR a document/contract (Pick Payment, credit card authorization, sale contract). If it's a document, extract ALL text: client name, phone, email, vehicle info, financial data."
+2. Si analyze_image identifica un **documento/contrato/Pick Payment** → ejecuta \`create_deal\` con los datos extraídos (NUNCA create_lead)
+3. Si analyze_image identifica un **vehículo/auto para catálogo** → ejecuta \`extract_vehicle_from_images\` con las URLs
+4. Si no está claro → pregunta al usuario: "¿Estas fotos son de un vehículo para publicar o de documentos/contratos de venta?"
+
+**REGLA: Fotos de papel/documentos/formularios/contratos = SIEMPRE create_deal, NUNCA create_lead**
 `
         }
       }

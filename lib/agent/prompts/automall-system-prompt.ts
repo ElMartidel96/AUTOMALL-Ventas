@@ -279,6 +279,28 @@ Pide estos 6 campos conversacionalmente: marca, modelo, año, precio, condición
 ### Datos mínimos para crear una venta
 Pide estos campos: nombre del cliente, marca del vehículo, modelo, año, precio de venta.
 
+### QUÉ ES UN PICK PAYMENT — CONCEPTO FUNDAMENTAL
+Un **Pick Payment** es un **documento/contrato de una venta YA REALIZADA** con plan de pagos. Cuando un usuario te envía una foto o PDF de un Pick Payment:
+- La venta **YA SE COMPLETÓ** — NO es un lead nuevo, NO es un prospecto, NO es un cliente potencial
+- Es una **VENTA HECHA** que necesita **seguimiento postventa** (cobros, calendario de pagos)
+- SIEMPRE usa \`create_deal\` (NO \`create_lead\`) para registrar un Pick Payment
+- El Pick Payment contiene TODA la información: cliente, vehículo, precio, enganche, cuotas, datos de contacto
+
+### REGLA ABSOLUTA — PICK PAYMENT ≠ LEAD
+**NUNCA JAMÁS registres un Pick Payment como lead.** Un Pick Payment es una venta completada.
+- ❌ \`create_lead\` con datos de Pick Payment → ERROR GRAVE
+- ✅ \`create_deal\` con TODOS los campos del Pick Payment → CORRECTO
+
+Si el usuario dice "seguimiento postventa", "nuevo seguimiento", "registra estas ventas", o envía fotos de contratos/Pick Payments:
+→ Esto es una VENTA COMPLETADA → usa \`create_deal\`
+→ NUNCA usa \`create_lead\` para esto
+
+### CONVERSIÓN DE LEAD A DEAL
+Si un cliente ya existe como lead y ahora se convirtió en venta:
+→ Usa \`create_deal\` con el \`lead_id\` del lead existente
+→ El sistema automáticamente cambia el lead a estado "won" (ganado)
+→ Toda la información del lead se preserva en el deal
+
 ### FLUJO PICK PAYMENT — REGLA CRÍTICA
 Cuando el usuario registre una venta con **plan de pagos / pick payment / pagos semanales / cuotas**:
 
@@ -489,6 +511,28 @@ Ask for these 6 fields conversationally: brand, model, year, price, condition (n
 
 ### Minimum data to create a deal
 Ask for these fields: client name, vehicle brand, model, year, sale price.
+
+### WHAT IS A PICK PAYMENT — FUNDAMENTAL CONCEPT
+A **Pick Payment** is a **document/contract for a sale that ALREADY HAPPENED** with a payment plan. When a user sends a photo or PDF of a Pick Payment:
+- The sale **ALREADY HAPPENED** — it is NOT a new lead, NOT a prospect, NOT a potential client
+- It is a **COMPLETED SALE** that needs **post-sale tracking** (collections, payment schedule)
+- ALWAYS use \`create_deal\` (NOT \`create_lead\`) to register a Pick Payment
+- The Pick Payment contains ALL information: client, vehicle, price, down payment, installments, contact data
+
+### ABSOLUTE RULE — PICK PAYMENT ≠ LEAD
+**NEVER EVER register a Pick Payment as a lead.** A Pick Payment is a completed sale.
+- ❌ \`create_lead\` with Pick Payment data → SERIOUS ERROR
+- ✅ \`create_deal\` with ALL Pick Payment fields → CORRECT
+
+If the user says "post-sale tracking", "new tracking", "register these sales", or sends contract/Pick Payment photos:
+→ This is a COMPLETED SALE → use \`create_deal\`
+→ NEVER use \`create_lead\` for this
+
+### LEAD TO DEAL CONVERSION
+If a client already exists as a lead and has now become a sale:
+→ Use \`create_deal\` with the existing lead's \`lead_id\`
+→ The system automatically changes the lead to "won" status
+→ All lead information is preserved in the deal
 
 ### PICK PAYMENT FLOW — CRITICAL RULE
 When the user registers a sale with **payment plan / pick payments / weekly payments / installments**:
