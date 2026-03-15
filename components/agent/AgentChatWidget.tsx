@@ -212,37 +212,46 @@ function ApexChatInner({ address }: { address: string }) {
         prepared.push({ blob: file, preview: '', name: file.name, isDoc: true })
       }
 
-      // Phase 2: Upload to staging endpoint
-      const formData = new FormData()
-      for (const { blob, name, isDoc } of prepared) {
-        formData.append(isDoc ? 'files' : 'images', blob, name)
-      }
+      // Phase 2: Upload in chunks of 3 to stay under Vercel's 4.5MB body limit.
+      // Each compressed image is ~1-1.5MB, so 3 per batch = ~3-4.5MB (safe).
+      const CHUNK_SIZE = 3
+      const allStaged: StagedFileInfo[] = []
+      let preparedIdx = 0
 
-      const res = await fetch('/api/agent/chat/upload', {
-        method: 'POST',
-        headers: { 'x-wallet-address': address },
-        body: formData,
-      })
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({ error: 'Upload failed' }))
-        throw new Error(data.error || 'Upload failed')
-      }
-
-      const data = await res.json()
-
-      // Merge staged results with local previews
-      const newStaged: StagedFileInfo[] = data.images.map((item: any, i: number) => {
-        const isDoc = DOC_MIME_TYPES.includes(item.mime_type)
-        return {
-          ...item,
-          preview_url: isDoc ? '' : (prepared[i]?.preview || item.public_url),
-          file_name: prepared[i]?.name || 'file',
-          is_document: isDoc,
+      for (let c = 0; c < prepared.length; c += CHUNK_SIZE) {
+        const chunk = prepared.slice(c, c + CHUNK_SIZE)
+        const formData = new FormData()
+        for (const { blob, name, isDoc } of chunk) {
+          formData.append(isDoc ? 'files' : 'images', blob, name)
         }
-      })
 
-      setStagedFiles(prev => [...prev, ...newStaged])
+        const res = await fetch('/api/agent/chat/upload', {
+          method: 'POST',
+          headers: { 'x-wallet-address': address },
+          body: formData,
+        })
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({ error: 'Upload failed' }))
+          throw new Error(errData.error || `Upload failed (batch ${Math.floor(c / CHUNK_SIZE) + 1})`)
+        }
+
+        const data = await res.json()
+
+        for (let i = 0; i < data.images.length; i++) {
+          const item = data.images[i]
+          const isDoc = DOC_MIME_TYPES.includes(item.mime_type)
+          allStaged.push({
+            ...item,
+            preview_url: isDoc ? '' : (prepared[preparedIdx]?.preview || item.public_url),
+            file_name: prepared[preparedIdx]?.name || 'file',
+            is_document: isDoc,
+          })
+          preparedIdx++
+        }
+      }
+
+      setStagedFiles(prev => [...prev, ...allStaged])
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : 'Upload failed')
     } finally {

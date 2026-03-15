@@ -181,16 +181,26 @@ export async function extractVehicleData(
     const errMsg = extractionError instanceof Error ? extractionError.message : String(extractionError);
     if (errMsg.includes('did not match schema') || errMsg.includes('No object generated')) {
       console.warn(`[Vehicle Extractor] Schema mismatch, retrying with simplified schema: ${errMsg}`);
-      const SimplifiedSchema = VehicleExtractionSchema.omit({ image_order: true, confidence: true });
-      const { object } = await generateObject({
-        model: openai('gpt-4o'),
-        schema: SimplifiedSchema,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content }],
-        abortSignal: controller.signal,
-        providerOptions: { openai: { structuredOutputs: false } },
-      });
-      return validateExtraction({ ...object, image_order: [], confidence: {} } as ExtractedVehicle);
+      clearTimeout(timeout); // Clear original timeout
+
+      // CRITICAL: Fresh AbortController for retry — the original may have consumed most of the timeout
+      const retryController = new AbortController();
+      const retryTimeout = setTimeout(() => retryController.abort(), EXTRACTION_TIMEOUT_MS);
+
+      try {
+        const SimplifiedSchema = VehicleExtractionSchema.omit({ image_order: true, confidence: true });
+        const { object } = await generateObject({
+          model: openai('gpt-4o'),
+          schema: SimplifiedSchema,
+          system: SYSTEM_PROMPT,
+          messages: [{ role: 'user', content }],
+          abortSignal: retryController.signal,
+          providerOptions: { openai: { structuredOutputs: false } },
+        });
+        return validateExtraction({ ...object, image_order: [], confidence: {} } as ExtractedVehicle);
+      } finally {
+        clearTimeout(retryTimeout);
+      }
     }
     throw extractionError;
   } finally {
