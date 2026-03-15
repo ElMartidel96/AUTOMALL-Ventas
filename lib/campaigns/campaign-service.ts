@@ -952,6 +952,8 @@ export async function publishToFacebook(
             if (!isWhatsAppNotLinked) throw ctwaErr; // Unknown error — don't swallow
 
             // Fallback: boost organic post with ENGAGEMENT (like friend's campaign)
+            // POST_ENGAGEMENT is the correct optimization_goal for OUTCOME_ENGAGEMENT
+            // (REACH is NOT compatible with ENGAGEMENT objective — causes error 2490408)
             console.warn(`[CampaignService] CTWA failed (WhatsApp not linked to page), falling back to engagement boost: ${ctwaMsg}`);
             const fbAdSet = await createFBAdSet(adAccountId, userToken, {
               name: `${campaign.name} — Houston Area`,
@@ -959,7 +961,7 @@ export async function publishToFacebook(
               dailyBudgetCents,
               pageId: conn.fb_page_id,
               targeting,
-              // No destinationType, no whatsappNumber — simple engagement boost
+              optimizationGoal: 'POST_ENGAGEMENT',
             });
             fbAdSetId = fbAdSet.id;
           }
@@ -1350,6 +1352,7 @@ export async function switchAdObjective(
           dailyBudgetCents,
           pageId: conn.fb_page_id,
           targeting,
+          optimizationGoal: 'POST_ENGAGEMENT',
         });
         fbAdSetId = fbAdSet.id;
       }
